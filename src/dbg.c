@@ -1,0 +1,263 @@
+#include "../include/dbg.h"
+
+/*
+ * *NOTE* capstone used here
+ * need 32bit and 64bit libraries in /usr/lib32 and /usr/lib64
+ * so download .deb files at
+ * http://www.capstone-engine.org/download/3.0.4/ubuntu-14.04/
+ * and install 32bit then copy the lib files in /usr/lib to /usr/lib32
+ * then install 64bit
+ */
+
+/*
+ * useful when you use your own signal handler
+ * this function doesn't print the lib function cause they
+ * Do Not have a regular start *push r(e)bp, mov r(e)bp, r(e)sp, leave, ret
+ * *USE* '-rdynamic -ldl -lcapstone' options when compile and link
+ */
+static void print_bt_info(ucontext_t *uc)
+{
+#ifdef __x86_64__
+	uint64_t current_rip, current_rbp;
+	current_rbp = uc->uc_mcontext.gregs[REG_RBP];
+	current_rip = uc->uc_mcontext.gregs[REG_RIP];
+
+	Dl_info dlinfo;
+	while (current_rbp && current_rip) {
+		if ((current_rbp > 0x0000800000000000) ||
+			(current_rip > 0x0000800000000000)) {
+			fprintf(stderr, "stack overflow?\n");
+			break;
+		}
+
+		dladdr((void *)current_rip, &dlinfo);
+		fprintf(stderr, "[%p]: %s|%s|%p\n", (void *)current_rip,
+			dlinfo.dli_fname,
+			dlinfo.dli_sname, dlinfo.dli_saddr);
+		if (*((uint64_t *)current_rbp) < current_rbp)
+			break;
+		current_rip = *((uint64_t *)current_rbp+1);
+		current_rbp = *((uint64_t *)current_rbp);
+	}
+#endif
+#ifdef __i386__
+	uint32_t current_ebp, current_eip;
+	current_ebp = uc->uc_mcontext.gregs[REG_EBP];
+	current_eip = uc->uc_mcontext.gregs[REG_EIP];
+
+	Dl_info dlinfo;
+	while (current_eip && current_ebp) {
+		dladdr((void *)current_eip, &dlinfo);
+		fprintf(stderr, "[%p]: %s|%s|%p\n", (void *)current_eip,
+			dlinfo.dli_fname,
+			dlinfo.dli_sname, dlinfo.dli_saddr);
+		current_eip = *((uint32_t *)current_ebp+1);
+		current_ebp = *((uint32_t *)current_ebp);
+	}
+#endif
+}
+
+static void dump_regs(ucontext_t *uc)
+{
+	fprintf(stderr, "INFO REGISTERS:\n");
+#ifdef __x86_64__
+	fprintf(stderr, "RAX: %p\t", (void *)(uc->uc_mcontext.gregs[REG_RAX]));
+	fprintf(stderr, "RBX: %p\t", (void *)(uc->uc_mcontext.gregs[REG_RBX]));
+	fprintf(stderr, "RCX: %p\n",(void *)(uc->uc_mcontext.gregs[REG_RCX]));
+	fprintf(stderr, "RDX: %p\t", (void *)(uc->uc_mcontext.gregs[REG_RDX]));
+	fprintf(stderr, "RSI: %p\t", (void *)(uc->uc_mcontext.gregs[REG_RSI]));
+	fprintf(stderr, "RDI: %p\n",(void *)(uc->uc_mcontext.gregs[REG_RDI]));
+	fprintf(stderr, "RBP: %p\t", (void *)(uc->uc_mcontext.gregs[REG_RBP]));
+	fprintf(stderr, "RSP: %p\t", (void *)(uc->uc_mcontext.gregs[REG_RSP]));
+	fprintf(stderr, "R8: %p\n", (void *)(uc->uc_mcontext.gregs[REG_R8]));
+	fprintf(stderr, "R9: %p\t", (void *)(uc->uc_mcontext.gregs[REG_R9]));
+	fprintf(stderr, "R10: %p\t", (void *)(uc->uc_mcontext.gregs[REG_R10]));
+	fprintf(stderr, "R11: %p\n", (void *)(uc->uc_mcontext.gregs[REG_R11]));
+	fprintf(stderr, "R12: %p\t", (void *)(uc->uc_mcontext.gregs[REG_R12]));
+	fprintf(stderr, "R13: %p\t", (void *)(uc->uc_mcontext.gregs[REG_R13]));
+	fprintf(stderr, "R14: %p\n", (void *)(uc->uc_mcontext.gregs[REG_R14]));
+	fprintf(stderr, "R15: %p\t", (void *)(uc->uc_mcontext.gregs[REG_R15]));
+	fprintf(stderr, "RIP: %p\t", (void *)(uc->uc_mcontext.gregs[REG_RIP]));
+	fprintf(stderr, "RFLAG: %p\n",(void *)(uc->uc_mcontext.gregs[REG_EFL]));
+#endif
+#ifdef __i386__
+	fprintf(stderr, "EAX: %p\t", (void *)(uc->uc_mcontext.gregs[REG_EAX]));
+	fprintf(stderr, "EBX: %p\t", (void *)(uc->uc_mcontext.gregs[REG_EBX]));
+	fprintf(stderr, "ECX: %p\n", (void *)(uc->uc_mcontext.gregs[REG_ECX]));
+	fprintf(stderr, "EDX: %p\t", (void *)(uc->uc_mcontext.gregs[REG_EDX]));
+	fprintf(stderr, "ESI: %p\t", (void *)(uc->uc_mcontext.gregs[REG_ESI]));
+	fprintf(stderr, "EDI: %p\n", (void *)(uc->uc_mcontext.gregs[REG_EDI]));
+	fprintf(stderr, "EBP: %p\t", (void *)(uc->uc_mcontext.gregs[REG_EBP]));
+	fprintf(stderr, "ESP: %p\t", (void *)(uc->uc_mcontext.gregs[REG_ESP]));
+	fprintf(stderr, "EIP: %p\n", (void *)(uc->uc_mcontext.gregs[REG_EIP]));
+	fprintf(stderr, "EFLAG: %p\n",(void *)(uc->uc_mcontext.gregs[REG_EFL]));
+#endif
+}
+
+static void dump_ill(int code)
+{
+	switch (code) {
+	case ILL_ILLOPC:
+		fprintf(stderr, "illegal opcode\n");
+		break;
+	case ILL_ILLOPN:
+		fprintf(stderr, "illegal operation\n");
+		break;
+	case ILL_ILLADR:
+		fprintf(stderr, "illegal addr mode\n");
+		break;
+	case ILL_ILLTRP:
+		fprintf(stderr, "illegal trap\n");
+		break;
+	case ILL_PRVOPC:
+		fprintf(stderr, "illegal privilege opcode\n");
+		break;
+	case ILL_PRVREG:
+		fprintf(stderr, "illegal privilege register\n");
+		break;
+	case ILL_COPROC:
+		fprintf(stderr, "illegal cooperate register\n");
+		break;
+	case ILL_BADSTK:
+		fprintf(stderr, "illegal stack error\n");
+		break;
+	default:
+		fprintf(stderr, "SIGILL error: %d\n", code);
+	}
+}
+
+static void dump_fpe(int code)
+{
+	switch (code) {
+	case FPE_INTDIV:
+		fprintf(stderr, "div by zero\n");
+		break;
+	case FPE_INTOVF:
+		fprintf(stderr, "int overflow\n");
+		break;
+	case FPE_FLTDIV:
+		fprintf(stderr, "float div by zero\n");
+		break;
+	case FPE_FLTOVF:
+		fprintf(stderr, "float overflow\n");
+		break;
+	case FPE_FLTUND:
+		fprintf(stderr, "float underflow\n");
+		break;
+	case FPE_FLTRES:
+		fprintf(stderr, "float inaccurate result\n");
+		break;
+	case FPE_FLTINV:
+		fprintf(stderr, "float invalid\n");
+		break;
+	case FPE_FLTSUB:
+		fprintf(stderr, "float subscript out of range\n");
+		break;
+	default:
+		fprintf(stderr, "SIGFPE error: %d\n", code);
+	}
+}
+
+static void dump_segv(int code)
+{
+	switch (code) {
+	case SEGV_MAPERR:
+		fprintf(stderr, "addr not mapped\n");
+		break;
+	case SEGV_ACCERR:
+		fprintf(stderr, "access error\n");
+		break;
+	default:
+		fprintf(stderr, "SIGSEGV error: %d\n", code);
+	}
+}
+
+static void dump_bus(int code)
+{
+	switch (code) {
+	case BUS_ADRALN:
+		fprintf(stderr, "addr not assigned right\n");
+		break;
+	case BUS_ADRERR:
+		fprintf(stderr, "addr not exist\n");
+		break;
+	case BUS_OBJERR:
+		fprintf(stderr, "hardware error\n");
+		break;
+	default:
+		fprintf(stderr, "SIGBUS error: %d\n", code);
+	}
+}
+
+static struct sigaction new_act, old_act;
+static sigact_func callback;
+static void self_sigact(int signo, siginfo_t *si, void *arg)
+{
+	switch (signo) {
+	case SIGILL:
+		fprintf(stderr, "receive SIGILL:\t");
+		dump_ill(si->si_code);
+		fprintf(stderr, "instruction addr:");
+		break;
+	case SIGFPE:
+		fprintf(stderr, "receive SIGFPE:\t");
+		dump_fpe(si->si_code);
+		fprintf(stderr, "instruction addr:");
+		break;
+	case SIGSEGV:
+		fprintf(stderr, "receive SIGSEGV:\t");
+		dump_segv(si->si_code);
+		fprintf(stderr, "operation addr:");
+		break;
+	case SIGBUS:
+		fprintf(stderr, "receive SIGBUS:\t");
+		dump_bus(si->si_code);
+		fprintf(stderr, "\t\t");
+		break;
+	default:
+		fprintf(stderr, "receive %d\n", signo);
+	}
+	fprintf(stderr, "\t=> %p:\t", si->si_addr);
+#ifdef HAS_CAPSTONE
+#ifdef __x86_64__
+	disas_single(CS_ARCH_X86, CS_MODE_64,
+		(void *)(((ucontext_t *)arg)->uc_mcontext.gregs[REG_RIP]));
+#endif
+#ifdef __i386__
+	disas_single(CS_ARCH_X86, CS_MODE_32,
+		(void *)(((ucontext_t *)arg)->uc_mcontext.gregs[REG_EIP]));
+#endif
+#endif
+	fprintf(stderr, "errno: %s\n\n", strerror(si->si_errno));
+
+	dump_regs((ucontext_t *)arg);
+
+	fprintf(stderr, "\nCall Stack:\n");
+	print_bt_info((ucontext_t *)arg);
+	fprintf(stderr, "\n");
+	if (callback)
+		callback(signo, si, arg);
+	old_act.sa_handler(signo);
+}
+
+void set_eh(sigact_func func)
+{
+	memset((char *)&new_act, 0, sizeof(struct sigaction));
+	memset((char *)&old_act, 0, sizeof(struct sigaction));
+	callback = NULL;
+
+	new_act.sa_flags = SA_SIGINFO | SA_INTERRUPT;
+	sigemptyset(&new_act.sa_mask);
+	sigaddset(&new_act.sa_mask, SIGILL);
+	sigaddset(&new_act.sa_mask, SIGFPE);
+	sigaddset(&new_act.sa_mask, SIGSEGV);
+	sigaddset(&new_act.sa_mask, SIGBUS);
+
+	new_act.sa_sigaction = self_sigact;
+	sigaction(SIGILL, &new_act, &old_act);
+	sigaction(SIGFPE, &new_act, &old_act);
+	sigaction(SIGSEGV, &new_act, &old_act);
+	sigaction(SIGBUS, &new_act, &old_act);
+
+	callback = func;
+}
