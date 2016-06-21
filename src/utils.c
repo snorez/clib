@@ -20,6 +20,14 @@ uint64_t max_64(uint64_t a, uint64_t b)
 	return (a > b) ? a : b;
 }
 
+void *malloc_s(size_t size)
+{
+	char *ret = (char *)malloc(size);
+	if (ret)
+		memset(ret, 0, size);
+	return (void *)ret;
+}
+
 void free_s(void **addr)
 {
 	if (!addr || !(*addr))

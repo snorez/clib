@@ -15,7 +15,7 @@ static char find_pos(char ch)
     return (ptr - base64);
 }
 
-char *base64_encode(const char *data, int data_len)
+char *base64_enc(const char *data, int data_len)
 {
     int prepare = 0;
     int ret_len;
@@ -71,7 +71,7 @@ char *base64_encode(const char *data, int data_len)
     return ret;
 }
 
-char *base64_decode(const char *data, int data_len)
+char *base64_dec(const char *data, int data_len)
 {
     int ret_len = (data_len / 4) * 3;
     int equal_count = 0;

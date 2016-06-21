@@ -8,7 +8,7 @@
 #include <elf.h>
 
 typedef struct _elf_file {
-	reg_file *file;
+	text_file *file;
 	uint8_t elf_bits;
 	uint16_t elf_machine;
 	uint64_t elf_text_entry;

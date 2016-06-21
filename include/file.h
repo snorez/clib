@@ -11,27 +11,55 @@
 #include <errno.h>
 #include <stdint.h>
 #include <sys/file.h>
+#include <dirent.h>
 #include <linux/limits.h>
+#include <pthread.h>
 #include "./error.h"
 #include "./string.h"
 #include "./list.h"
+#include "./utils.h"
 
-/* XXX: reg_file use list_dt, so should not be used any more */
-typedef str_struct line_struct;
-typedef struct _reg_file {
-	list_comm pri_data;
-	const char *path;
+struct file;
+typedef struct _base_io {
+	int	(*open)(struct file *file, void *path, int flag, ...);
+	ssize_t	(*in)(struct file *file, void *buf, size_t len, int flag);
+	ssize_t	(*out)(struct file *file, void *buf, size_t len, int flag);
+	int	(*close)(struct file *file);
+	loff_t	(*llseek)(struct file *file, loff_t offs, int where);
+	long	(*ioctl)(struct file *file, unsigned long request, ...);
+} base_io;
+
+struct file_ops {
+	base_io bio;
+};
+
+struct file {
+	struct stat stat;
+	char *path;		/* file path or addr if has */
+	void *rdata;		/* file input buf, maybe a list_comm */
+	void *wdata;		/* file output buf, maybe a list_comm */
+
 	int fd;
-} reg_file;
+	int openflag;
+	pthread_rwlock_t rwlock;
+};
+
+typedef str_struct line_struct;
+typedef struct _text_file {
+	struct file file;
+	struct file_ops *ops;
+} text_file;
 
 extern int path_exists(const char *path);
-extern reg_file *reg_file_open(const char *path, int flag, ...);
-extern int reg_file_close(reg_file *);
-extern void set_file_max_size(uint64_t file_max_size);
-extern int reg_file_readlines(reg_file *);
-extern int reg_file_readline(reg_file *);
-extern void set_line_buf_size(uint32_t line_buf_size);
-extern int reg_file_readline_several(reg_file *, uint32_t lines);
-extern int reg_file_writelines(reg_file *);
+extern text_file *text_file_open(const char *path, int flag, ...);
+extern int text_file_close(text_file *);
+extern void set_file_max_size(size_t file_max_size);
+extern size_t get_file_max_size(void);
+extern int text_file_readall(text_file *);
+extern int text_file_readlines(text_file *);
+extern void set_io_speed(uint32_t val);
+extern uint32_t get_io_speed(void);
+extern int text_file_readline(text_file *, uint32_t lines);
+extern int text_file_writelines(text_file *);
 
 #endif

@@ -37,10 +37,10 @@ else
 endif
 
 shared: $(obj_dynamic)
-	cd $(TMP);$(CC_OPT_dynamic) -rdynamic -shared -fPIC $(obj_dynamic) -ldl -lcapstone -o libzerons$(ARCH).so;cd $(CWD);cp $(TMP)/libzerons$(ARCH).so $(LIB)/
+	cd $(TMP);$(CC_OPT_dynamic) -rdynamic -shared -fPIC $(obj_dynamic) -lpthread -ldl -lcapstone -o libzerons$(ARCH).so;cd $(CWD);cp $(TMP)/libzerons$(ARCH).so $(LIB)/
 
 shared_low_ver: $(obj_dynamic_low)
-	cd $(TMP);$(CC_OPT_low) $(obj_dynamic_low) -Wl,--wrap=memcpy -rdynamic -shared -fPIC -ldl -o libzerons$(ARCH)_low.so;cd $(CWD);cp $(TMP)/libzerons$(ARCH)_low.so $(LIB)/
+	cd $(TMP);$(CC_OPT_low) $(obj_dynamic_low) -Wl,--wrap=memcpy -rdynamic -shared -fPIC -ldl -lpthread -o libzerons$(ARCH)_low.so;cd $(CWD);cp $(TMP)/libzerons$(ARCH)_low.so $(LIB)/
 
 clean:
 	rm -vf $(TMP)/*.o

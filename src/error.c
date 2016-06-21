@@ -6,7 +6,7 @@
 static int dbg_mode;
 
 static void err_common(int has_errno, int error, const char *fmt,
-			 va_list ap)
+		       va_list ap)
 {
 	char buf[MAXLINE];
 	vsnprintf(buf, MAXLINE, fmt, ap);
