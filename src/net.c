@@ -106,6 +106,7 @@ void s_putaddrinfo(sock *file)
 
 	int err = pthread_mutex_trylock(&file->mutex);
 	freeaddrinfo(file->ailist);
+	file->ailist = NULL;
 	if (!err)
 		pthread_mutex_unlock(&file->mutex);
 }
