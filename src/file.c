@@ -33,15 +33,18 @@ text *text_open(const char *path, int flag, ...)
 
 	int err;
 	struct stat tmp_stat;
-	err = stat(path, &tmp_stat);
-	if (err == -1) {
-		err_dbg(1, err_fmt("stat err"));
-		return NULL;
-	}
-	if (!S_ISREG(tmp_stat.st_mode)) {
-		err_dbg(0, err_fmt("%s filetype not right"), path);
-		errno = EINVAL;
-		return NULL;
+	memset(&tmp_stat, 0, sizeof(tmp_stat));
+	if (!(flag & O_CREAT)) {
+		err = stat(path, &tmp_stat);
+		if (err == -1) {
+			err_dbg(1, err_fmt("stat err"));
+			return NULL;
+		}
+		if (!S_ISREG(tmp_stat.st_mode)) {
+			err_dbg(0, err_fmt("%s filetype not right"), path);
+			errno = EINVAL;
+			return NULL;
+		}
 	}
 
 	int fd;

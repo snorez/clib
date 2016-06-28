@@ -87,6 +87,7 @@ int s_getaddrinfo(sock *file, char *host, char *port, int flag)
 		goto free;
 	}
 	err = 0;
+	goto unlock;
 
 free:
 	free(file->host);
