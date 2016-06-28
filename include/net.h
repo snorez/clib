@@ -8,38 +8,41 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <pthread.h>
 #include "./error.h"
 #include "./string.h"
 
-typedef struct _sock_file {
+typedef struct _sock {
 	int family;
 	int socktype;
 	int protocol;
 	int shut_how;
 	int sockfd;
+	int offline;
 	int sock_buf_len;
-} sock_file;
 
-typedef struct _sock_ai {
 	struct addrinfo *ailist;
-} sock_ai;
+	char *host;
+	char *port;
+
+	pthread_mutex_t mutex;
+} sock;
 
 typedef struct _cli_info {
 	struct sockaddr addr;
 	socklen_t len;
 } cli_info;
 
-extern sock_file *sock_file_open(int family, int type, int protocol, int shut);
-extern int sock_file_close(sock_file *);
-extern int s_getaddrinfo(sock_file *, char *host, char *service, int flag,
-			 sock_ai *res);
-extern void s_putaddrinfo(sock_ai *);
-extern int sock_bind(sock_file *, sock_ai *);
-extern int sock_connect(sock_file *, sock_ai *);
-extern int sock_listen(sock_file *, int how_many);
-extern cli_info *get_cli_info(sock_file *);
-extern void put_cli_info(cli_info *client_info);
-extern int sock_accept(sock_file *, cli_info *);
+extern sock *sock_open(int family, int type, int protocol);
+extern int sock_close(sock *);
+extern int s_getaddrinfo(sock *, char *host, char *service, int flag);
+extern void s_putaddrinfo(sock *);
+extern int sock_bind(sock *);
+extern int sock_connect(sock *);
+extern int sock_listen(sock *, int how_many);
+extern cli_info *alloc_cli_info(sock *);
+extern void free_cli_info(cli_info *client_info);
+extern sock *sock_accept(sock *, cli_info *);
 extern void cli_info_print(cli_info *client);
 extern long fork_wget(char *url, char *file2write);
 
@@ -56,11 +59,9 @@ typedef struct _sock_pkg {
 	char content[0];
 } sock_pkg;
 
-extern int set_sock_buf_len(sock_file *file);
-extern int get_sock_buf_len(sock_file *file);
-extern int xchg_sock_buf_len0(sock_file *file);
-extern int xchg_sock_buf_len1(sock_file *file);
-extern int sock_send(sock_file *file, void *msg, size_t len, int flag);
-extern int sock_recv(sock_file *file, void *msg, size_t len, int flag);
+extern int xchg_sock_buf_len0(sock *file);
+extern int xchg_sock_buf_len1(sock *file);
+extern int sock_send(sock *file, void *msg, size_t len, int flag);
+extern int sock_recv(sock *file, void *msg, size_t len, int flag);
 
 #endif

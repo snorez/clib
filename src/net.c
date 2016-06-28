@@ -1,19 +1,17 @@
 #include "../include/net.h"
 #include "../include/utils.h"
 
-sock_file *sock_file_open(int family, int socktype, int protocol, int shut_how)
+sock *sock_open(int family, int socktype, int protocol)
 {
-	sock_file *ret = (sock_file *)malloc(sizeof(sock_file));
+	sock *ret = (sock *)malloc_s(sizeof(sock));
 	if (!ret) {
 		err_dbg(0, err_fmt("malloc err"));
 		return NULL;
 	}
-	memset(ret, 0, sizeof(sock_file));
 
 	ret->family = family;
 	ret->socktype = socktype;
 	ret->protocol = protocol;
-	ret->shut_how = shut_how;
 
 	ret->sockfd = socket(family, socktype, protocol);
 	if (ret->sockfd == -1) {
@@ -21,121 +19,153 @@ sock_file *sock_file_open(int family, int socktype, int protocol, int shut_how)
 		goto free_ret;
 	}
 
-	if (shut_how == -1)
-		return ret;
-	int err = shutdown(ret->sockfd, shut_how);
-	if (err == -1) {
-		err_dbg(1, err_fmt("shutdown err"));
-		goto close_ret;
-	}
+	ret->offline = 1;
+	pthread_mutex_init(&ret->mutex, NULL);
 	return ret;
 
-close_ret:
-	close(ret->sockfd);
 free_ret:
 	free(ret);
 	return NULL;
 }
 
-int sock_file_close(sock_file *sockfile)
+int sock_close(sock *file)
 {
-	if (!sockfile) {
+	if (!file) {
 		err_dbg(0, err_fmt("arg check err"));
 		errno = EINVAL;
 		return -1;
 	}
 
-	int ret = close(sockfile->sockfd);
-	free(sockfile);
+	pthread_mutex_lock(&file->mutex);
+	if (file->ailist)
+		s_putaddrinfo(file);
+	if (file->host)
+		free_s((void **)&file->host);
+	if (file->port)
+		free_s((void **)&file->port);
+
+	int ret = close(file->sockfd);
+	pthread_mutex_unlock(&file->mutex);
+	pthread_mutex_destroy(&file->mutex);
+	free_s((void **)&file);
 	return ret;
 }
 
-int s_getaddrinfo(sock_file *sockfile, char *host, char *service, int flag,
-		  sock_ai *res)
+int s_getaddrinfo(sock *file, char *host, char *port, int flag)
 {
-	if (!sockfile || !host|| !service) {
+	if (!file || !host|| !port) {
 		err_dbg(0, err_fmt("arg check err"));
 		errno = EINVAL;
 		return -1;
 	}
 
+	pthread_mutex_lock(&file->mutex);
 	struct addrinfo hint;
 	memset(&hint, 0, sizeof(struct addrinfo));
-	hint.ai_family = sockfile->family;
-	hint.ai_socktype = sockfile->socktype;
-	hint.ai_protocol = sockfile->protocol;
+	hint.ai_family = file->family;
+	hint.ai_socktype = file->socktype;
+	hint.ai_protocol = file->protocol;
 	hint.ai_flags = flag;
 
-	int err = getaddrinfo(host, service, &hint, &res->ailist);
+	int err = getaddrinfo(host, port, &hint, &file->ailist);
 	if (err != 0) {
 		err_dbg(0,err_fmt("getaddrinfo err: %s"),gai_strerror(err));
-		return -1;
+		err = -1;
+		goto unlock;
 	}
 
-	return 0;
+	file->host = (char *)malloc_s(strlen(host)+1);
+	if (!file->host) {
+		err = -1;
+		goto putaddrinfo;
+	}
+	memcpy(file->host, host, strlen(host));
+
+	file->port = (char *)malloc_s(strlen(port)+1);
+	if (!file->port) {
+		err = -1;
+		goto free;
+	}
+	err = 0;
+
+free:
+	free(file->host);
+putaddrinfo:
+	s_putaddrinfo(file);
+unlock:
+	pthread_mutex_unlock(&file->mutex);
+	return err;
 }
 
-void s_putaddrinfo(sock_ai *res)
+void s_putaddrinfo(sock *file)
 {
-	if (!res) {
+	if (!file) {
 		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
 		return;
 	}
-	freeaddrinfo(res->ailist);
+
+	int err = pthread_mutex_trylock(&file->mutex);
+	freeaddrinfo(file->ailist);
+	if (!err)
+		pthread_mutex_unlock(&file->mutex);
 }
 
-int sock_bind(sock_file *sockfile, sock_ai *sai)
+int sock_bind(sock *file)
 {
-	if (!sockfile || !sai) {
+	if (!file) {
 		err_dbg(0, err_fmt("arg check err"));
 		errno = EINVAL;
 		return -1;
 	}
-	return bind(sockfile->sockfd, sai->ailist->ai_addr,
-		    sai->ailist->ai_addrlen);
+	return bind(file->sockfd, file->ailist->ai_addr,
+		    file->ailist->ai_addrlen);
 }
 
-int sock_connect(sock_file *sockfile, sock_ai *sai)
+int sock_connect(sock *file)
 {
-	if (!sockfile || !sai) {
+	if (!file) {
 		err_dbg(0, err_fmt("arg check err"));
 		errno = EINVAL;
 		return -1;
 	}
-	return connect(sockfile->sockfd, sai->ailist->ai_addr,
-		       sai->ailist->ai_addrlen);
+	int err = connect(file->sockfd, file->ailist->ai_addr,
+			  file->ailist->ai_addrlen);
+	if (!err)
+		file->offline = 0;
+	return err;
 }
 
-int sock_listen(sock_file *sockfile, int backlog)
+int sock_listen(sock *file, int how_many)
 {
-	if (!sockfile) {
+	if (!file) {
 		err_dbg(0, err_fmt("arg check err"));
 		errno = EINVAL;
 		return -1;
 	}
-	return listen(sockfile->sockfd, backlog);
+	int err = listen(file->sockfd, how_many);
+	if (!err)
+		file->offline = 0;
+	return err;
 }
 
-cli_info *get_cli_info(sock_file *sockfile)
+cli_info *alloc_cli_info(sock *file)
 {
-	if (!sockfile) {
+	if (!file) {
 		err_dbg(0, err_fmt("arg check err"));
 		errno = EINVAL;
 		return NULL;
 	}
 
-	cli_info *ret = (cli_info *)malloc(sizeof(cli_info));
+	cli_info *ret = (cli_info *)malloc_s(sizeof(cli_info));
 	if (!ret) {
 		err_dbg(0, err_fmt("malloc err"));
 		errno = ENOMEM;
 		return NULL;
 	}
-	memset(ret, 0, sizeof(cli_info));
 
-	if (sockfile->family == AF_INET)
+	if (file->family == AF_INET)
 		ret->len = INET_ADDRSTRLEN;
-	else if (sockfile->family == AF_INET6)
+	else if (file->family == AF_INET6)
 		ret->len = INET6_ADDRSTRLEN;
 	if (!ret->len) {
 		err_dbg(0, err_fmt("sock family not support"));
@@ -146,28 +176,47 @@ cli_info *get_cli_info(sock_file *sockfile)
 	return ret;
 }
 
-void put_cli_info(cli_info *client)
+void free_cli_info(cli_info *client)
 {
 	if (!client) {
 		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
 		return;
 	}
-	free(client);
+	free_s((void **)&client);
 }
 
-int sock_accept(sock_file *sockfile, cli_info *client)
+sock *sock_accept(sock *file, cli_info *client)
 {
-	if (!sockfile) {
+	if (!file) {
 		err_dbg(0, err_fmt("arg check err"));
 		errno = EINVAL;
-		return -1;
+		return NULL;
 	}
 
+	int fd;
+
 	if (!client)
-		return accept(sockfile->sockfd, NULL, NULL);
+		fd = accept(file->sockfd, NULL, NULL);
 	else
-		return accept(sockfile->sockfd, &client->addr, &client->len);
+		fd = accept(file->sockfd, &client->addr, &client->len);
+	if (fd == -1) {
+		err_dbg(1, err_fmt("accept err"));
+		return NULL;
+	}
+
+	sock *ret = (sock *)malloc_s(sizeof(sock));
+	if (!ret) {
+		err_dbg(0, err_fmt("malloc_s err"));
+		goto close_ret;
+	}
+
+	ret->sockfd = fd;
+	pthread_mutex_init(&ret->mutex, NULL);
+	return ret;
+
+close_ret:
+	close(fd);
+	return NULL;
 }
 
 void cli_info_print(cli_info *client)
@@ -242,19 +291,7 @@ long fork_wget(char *url, char *file_w)
 	return 0;
 }
 
-/*
- * XXX: what we need here?
- * sometime we send a buf(>16K or larger), then when we recv the buf,
- * it is disordered, cause the system net send/recv buffer is limited,
- * getsockopt can show us how many bytes the buffer has
- * so we need some functions that ensure we recv what we send
- * usage:
- * call set_sock_buf_len and get_sock_buf_len
- * if no err, call xchg_sock_buf_len0&xchg_sock_buf_len1 to set the buf_len
- * if err, then check err and reconnect that again
- */
-
-int set_sock_buf_len(sock_file *file)
+static int set_sock_buf_len(sock *file)
 {
 	if (!file) {
 		err_dbg(0, err_fmt("arg check err"));
@@ -281,7 +318,7 @@ int set_sock_buf_len(sock_file *file)
 	return 0;
 }
 
-int get_sock_buf_len(sock_file *file)
+static int get_sock_buf_len(sock *file)
 {
 	if (!file) {
 		err_dbg(0, err_fmt("arg check err"));
@@ -310,38 +347,58 @@ int get_sock_buf_len(sock_file *file)
 	return 0;
 }
 
-int xchg_sock_buf_len0(sock_file *file)
+int xchg_sock_buf_len0(sock *file)
 {
 	if (!file) {
 		err_dbg(0, err_fmt("arg check err"));
 		errno = EINVAL;
 		return -1;
+	}
+
+	pthread_mutex_lock(&file->mutex);
+
+	int err;
+	if (!file->sock_buf_len) {
+		err = set_sock_buf_len(file);
+		if (err == -1)
+			err_sys("set_sock_buf_len err");
+		err = get_sock_buf_len(file);
+		if (err == -1)
+			err_sys("get_sock_buf_len err");
 	}
 
 	char buf[16];
 	memset(buf, 0, 16);
 	sprintf(buf, "%d", file->sock_buf_len);
 
-	int err = send(file->sockfd, buf, strlen(buf), 0);
-	if ((err == -1) || (err == 0)) {
+	err = send(file->sockfd, buf, strlen(buf), 0);
+	if (err == -1) {
 		err_dbg(1, err_fmt("send err"));
-		return -1;
+		goto unlock;
 	}
 
 	memset(buf, 0, 16);
 	err = recv(file->sockfd, buf, 16, 0);
-	if ((err == -1) || (err == 0)) {
+	if (err == -1) {
 		err_dbg(1, err_fmt("recv err"));
-		return -1;
+		goto unlock;
+	} else if (err == 0) {
+		err_dbg(0, err_fmt("offline"));
+		err = -1;
+		goto unlock;
 	}
 
 	int len = atoi(buf);
 	if (len < file->sock_buf_len)
 		file->sock_buf_len = len;
-	return 0;
+	err = 0;
+unlock:
+	file->offline = !!err;
+	pthread_mutex_unlock(&file->mutex);
+	return err;
 }
 
-int xchg_sock_buf_len1(sock_file *file)
+int xchg_sock_buf_len1(sock *file)
 {
 	if (!file) {
 		err_dbg(0, err_fmt("arg check err"));
@@ -349,13 +406,28 @@ int xchg_sock_buf_len1(sock_file *file)
 		return -1;
 	}
 
+	pthread_mutex_lock(&file->mutex);
+	int err;
+	if (!file->sock_buf_len) {
+		err = set_sock_buf_len(file);
+		if (err == -1)
+			err_sys("set_sock_buf_len err");
+		err = get_sock_buf_len(file);
+		if (err == -1)
+			err_sys("get_sock_buf_len err");
+	}
+
 	char buf[16];
 	memset(buf, 0, 16);
 
-	int err = recv(file->sockfd, buf, 16, 0);
-	if ((err == -1) || (err == 0)) {
+	err = recv(file->sockfd, buf, 16, 0);
+	if (err == -1) {
 		err_dbg(1, err_fmt("recv err"));
-		return -1;
+		goto unlock;
+	} else if (err == 0) {
+		err_dbg(0, err_fmt("offline"));
+		err = -1;
+		goto unlock;
 	}
 
 	int len = atoi(buf);
@@ -365,20 +437,24 @@ int xchg_sock_buf_len1(sock_file *file)
 	sprintf(buf, "%d", file->sock_buf_len);
 
 	err = send(file->sockfd, buf, strlen(buf), 0);
-	if ((err == -1) || (err == 0)) {
+	if (err == -1) {
 		err_dbg(1, err_fmt("send err"));
-		return -1;
+		goto unlock;
 	}
-	return 0;
+	err = 0;
+unlock:
+	file->offline = !!err;
+	pthread_mutex_unlock(&file->mutex);
+	return err;
 }
 
-static int check_sock_buflen(sock_file *file)
+static int check_sock_buflen(sock *file)
 {
 	return file->sock_buf_len > (int)sizeof(pkg_ctl);
 }
 
 /* FIXME: len should less than or equal 0xffffffff */
-int sock_send(sock_file *file, void *msg, size_t len, int flag)
+int sock_send(sock *file, void *msg, size_t len, int flag)
 {
 	if (!file) {
 		err_dbg(0, err_fmt("arg check err"));
@@ -386,29 +462,34 @@ int sock_send(sock_file *file, void *msg, size_t len, int flag)
 		return -1;
 	}
 
+	pthread_mutex_lock(&file->mutex);
+	int ret = 0;
+	if (file->offline) {
+		err_dbg(0, err_fmt("offline now"));
+		goto unlock;
+	}
+
 	if (!check_sock_buflen(file)) {
 		err_dbg(0, err_fmt("should check your sock_buf_len"));
 		errno = EINVAL;
-		return -1;
+		goto unlock;
 	}
-
 
 	int msg_per_len = file->sock_buf_len-sizeof(pkg_ctl);
 	int snd_cnt = len / msg_per_len + 1;
-	sock_pkg *pack = (sock_pkg *)malloc(file->sock_buf_len);
+	sock_pkg *pack = (sock_pkg *)malloc_s(file->sock_buf_len);
 	if (!pack) {
 		err_dbg(0, err_fmt("malloc err"));
 		errno = ENOMEM;
-		return -1;
+		goto unlock;
 	}
-	memset(pack, 0, file->sock_buf_len);
 	char *tmp_pos = (char *)pack;
 
 	struct timeval tv;
 	int err = gettimeofday(&tv, NULL);
 	if (err == -1) {
 		err_dbg(1, err_fmt("gettimeofday err"));
-		goto out_free;
+		goto free_ret;
 	}
 	sprintf(tmp_pos+strlen(tmp_pos), "%016lx", tv.tv_sec+tv.tv_usec);
 	sprintf(tmp_pos+strlen(tmp_pos), "%08x", (unsigned int)len);
@@ -418,20 +499,27 @@ int sock_send(sock_file *file, void *msg, size_t len, int flag)
 		memset(tmp_pos+24, 0, file->sock_buf_len-24);
 		sprintf(tmp_pos+24, "%08x", i);
 		memcpy(tmp_pos+32,src_pos,min_32(strlen(src_pos),msg_per_len));
-		err = send(file->sockfd, pack, file->sock_buf_len, flag);
-		if ((err == -1) || (err == 0)) {
+resend:
+		err = send(file->sockfd, pack, file->sock_buf_len, 0);
+		if (err == -1) {
 			err_dbg(1, err_fmt("send err"));
-			goto out_free;
+			if ((errno == ECONNRESET))
+				file->offline = 1;
+			else if (errno == EINTR)
+				goto resend;
+			ret = 0;
+			goto free_ret;
 		}
+		ret += err;
 	}
+free_ret:
 	free(pack);
-	return 0;
-out_free:
-	free(pack);
-	return -1;
+unlock:
+	pthread_mutex_unlock(&file->mutex);
+	return ret ? ret : -1;
 }
 
-int sock_recv(sock_file *file, void *msg, size_t len, int flag)
+int sock_recv(sock *file, void *msg, size_t len, int flag)
 {
 	if (!file) {
 		err_dbg(0, err_fmt("arg check err"));
@@ -439,10 +527,17 @@ int sock_recv(sock_file *file, void *msg, size_t len, int flag)
 		return -1;
 	}
 
+	int ret = 0;
+	pthread_mutex_lock(&file->mutex);
+	if (file->offline) {
+		err_dbg(0, err_fmt("offline now"));
+		goto unlock;
+	}
+
 	if (!check_sock_buflen(file)) {
 		err_dbg(0, err_fmt("should check your sock_buf_len"));
 		errno = EINVAL;
-		return -1;
+		goto unlock;
 	}
 
 	/*
@@ -451,13 +546,12 @@ int sock_recv(sock_file *file, void *msg, size_t len, int flag)
 	 * send already should be dropped
 	 */
 	int msg_per_len = file->sock_buf_len-sizeof(pkg_ctl);
-	sock_pkg *pack = (sock_pkg *)malloc(file->sock_buf_len);
+	sock_pkg *pack = (sock_pkg *)malloc_s(file->sock_buf_len);
 	if (!pack) {
 		err_dbg(0, err_fmt("malloc err"));
 		errno = ENOMEM;
-		return -1;
+		goto unlock;
 	}
-	memset(pack, 0, file->sock_buf_len);
 	char *tmp_pos = (char *)pack;
 
 	int err;
@@ -471,21 +565,28 @@ int sock_recv(sock_file *file, void *msg, size_t len, int flag)
 			   MSG_PEEK);
 		if ((err == -1) || (err == 0)) {
 			err_dbg(1, err_fmt("recv MSG_PEEK err"));
-			goto out_free;
+			goto free_ret;
 		}
 		if (tag[0] == '\0')
 			memcpy(tag, tmp_pos, 16);
 		else {
 			if (strncmp(tag, tmp_pos, 16))
-				goto out_free;
+				goto free_ret;
 		}
 
 		/* XXX: we must use MSG_WAITALL to recv `lenth` bytes */
+rerecv:
 		err = recv(file->sockfd,tmp_pos,file->sock_buf_len,MSG_WAITALL);
-		if ((err == -1) || (err == 0)) {
+		if (err == -1) {
 			err_dbg(1, err_fmt("recv err"));
-			goto out_free;
+			if (errno == EINTR)
+				goto rerecv;
+			goto free_ret;
+		} else if (err == 0) {
+			file->offline = 1;
+			goto free_ret;
 		}
+		ret += err;
 		if (!msg_size) {
 			msg_size = hex2int(pack->control.size);
 			recv_cnt = msg_size / msg_per_len + 1;
@@ -493,7 +594,7 @@ int sock_recv(sock_file *file, void *msg, size_t len, int flag)
 		if (msg_size > len) {
 			err_dbg(0, err_fmt("msg space not enough"));
 			errno = EINVAL;
-			goto out_free;
+			goto free_ret;
 		}
 		memcpy((char *)msg+msg_per_len*hex2int(pack->control.index),
 		       tmp_pos+sizeof(pkg_ctl),
@@ -502,9 +603,9 @@ int sock_recv(sock_file *file, void *msg, size_t len, int flag)
 		if (!recv_cnt)
 			break;
 	}
+free_ret:
 	free(pack);
-	return 0;
-out_free:
-	free(pack);
-	return -1;
+unlock:
+	pthread_mutex_unlock(&file->mutex);
+	return ret ? ret : -1;
 }

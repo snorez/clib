@@ -2,6 +2,7 @@ TMP = /tmp
 LIB = ./lib
 INC = ./include
 ARCH = $(shell getconf LONG_BIT)
+#ARCH = 32
 CWD = $(shell pwd)
 vpath %.c ./src/
 vpath %.c ./src/file-format/
