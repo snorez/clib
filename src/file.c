@@ -23,7 +23,7 @@ int path_exists(const char *path)
 		return 1;
 }
 
-text_file *text_file_open(const char *path, int flag, ...)
+text *text_open(const char *path, int flag, ...)
 {
 	if (!path) {
 		err_dbg(0, err_fmt("arg check err"));
@@ -74,7 +74,7 @@ text_file *text_file_open(const char *path, int flag, ...)
 		}
 	}
 
-	text_file *ret = (text_file *)malloc_s(sizeof(text_file));
+	text *ret = (text *)malloc_s(sizeof(text));
 	if (!ret) {
 		err_dbg(0, err_fmt("malloc err"));
 		errno = ENOMEM;
@@ -122,7 +122,7 @@ close_ret:
 	return NULL;
 }
 
-int text_file_close(text_file *file)
+int text_close(text *file)
 {
 	if (!file) {
 		err_dbg(0, err_fmt("arg check err"));
@@ -157,7 +157,7 @@ size_t get_file_max_size(void)
 	return file_max_size;
 }
 
-int text_file_readall(text_file *file)
+int text_readall(text *file)
 {
 	if (!file) {
 		err_dbg(0, err_fmt("arg check err"));
@@ -216,7 +216,7 @@ unlock:
 	return err;
 }
 
-int text_file_readlines(text_file *file)
+int text_readlines(text *file)
 {
 	if (!file) {
 		err_dbg(0, err_fmt("arg check err"));
@@ -232,9 +232,9 @@ int text_file_readlines(text_file *file)
 	}
 
 	int err;
-	err = text_file_readall(file);
+	err = text_readall(file);
 	if (err == -1) {
-		err_dbg(1, err_fmt("text_file_readall err"));
+		err_dbg(1, err_fmt("text_readall err"));
 		return -1;
 	}
 
@@ -277,7 +277,7 @@ uint32_t get_io_speed(void)
  * -1: err
  * >0: lines that have read
  */
-int text_file_readline(text_file *file, uint32_t lines)
+int text_readline(text *file, uint32_t lines)
 {
 	if (!file || !lines) {
 		err_dbg(0, err_fmt("arg check err"));
@@ -379,7 +379,7 @@ unlock:
  * usage: before call this function, make sure the position of the file
  * is where you want it be
  */
-int text_file_writelines(text_file *file)
+int text_writelines(text *file)
 {
 	if (!file) {
 		err_dbg(0, err_fmt("arg check err"));

@@ -139,16 +139,16 @@ elf_file *do_elf_file(char *path)
 	}
 	memset(ef, 0, sizeof(elf_file));
 
-	ef->file = text_file_open(path, O_RDONLY);
+	ef->file = text_open(path, O_RDONLY);
 	if (!ef->file) {
-		err_dbg(1, err_fmt("text_file_open err"));
+		err_dbg(1, err_fmt("text_open err"));
 		err = -1;
 		goto free_ret;
 	}
 
-	err = text_file_readall(ef->file);
+	err = text_readall(ef->file);
 	if (err == -1) {
-		err_dbg(1, err_fmt("text_file_readall err"));
+		err_dbg(1, err_fmt("text_readall err"));
 		err = -1;
 		goto free_ret2;
 	}
@@ -180,7 +180,7 @@ elf_file *do_elf_file(char *path)
 	else
 		goto ret;
 free_ret2:
-	text_file_close(ef->file);
+	text_close(ef->file);
 free_ret:
 	free(ef);
 ret:
@@ -191,7 +191,7 @@ int done_elf_file(elf_file *file)
 {
 	if (!file)
 		return -1;
-	text_file_close(file->file);
+	text_close(file->file);
 	free(file->elf_hdr);
 	free(file->elf_phdr);
 	free(file->elf_shdr);

@@ -9,11 +9,11 @@
 #include "./list.h"
 #include "./file.h"
 
-typedef text_file log_file;
+typedef text log;
 typedef enum _log_level {debug, info, warn, error, fatal} log_level;
 
-extern log_file *log_open(char *path);
-extern int log_write(log_file *file, log_level level, char *fmt, ...);
-extern int log_close(log_file *file);
+extern log *log_open(char *path);
+extern int log_write(log *file, log_level level, char *fmt, ...);
+extern int log_close(log *file);
 
 #endif

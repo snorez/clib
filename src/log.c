@@ -1,11 +1,11 @@
 #include "../include/log.h"
 
-log_file *log_open(char *path)
+log *log_open(char *path)
 {
-	return text_file_open(path, O_WRONLY|O_APPEND|O_CREAT, S_IRUSR|S_IWUSR);
+	return text_open(path, O_WRONLY|O_APPEND|O_CREAT, S_IRUSR|S_IWUSR);
 }
 
-int log_write(log_file *file, log_level level, char *fmt, ...)
+int log_write(log *file, log_level level, char *fmt, ...)
 {
 	if (!file) {
 		err_dbg(0, err_fmt("arg check err"));
@@ -49,7 +49,7 @@ int log_write(log_file *file, log_level level, char *fmt, ...)
 	return write(file->file.fd, buf, strlen(buf));
 }
 
-int log_close(log_file *file)
+int log_close(log *file)
 {
-	return text_file_close(file);
+	return text_close(file);
 }

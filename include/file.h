@@ -45,21 +45,21 @@ struct file {
 };
 
 typedef str_struct line_struct;
-typedef struct _text_file {
+typedef struct _text {
 	struct file file;
 	struct file_ops *ops;
-} text_file;
+} text;
 
 extern int path_exists(const char *path);
-extern text_file *text_file_open(const char *path, int flag, ...);
-extern int text_file_close(text_file *);
+extern text *text_open(const char *path, int flag, ...);
+extern int text_close(text *);
 extern void set_file_max_size(size_t file_max_size);
 extern size_t get_file_max_size(void);
-extern int text_file_readall(text_file *);
-extern int text_file_readlines(text_file *);
+extern int text_readall(text *);
+extern int text_readlines(text *);
 extern void set_io_speed(uint32_t val);
 extern uint32_t get_io_speed(void);
-extern int text_file_readline(text_file *, uint32_t lines);
-extern int text_file_writelines(text_file *);
+extern int text_readline(text *, uint32_t lines);
+extern int text_writelines(text *);
 
 #endif
