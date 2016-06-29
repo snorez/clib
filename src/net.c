@@ -47,7 +47,7 @@ int sock_close(sock *file)
 	int ret = close(file->sockfd);
 	pthread_mutex_unlock(&file->mutex);
 	pthread_mutex_destroy(&file->mutex);
-	free_s((void **)&file);
+	free(file);
 	return ret;
 }
 
@@ -184,7 +184,7 @@ void free_cli_info(cli_info *client)
 		err_dbg(0, err_fmt("arg check err"));
 		return;
 	}
-	free_s((void **)&client);
+	free(client);
 }
 
 sock *sock_accept(sock *file, cli_info *client)
