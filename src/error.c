@@ -14,7 +14,15 @@ static void err_common(int has_errno, int error, const char *fmt,
 	if (has_errno)
 		snprintf(buf+strlen(buf), MAXLINE-strlen(buf), ": %s",
 			 strerror(errno));
-	strncat(buf, "\n", MAXLINE);
+	size_t len = strlen(buf);
+	if (len >= MAXLINE-1) {
+		buf[MAXLINE-5] = '.';
+		buf[MAXLINE-4] = '.';
+		buf[MAXLINE-3] = '.';
+		buf[MAXLINE-2] = '\n';
+		buf[MAXLINE-1] = '\0';
+	} else
+		buf[len] = '\n';
 	fflush(stdout);
 	fputs(buf, stderr);
 	fflush(NULL);
