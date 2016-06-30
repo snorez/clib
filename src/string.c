@@ -482,11 +482,14 @@ int get_next_word(char **pos, uint32_t *len)
 	char *res = *pos;
 	int in_word = 0;
 	int done = 0;
+	*len = 0;
 
 	while (!done) {
 		int c = *res;
-		if (c == '\0')
-			return -1;
+		if (c == '\0') {
+			done = 1;
+			break;
+		}
 
 		if (in_word) {
 			*pos = res;
