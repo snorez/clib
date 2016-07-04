@@ -521,6 +521,12 @@ unlock:
 	return ret ? ret : -1;
 }
 
+/*
+ * XXX: here we use blocked `recv` to get msg, there could be a issue that
+ * `recv` could be interrupt by any signal, maybe here, the way dealing with EINTR
+ * is not right(TODO). so in some projects, I use sigprocmask to block the signal
+ * that may interrupt `recv`
+ */
 int sock_recv(sock *file, void *msg, size_t len, int flag)
 {
 	if (!file) {
