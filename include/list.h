@@ -34,9 +34,9 @@ typedef struct _list list;
 
 typedef struct _list_comm {
 	list list_head;
-	char extra[0];
+	void *st;
 } list_comm;
-typedef void list_comm_type_clean_func(void *);
+typedef void list_comm_clean_func(void *);
 
 #include "./error.h"
 #include "./string.h"
@@ -53,8 +53,8 @@ extern int list_is_empty(list *head);
 extern void list_comm_init(list_comm *head);
 extern int list_comm_is_empty(list_comm *head);
 extern void list_comm_append(list_comm *head, list_comm *new);
-extern int list_comm_type_new_append(list_comm *head,void *new,size_t len);
-extern void list_comm_type_make_empty(list_comm *head,
-				      list_comm_type_clean_func *callback);
+extern int list_comm_new_append(list_comm *head, void *new, size_t size);
+extern void list_comm_make_empty(list_comm *head,
+				 list_comm_clean_func *callback);
 
 #endif

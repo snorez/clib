@@ -14,11 +14,11 @@ CC_OPT_dynamic = $(CC) -O2 -rdynamic -DHAS_CAPSTONE
 CC_OPT_low = $(CC) -O2 -rdynamic
 
 obj_static = error.o file.o list.o string.o net.o crypt.o elf.o \
-	 utils.o signal.o dbg.o disas.o log.o plugin.o
+	 utils.o signal.o dbg.o disas.o log.o plugin.o class.o
 obj_dynamic = error.0 file.0 list.0 string.0 net.0 crypt.0 elf.0 \
-	 utils.0 signal.0 dbg.0 disas.0 log.0 plugin.0
+	 utils.0 signal.0 dbg.0 disas.0 log.0 plugin.0 class.0
 obj_dynamic_low = error.1 file.1 list.1 string.1 net.1 crypt.1 elf.1 \
-	 utils.1 signal.1 dbg.1 disas.1 log.1 memcpy.1 plugin.1
+	 utils.1 signal.1 dbg.1 disas.1 log.1 memcpy.1 plugin.1 class.1
 
 all: static shared shared_low_ver
 

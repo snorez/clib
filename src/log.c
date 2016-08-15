@@ -46,7 +46,7 @@ int log_write(log *file, log_level level, char *fmt, ...)
 	vsnprintf(buf+strlen(buf), 4096-strlen(buf), fmt, ap);
 	va_end(ap);
 	*(buf+strlen(buf)) = '\n';
-	return write(file->file.fd, buf, strlen(buf));
+	return write(file->fd, buf, strlen(buf));
 }
 
 int log_close(log *file)

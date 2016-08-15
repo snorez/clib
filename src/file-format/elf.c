@@ -153,9 +153,9 @@ elf_file *do_elf_file(char *path)
 		goto free_ret2;
 	}
 
-	list_comm *rhead = (list_comm *)ef->file->file.rdata;
+	list_comm *rhead = (list_comm *)ef->file->rdata;
 	list_comm *tmp = (list_comm *)(rhead->list_head.next);
-	line_struct *tmp_buf = (line_struct *)tmp->extra;
+	line_struct *tmp_buf = (line_struct *)tmp->st;
 	char *buf = tmp_buf->str;
 	if (!buf) {
 		err_dbg(0, err_fmt("file data err"));

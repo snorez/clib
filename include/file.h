@@ -19,20 +19,6 @@
 #include "./list.h"
 #include "./utils.h"
 
-struct file;
-typedef struct _base_io {
-	int	(*open)(struct file *file, void *path, int flag, ...);
-	ssize_t	(*in)(struct file *file, void *buf, size_t len, int flag);
-	ssize_t	(*out)(struct file *file, void *buf, size_t len, int flag);
-	int	(*close)(struct file *file);
-	loff_t	(*llseek)(struct file *file, loff_t offs, int where);
-	long	(*ioctl)(struct file *file, unsigned long request, ...);
-} base_io;
-
-struct file_ops {
-	base_io bio;
-};
-
 struct file {
 	struct stat stat;
 	char *path;		/* file path or addr if has */
@@ -45,10 +31,20 @@ struct file {
 };
 
 typedef str_struct line_struct;
-typedef struct _text {
-	struct file file;
-	struct file_ops *ops;
-} text;
+typedef struct file text;
+typedef struct _text_ops {
+	int	(*open)(text *file, void *path, int flag, ...);
+	ssize_t (*read)(text *file, void *buf, size_t len, int flag);
+	ssize_t (*write)(text *file, void *buf, size_t len, int flag);
+	int	(*close)(text *file);
+	off_t	(*lseek)(text *file, off_t offs, int where);
+	//long	(*ioctl)(text *file, unsigned long request, ...);
+
+	ssize_t (*readall)(text *file);
+	ssize_t (*readlines)(text *file);
+	ssize_t (*readline)(text *file);
+	ssize_t (*writelines)(text *file);
+} text_ops;
 
 extern int path_exists(const char *path);
 extern text *text_open(const char *path, int flag, ...);
@@ -61,5 +57,8 @@ extern void set_io_speed(uint32_t val);
 extern uint32_t get_io_speed(void);
 extern int text_readline(text *, uint32_t lines);
 extern int text_writelines(text *);
+extern ssize_t text_read(text *file, void *buf, size_t count);
+extern ssize_t text_write(text *file, void *buf, size_t count);
+extern off_t text_lseek(text *file, off_t offs, int where);
 
 #endif

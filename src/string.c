@@ -612,7 +612,7 @@ int list_comm_str_struct_new(list_comm *head, char *str, uint32_t len)
 	}
 	memset(new, 0, sizeof(list_comm)+sizeof(str_struct));
 
-	str_struct *data = (str_struct *)new->extra;
+	str_struct *data = (str_struct *)new->st;
 	data->str = (char *)malloc(len+1);
 	if (!data->str) {
 		err_dbg(0, err_fmt("malloc err"));
@@ -632,7 +632,7 @@ void list_comm_str_struct_make_empty(list_comm *head)
 {
 	list_comm *prev = head, *next = head;
 	list_for_each_entry(next, &head->list_head, list_head) {
-		str_struct *tmp = (str_struct *)next->extra;
+		str_struct *tmp = (str_struct *)next->st;
 		free(tmp->str);
 		prev = (list_comm *)next->list_head.prev;
 		list_del_entry(&next->list_head);
@@ -644,8 +644,8 @@ void list_comm_str_struct_make_empty(list_comm *head)
 
 int list_comm_str_struct_comb_free(list_comm *b, list_comm *e)
 {
-	str_struct *b_data = (str_struct *)b->extra;
-	str_struct *e_data = (str_struct *)e->extra;
+	str_struct *b_data = (str_struct *)b->st;
+	str_struct *e_data = (str_struct *)e->st;
 	char *tmp = add_str_fau(b_data->str, e_data->str);
 	if (!tmp)
 		return -1;
@@ -662,7 +662,7 @@ void list_comm_str_struct_print(list_comm *head)
 {
 	list_comm *tmp;
 	list_for_each_entry(tmp, &head->list_head, list_head) {
-		str_struct *tmp_str = (str_struct *)tmp->extra;
+		str_struct *tmp_str = (str_struct *)tmp->st;
 		printf("%s\n", tmp_str->str);
 	}
 }
