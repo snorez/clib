@@ -28,6 +28,36 @@ free_ret:
 	return NULL;
 }
 
+int sock_lock(sock *file)
+{
+	if (!file) {
+		err_dbg(0, err_fmt("arg check err"));
+		errno = EINVAL;
+		return -1;
+	}
+	return pthread_mutex_lock(&file->mutex);
+}
+
+int sock_trylock(sock *file)
+{
+	if (!file) {
+		err_dbg(0, err_fmt("arg check err"));
+		errno = EINVAL;
+		return -1;
+	}
+	return pthread_mutex_trylock(&file->mutex);
+}
+
+int sock_unlock(sock *file)
+{
+	if (!file) {
+		err_dbg(0, err_fmt("arg check err"));
+		errno = EINVAL;
+		return -1;
+	}
+	return pthread_mutex_unlock(&file->mutex);
+}
+
 int sock_close(sock *file)
 {
 	if (!file) {
@@ -36,19 +66,57 @@ int sock_close(sock *file)
 		return -1;
 	}
 
-	pthread_mutex_lock(&file->mutex);
-	if (file->ailist)
+	if (file->ailist) {
+		unset_ailist_nr(file);
 		s_putaddrinfo(file);
-	if (file->host)
-		free_s((void **)&file->host);
-	if (file->port)
-		free_s((void **)&file->port);
+	}
+	if (file->this_ailist) {
+		set_ailist_nr(file);
+		s_putaddrinfo(file);
+	}
 
 	int ret = close(file->sockfd);
-	pthread_mutex_unlock(&file->mutex);
+	sock_unlock(file);
 	pthread_mutex_destroy(&file->mutex);
+	memset(file, 0, sizeof(*file));
 	free(file);
 	return ret;
+}
+
+int set_ailist_nr(sock *file)
+{
+	if (!file) {
+		err_dbg(0, err_fmt("arg check err"));
+		errno = EINVAL;
+		return -1;
+	}
+
+	file->which_ailist = 1;
+	return 0;
+}
+
+int get_ailist_nr(sock *file)
+{
+	if (!file) {
+		err_dbg(0, err_fmt("arg check err"));
+		errno = EINVAL;
+		return -1;
+	}
+
+	int ret = file->which_ailist;
+	return ret;
+}
+
+int unset_ailist_nr(sock *file)
+{
+	if (!file) {
+		err_dbg(0, err_fmt("arg check err"));
+		errno = EINVAL;
+		return -1;
+	}
+
+	file->which_ailist = 0;
+	return 0;
 }
 
 int s_getaddrinfo(sock *file, char *host, char *port, int flag)
@@ -59,7 +127,16 @@ int s_getaddrinfo(sock *file, char *host, char *port, int flag)
 		return -1;
 	}
 
-	pthread_mutex_lock(&file->mutex);
+	int which = get_ailist_nr(file);	/* should never be -1 */
+	if (!which && file->ailist) {
+		err_dbg(0, err_fmt("NOTICE: change target addrinfo"));
+		s_putaddrinfo(file);
+	}
+	if (which && file->this_ailist) {
+		err_dbg(0, err_fmt("NOTICE: change this addrinfo"));
+		s_putaddrinfo(file);
+	}
+
 	struct addrinfo hint;
 	memset(&hint, 0, sizeof(struct addrinfo));
 	hint.ai_family = file->family;
@@ -67,54 +144,73 @@ int s_getaddrinfo(sock *file, char *host, char *port, int flag)
 	hint.ai_protocol = file->protocol;
 	hint.ai_flags = flag;
 
-	int err = getaddrinfo(host, port, &hint, &file->ailist);
+	int err;
+	if (!which)
+		err = getaddrinfo(host, port, &hint, &file->ailist);
+	else
+		err = getaddrinfo(host, port, &hint, &file->this_ailist);
 	if (err != 0) {
-		err_dbg(0,err_fmt("getaddrinfo err: %s"),gai_strerror(err));
+		err_dbg(0, err_fmt("getaddrinfo err: %s"), gai_strerror(err));
 		err = -1;
 		goto unlock;
 	}
 
-	file->host = (char *)malloc_s(strlen(host)+1);
-	if (!file->host) {
+	char *host_tmp = (char *)malloc_s(strlen(host)+1);
+	if (!host_tmp) {
 		err = -1;
 		goto putaddrinfo;
 	}
-	memcpy(file->host, host, strlen(host));
+	memcpy(host_tmp, host, strlen(host));
 
-	file->port = (char *)malloc_s(strlen(port)+1);
-	if (!file->port) {
+	char *port_tmp = (char *)malloc_s(strlen(port)+1);
+	if (!port_tmp) {
 		err = -1;
 		goto free;
+	}
+	memcpy(port_tmp, port, strlen(port));
+
+	if (!which) {
+		file->host = host_tmp;
+		file->port = port_tmp;
+	} else {
+		file->this_host = host_tmp;
+		file->this_port = port_tmp;
 	}
 	err = 0;
 	goto unlock;
 
 free:
-	free(file->host);
+	free(host_tmp);
 putaddrinfo:
 	s_putaddrinfo(file);
 unlock:
-	pthread_mutex_unlock(&file->mutex);
 	return err;
 }
 
 void s_putaddrinfo(sock *file)
 {
-	if (!file) {
+	if (!file || !file->ailist) {
 		err_dbg(0, err_fmt("arg check err"));
 		return;
 	}
 
-	int err = pthread_mutex_trylock(&file->mutex);
-	freeaddrinfo(file->ailist);
-	file->ailist = NULL;
-	if (!err)
-		pthread_mutex_unlock(&file->mutex);
+	int which = get_ailist_nr(file);
+	if (!which) {
+		freeaddrinfo(file->ailist);
+		file->ailist = NULL;
+		free_s((void **)&file->host);
+		free_s((void **)&file->port);
+	} else {
+		freeaddrinfo(file->this_ailist);
+		file->this_ailist = NULL;
+		free_s((void **)&file->this_host);
+		free_s((void **)&file->this_port);
+	}
 }
 
 int sock_bind(sock *file)
 {
-	if (!file) {
+	if (!file || !file->ailist) {
 		err_dbg(0, err_fmt("arg check err"));
 		errno = EINVAL;
 		return -1;
@@ -125,7 +221,7 @@ int sock_bind(sock *file)
 
 int sock_connect(sock *file)
 {
-	if (!file) {
+	if (!file || !file->ailist) {
 		err_dbg(0, err_fmt("arg check err"));
 		errno = EINVAL;
 		return -1;
@@ -357,8 +453,6 @@ int xchg_sock_buf_len0(sock *file)
 		return -1;
 	}
 
-	pthread_mutex_lock(&file->mutex);
-
 	int err;
 	if (!file->sock_buf_len) {
 		err = set_sock_buf_len(file);
@@ -396,7 +490,6 @@ int xchg_sock_buf_len0(sock *file)
 	err = 0;
 unlock:
 	file->offline = !!err;
-	pthread_mutex_unlock(&file->mutex);
 	return err;
 }
 
@@ -408,7 +501,6 @@ int xchg_sock_buf_len1(sock *file)
 		return -1;
 	}
 
-	pthread_mutex_lock(&file->mutex);
 	int err;
 	if (!file->sock_buf_len) {
 		err = set_sock_buf_len(file);
@@ -446,7 +538,6 @@ int xchg_sock_buf_len1(sock *file)
 	err = 0;
 unlock:
 	file->offline = !!err;
-	pthread_mutex_unlock(&file->mutex);
 	return err;
 }
 
@@ -464,7 +555,6 @@ int sock_send(sock *file, void *msg, size_t len, int flag)
 		return -1;
 	}
 
-	pthread_mutex_lock(&file->mutex);
 	int ret = 0;
 	if (file->offline) {
 		err_dbg(0, err_fmt("offline now"));
@@ -517,7 +607,6 @@ resend:
 free_ret:
 	free(pack);
 unlock:
-	pthread_mutex_unlock(&file->mutex);
 	return ret ? ret : -1;
 }
 
@@ -536,7 +625,6 @@ int sock_recv(sock *file, void *msg, size_t len, int flag)
 	}
 
 	int ret = 0;
-	pthread_mutex_lock(&file->mutex);
 	if (file->offline) {
 		err_dbg(0, err_fmt("offline now"));
 		goto unlock;
@@ -614,6 +702,5 @@ rerecv:
 free_ret:
 	free(pack);
 unlock:
-	pthread_mutex_unlock(&file->mutex);
 	return ret ? ret : -1;
 }
