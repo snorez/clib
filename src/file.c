@@ -112,7 +112,7 @@ text *text_open(const char *path, int flag, ...)
 	ret->fd = fd;
 	memcpy(&ret->stat, &tmp_stat, sizeof(tmp_stat));
 	ret->openflag = flag;
-	pthread_rwlock_init(&ret->rwlock, NULL);
+	pthread_mutex_init(&ret->mutex, NULL);
 	//ret->rwlock = PTHREAD_RWLOCK_INITIALIZER;
 	return ret;
 free3_ret:
@@ -126,6 +126,36 @@ close_ret:
 	return NULL;
 }
 
+int text_lock(text *file)
+{
+	if (!file) {
+		err_dbg(0, err_fmt("arg check err"));
+		errno = EINVAL;
+		return -1;
+	}
+	return pthread_mutex_lock(&file->mutex);
+}
+
+int text_trylock(text *file)
+{
+	if (!file) {
+		err_dbg(0, err_fmt("arg check err"));
+		errno = EINVAL;
+		return -1;
+	}
+	return pthread_mutex_trylock(&file->mutex);
+}
+
+int text_unlock(text *file)
+{
+	if (!file) {
+		err_dbg(0, err_fmt("arg check err"));
+		errno = EINVAL;
+		return -1;
+	}
+	return pthread_mutex_unlock(&file->mutex);
+}
+
 int text_close(text *file)
 {
 	if (!file) {
@@ -135,7 +165,8 @@ int text_close(text *file)
 	}
 
 	int ret = close(file->fd);
-	pthread_rwlock_destroy(&file->rwlock);
+	text_unlock(file);
+	pthread_mutex_destroy(&file->mutex);
 	if (file->path)
 		free_s((void **)&file->path);
 	if (file->rdata) {
@@ -170,11 +201,6 @@ int text_readall(text *file)
 	}
 
 	int err;
-	err = pthread_rwlock_wrlock(&file->rwlock);
-	if (err) {
-		err_dbg(0, err_fmt("pthread_rwlock_wrlock err"));
-		return -1;
-	}
 
 	size_t len = (size_t)file->stat.st_size + 1;
 	if ((len > file_max_size) || (len == 0)) {
@@ -216,7 +242,6 @@ int text_readall(text *file)
 free_ret:
 	free(buf);
 unlock:
-	pthread_rwlock_unlock(&file->rwlock);
 	return err;
 }
 
@@ -229,10 +254,8 @@ int text_readlines(text *file)
 	}
 
 	if (!list_comm_is_empty(file->rdata)) {
-		pthread_rwlock_wrlock(&file->rwlock);
 		list_comm_str_struct_make_empty(file->rdata);
 		list_comm_init(file->rdata);
-		pthread_rwlock_unlock(&file->rwlock);
 	}
 
 	int err;
@@ -242,7 +265,6 @@ int text_readlines(text *file)
 		return -1;
 	}
 
-	err = pthread_rwlock_wrlock(&file->rwlock);
 	list_comm *rhead = (list_comm *)file->rdata;
 	list_comm *tmp = (list_comm *)rhead->list_head.next;
 	line_struct *tmp_data = (line_struct *)tmp->st;
@@ -251,7 +273,6 @@ int text_readlines(text *file)
 		list_comm_init(file->rdata);
 	free(tmp_data->str);
 	free(tmp);
-	pthread_rwlock_unlock(&file->rwlock);
 	return err;
 }
 
@@ -290,10 +311,8 @@ int text_readline(text *file, uint32_t lines)
 	}
 
 	if (!list_comm_is_empty(file->rdata)) {
-		pthread_rwlock_wrlock(&file->rwlock);
 		list_comm_str_struct_make_empty(file->rdata);
 		list_comm_init(file->rdata);
-		pthread_rwlock_unlock(&file->rwlock);
 	}
 
 	size_t buf_len = io_speed;
@@ -302,7 +321,6 @@ int text_readline(text *file, uint32_t lines)
 	int err, done = 0, last_read = 0;
 	uint32_t cnt = 0;
 
-	pthread_rwlock_wrlock(&file->rwlock);
 	off_t orig_offs = lseek(file->fd, 0, SEEK_CUR);
 	if (orig_offs == -1) {
 		err_dbg(1, err_fmt("lseek err"));
@@ -375,7 +393,6 @@ new_alloc:
 free_ret:
 	free_s((void **)&buf);
 unlock:
-	pthread_rwlock_unlock(&file->rwlock);
 	return err;
 }
 
@@ -395,7 +412,6 @@ int text_writelines(text *file)
 	list_comm *whead = (list_comm *)file->wdata;
 	int err = 0;
 
-	pthread_rwlock_wrlock(&file->rwlock);
 	list_for_each_entry(tmp_node, &whead->list_head, list_head) {
 		line_struct *tmp = (line_struct *)tmp_node->st;
 		err = write(file->fd, tmp->str, tmp->str_len);
@@ -411,7 +427,6 @@ int text_writelines(text *file)
 		}
 	}
 unlock:
-	pthread_rwlock_unlock(&file->rwlock);
 	return err;
 }
 
