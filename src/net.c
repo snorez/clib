@@ -20,42 +20,11 @@ sock *sock_open(int family, int socktype, int protocol)
 	}
 
 	ret->offline = 1;
-	pthread_mutex_init(&ret->mutex, NULL);
 	return ret;
 
 free_ret:
 	free(ret);
 	return NULL;
-}
-
-int sock_lock(sock *file)
-{
-	if (!file) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
-		return -1;
-	}
-	return pthread_mutex_lock(&file->mutex);
-}
-
-int sock_trylock(sock *file)
-{
-	if (!file) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
-		return -1;
-	}
-	return pthread_mutex_trylock(&file->mutex);
-}
-
-int sock_unlock(sock *file)
-{
-	if (!file) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
-		return -1;
-	}
-	return pthread_mutex_unlock(&file->mutex);
 }
 
 int sock_close(sock *file)
@@ -76,8 +45,6 @@ int sock_close(sock *file)
 	}
 
 	int ret = close(file->sockfd);
-	sock_unlock(file);
-	pthread_mutex_destroy(&file->mutex);
 	memset(file, 0, sizeof(*file));
 	free(file);
 	return ret;
@@ -309,7 +276,6 @@ sock *sock_accept(sock *file, cli_info *client)
 	}
 
 	ret->sockfd = fd;
-	pthread_mutex_init(&ret->mutex, NULL);
 	return ret;
 
 close_ret:

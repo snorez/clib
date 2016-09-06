@@ -8,7 +8,6 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netdb.h>
-#include <pthread.h>
 #include "./error.h"
 #include "./string.h"
 
@@ -28,8 +27,6 @@ typedef struct _sock {
 	struct addrinfo *this_ailist;	/* this end (ip, port) */
 	char *this_host;
 	char *this_port;
-
-	pthread_mutex_t mutex;		/* user should lock/unlock themselves */
 } sock;
 
 typedef struct _cli_info {
@@ -159,9 +156,6 @@ typedef struct __attribute__((packed)) _pseudo_header {
 } pseudo_header;
 
 extern sock *sock_open(int family, int type, int protocol);
-extern int sock_lock(sock *file);
-extern int sock_trylock(sock *file);
-extern int sock_unlock(sock *file);
 extern int sock_close(sock *);
 extern int set_ailist_nr(sock *file);
 extern int get_ailist_nr(sock *file);

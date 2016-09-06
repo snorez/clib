@@ -112,8 +112,6 @@ text *text_open(const char *path, int flag, ...)
 	ret->fd = fd;
 	memcpy(&ret->stat, &tmp_stat, sizeof(tmp_stat));
 	ret->openflag = flag;
-	pthread_mutex_init(&ret->mutex, NULL);
-	//ret->rwlock = PTHREAD_RWLOCK_INITIALIZER;
 	return ret;
 free3_ret:
 	free_s((void **)&ret->rdata);
@@ -126,36 +124,6 @@ close_ret:
 	return NULL;
 }
 
-int text_lock(text *file)
-{
-	if (!file) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
-		return -1;
-	}
-	return pthread_mutex_lock(&file->mutex);
-}
-
-int text_trylock(text *file)
-{
-	if (!file) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
-		return -1;
-	}
-	return pthread_mutex_trylock(&file->mutex);
-}
-
-int text_unlock(text *file)
-{
-	if (!file) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
-		return -1;
-	}
-	return pthread_mutex_unlock(&file->mutex);
-}
-
 int text_close(text *file)
 {
 	if (!file) {
@@ -165,8 +133,6 @@ int text_close(text *file)
 	}
 
 	int ret = close(file->fd);
-	text_unlock(file);
-	pthread_mutex_destroy(&file->mutex);
 	if (file->path)
 		free_s((void **)&file->path);
 	if (file->rdata) {

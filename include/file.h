@@ -13,7 +13,6 @@
 #include <sys/file.h>
 #include <dirent.h>
 #include <linux/limits.h>
-#include <pthread.h>
 #include "./error.h"
 #include "./string.h"
 #include "./list.h"
@@ -27,7 +26,6 @@ struct file {
 
 	int fd;
 	int openflag;
-	pthread_mutex_t mutex;
 };
 
 typedef str_struct line_struct;
@@ -48,9 +46,6 @@ typedef struct _text_ops {
 
 extern int path_exists(const char *path);
 extern text *text_open(const char *path, int flag, ...);
-extern int text_lock(text *file);
-extern int text_trylock(text *file);
-extern int text_unlock(text *file);
 extern int text_close(text *);
 extern void set_file_max_size(size_t file_max_size);
 extern size_t get_file_max_size(void);
