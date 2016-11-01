@@ -143,6 +143,8 @@ int text_close(text *file)
 		list_comm_str_struct_make_empty(file->wdata);
 		free_s((void **)&file->wdata);
 	}
+
+	memset(file, 0, sizeof(*file));
 	free(file);
 	return ret;
 }

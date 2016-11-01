@@ -39,7 +39,7 @@ int sock_close(sock *file)
 		unset_ailist_nr(file);
 		s_putaddrinfo(file);
 	}
-	if (file->this_ailist) {
+	if (file->bkp_ailist) {
 		set_ailist_nr(file);
 		s_putaddrinfo(file);
 	}
@@ -70,8 +70,7 @@ int get_ailist_nr(sock *file)
 		return -1;
 	}
 
-	int ret = file->which_ailist;
-	return ret;
+	return file->which_ailist;
 }
 
 int unset_ailist_nr(sock *file)
@@ -99,7 +98,7 @@ int s_getaddrinfo(sock *file, char *host, char *port, int flag)
 		err_dbg(0, err_fmt("NOTICE: change target addrinfo"));
 		s_putaddrinfo(file);
 	}
-	if (which && file->this_ailist) {
+	if (which && file->bkp_ailist) {
 		err_dbg(0, err_fmt("NOTICE: change this addrinfo"));
 		s_putaddrinfo(file);
 	}
@@ -115,7 +114,7 @@ int s_getaddrinfo(sock *file, char *host, char *port, int flag)
 	if (!which)
 		err = getaddrinfo(host, port, &hint, &file->ailist);
 	else
-		err = getaddrinfo(host, port, &hint, &file->this_ailist);
+		err = getaddrinfo(host, port, &hint, &file->bkp_ailist);
 	if (err != 0) {
 		err_dbg(0, err_fmt("getaddrinfo err: %s"), gai_strerror(err));
 		err = -1;
@@ -140,8 +139,8 @@ int s_getaddrinfo(sock *file, char *host, char *port, int flag)
 		file->host = host_tmp;
 		file->port = port_tmp;
 	} else {
-		file->this_host = host_tmp;
-		file->this_port = port_tmp;
+		file->bkp_host = host_tmp;
+		file->bkp_port = port_tmp;
 	}
 	err = 0;
 	goto unlock;
@@ -168,10 +167,10 @@ void s_putaddrinfo(sock *file)
 		free_s((void **)&file->host);
 		free_s((void **)&file->port);
 	} else {
-		freeaddrinfo(file->this_ailist);
-		file->this_ailist = NULL;
-		free_s((void **)&file->this_host);
-		free_s((void **)&file->this_port);
+		freeaddrinfo(file->bkp_ailist);
+		file->bkp_ailist = NULL;
+		free_s((void **)&file->bkp_host);
+		free_s((void **)&file->bkp_port);
 	}
 }
 
@@ -182,8 +181,14 @@ int sock_bind(sock *file)
 		errno = EINVAL;
 		return -1;
 	}
-	return bind(file->sockfd, file->ailist->ai_addr,
-		    file->ailist->ai_addrlen);
+
+	int which = get_ailist_nr(file);
+	if (!which)
+		return bind(file->sockfd, file->ailist->ai_addr,
+			    file->ailist->ai_addrlen);
+	else
+		return bind(file->sockfd, file->bkp_ailist->ai_addr,
+			    file->bkp_ailist->ai_addrlen);
 }
 
 int sock_connect(sock *file)

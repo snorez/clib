@@ -21,12 +21,12 @@ typedef struct _sock {
 	int sock_buf_len;
 
 	int which_ailist;		/* 0: target, 1: this */
-	struct addrinfo *ailist;	/* target tuple (ip, port) */
+	struct addrinfo *ailist;	/* primary tuple (ip, port) */
 	char *host;
 	char *port;
-	struct addrinfo *this_ailist;	/* this end (ip, port) */
-	char *this_host;
-	char *this_port;
+	struct addrinfo *bkp_ailist;	/* secondary tuple(ip, port) */
+	char *bkp_host;
+	char *bkp_port;
 } sock;
 
 typedef struct _cli_info {
