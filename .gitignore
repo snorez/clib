@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.so
+*.mod.c
+*.o
+*.ko
+*.symvers
+*.order
+*.cmd
+.tmp_versions/
+# nothing
+*.fuse*
+*~
+*.a
