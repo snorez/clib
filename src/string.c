@@ -635,7 +635,7 @@ void list_comm_str_struct_make_empty(list_comm *head)
 		str_struct *tmp = (str_struct *)next->st;
 		free(tmp->str);
 		prev = (list_comm *)next->list_head.prev;
-		list_del_entry(&next->list_head);
+		list_del(&next->list_head);
 		free(next);
 		next = prev;
 	}
@@ -649,7 +649,7 @@ int list_comm_str_struct_comb_free(list_comm *b, list_comm *e)
 	char *tmp = add_str_fau(b_data->str, e_data->str);
 	if (!tmp)
 		return -1;
-	list_del_entry(&e->list_head);
+	list_del(&e->list_head);
 	free(b_data->str);
 	free(e_data->str);
 	b_data->str = tmp;

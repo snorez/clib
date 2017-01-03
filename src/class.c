@@ -1,10 +1,10 @@
 #include "../include/class.h"
 
-list class_list_head;
+struct list_head class_list_head;
 
 void class_init(void)
 {
-	list_init(&class_list_head);
+	INIT_LIST_HEAD(&class_list_head);
 
 	/* some internal class init functions */
 }
@@ -74,7 +74,7 @@ void class_del(char *name)
 	if (next == (list_comm *)&class_list_head)
 		return;
 	free(tmp);
-	list_del_entry(&next->list_head);
+	list_del(&next->list_head);
 }
 
 void class_free(class_t *obj)

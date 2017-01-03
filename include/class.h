@@ -17,7 +17,7 @@ typedef struct _class_t {
 	void *ops; /* this is shared with other objects */
 } class_t;
 
-extern list class_list_head;
+extern struct list_head class_list_head;
 
 extern void class_init(void);
 extern class_t *class_new(char *name);
