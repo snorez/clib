@@ -1,5 +1,5 @@
-#ifndef __PE_H__
-#define __PE_H__
+#ifndef PE_H_53FSYVP7
+#define PE_H_53FSYVP7
 
 #include "../include/crypt.h"
 #include "../include/disas.h"
@@ -10,5 +10,4 @@
 #include "../include/file.h"
 #include "../include/net.h"
 
-
-#endif
+#endif /* end of include guard: PE_H_53FSYVP7 */

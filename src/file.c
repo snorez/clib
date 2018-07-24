@@ -1,7 +1,6 @@
 /*
  * please compile with -D_FILE_OFFSET_BITS=64
  */
-#include "../include/class.h"
 #include "../include/file.h"
 
 int path_exists(const char *path)
@@ -24,7 +23,7 @@ int path_exists(const char *path)
 		return 1;
 }
 
-text *text_open(const char *path, int flag, ...)
+regfile *regfile_open(const char *path, int flag, ...)
 {
 	if (!path) {
 		err_dbg(0, err_fmt("arg check err"));
@@ -78,7 +77,7 @@ text *text_open(const char *path, int flag, ...)
 		}
 	}
 
-	text *ret = (text *)malloc_s(sizeof(text));
+	regfile *ret = (regfile *)malloc_s(sizeof(regfile));
 	if (!ret) {
 		err_dbg(0, err_fmt("malloc err"));
 		errno = ENOMEM;
@@ -92,31 +91,14 @@ text *text_open(const char *path, int flag, ...)
 		goto free_ret;
 	}
 
-	ret->rdata = (char *)malloc_s(sizeof(list_comm));
-	if (!ret->rdata) {
-		err_dbg(0, err_fmt("malloc err"));
-		errno = ENOMEM;
-		goto free2_ret;
-	}
-	list_comm_init(ret->rdata);
-
-	ret->wdata = (char *)malloc_s(sizeof(list_comm));
-	if (!ret->wdata) {
-		err_dbg(0, err_fmt("malloc err"));
-		errno = ENOMEM;
-		goto free3_ret;
-	}
-	list_comm_init(ret->wdata);
+	list_comm_init(&ret->rdata);
+	list_comm_init(&ret->wdata);
 
 	memcpy(ret->path, path, strlen(path));
 	ret->fd = fd;
 	memcpy(&ret->stat, &tmp_stat, sizeof(tmp_stat));
 	ret->openflag = flag;
 	return ret;
-free3_ret:
-	free_s((void **)&ret->rdata);
-free2_ret:
-	free_s((void **)&ret->path);
 free_ret:
 	free_s((void **)&ret);
 close_ret:
@@ -124,7 +106,7 @@ close_ret:
 	return NULL;
 }
 
-int text_close(text *file)
+int regfile_close(regfile *file)
 {
 	if (!file) {
 		err_dbg(0, err_fmt("arg check err"));
@@ -135,14 +117,10 @@ int text_close(text *file)
 	int ret = close(file->fd);
 	if (file->path)
 		free_s((void **)&file->path);
-	if (file->rdata) {
-		list_comm_str_struct_make_empty(file->rdata);
-		free_s((void **)&file->rdata);
-	}
-	if (file->wdata) {
-		list_comm_str_struct_make_empty(file->wdata);
-		free_s((void **)&file->wdata);
-	}
+	if (!list_comm_is_empty(&file->rdata))
+		list_comm_str_struct_make_empty(&file->rdata);
+	if (!list_comm_is_empty(&file->wdata))
+		list_comm_str_struct_make_empty(&file->wdata);
 
 	memset(file, 0, sizeof(*file));
 	free(file);
@@ -160,7 +138,7 @@ size_t get_file_max_size(void)
 	return file_max_size;
 }
 
-int text_readall(text *file)
+int regfile_readall(regfile *file)
 {
 	if (!file) {
 		err_dbg(0, err_fmt("arg check err"));
@@ -193,7 +171,7 @@ int text_readall(text *file)
 	}
 
 	list_comm *data = (list_comm *)malloc_s(sizeof(list_comm) +
-						sizeof(line_struct));
+						sizeof(buf_struct));
 	if (!data) {
 		err_dbg(0, err_fmt("malloc err"));
 		errno = ENOMEM;
@@ -201,10 +179,10 @@ int text_readall(text *file)
 		err = -1;
 		goto free_ret;
 	}
-	line_struct *tmp = (line_struct *)data->st;
-	tmp->str = buf;
-	tmp->str_len = len-1;
-	list_comm_append(file->rdata, data);
+	buf_struct *tmp = (buf_struct *)data->data;
+	tmp->buf = buf;
+	tmp->buf_len = len-1;
+	list_comm_append(&file->rdata, data);
 	err = 0;
 	goto unlock;
 free_ret:
@@ -213,7 +191,7 @@ unlock:
 	return err;
 }
 
-int text_readlines(text *file)
+int regfile_readlines(regfile *file)
 {
 	if (!file) {
 		err_dbg(0, err_fmt("arg check err"));
@@ -221,25 +199,25 @@ int text_readlines(text *file)
 		return -1;
 	}
 
-	if (!list_comm_is_empty(file->rdata)) {
-		list_comm_str_struct_make_empty(file->rdata);
-		list_comm_init(file->rdata);
+	if (!list_comm_is_empty(&file->rdata)) {
+		list_comm_str_struct_make_empty(&file->rdata);
+		list_comm_init(&file->rdata);
 	}
 
 	int err;
-	err = text_readall(file);
+	err = regfile_readall(file);
 	if (err == -1) {
-		err_dbg(1, err_fmt("text_readall err"));
+		err_dbg(1, err_fmt("regfile_readall err"));
 		return -1;
 	}
 
-	list_comm *rhead = (list_comm *)file->rdata;
+	list_comm *rhead = (list_comm *)&file->rdata;
 	list_comm *tmp = (list_comm *)rhead->list_head.next;
-	line_struct *tmp_data = (line_struct *)tmp->st;
-	err = str_split(file->rdata, tmp_data->str, "\n");
+	buf_struct *tmp_data = (buf_struct *)tmp->data;
+	err = str_split(&file->rdata, tmp_data->buf, "\n");
 	if (err == -1)
-		list_comm_init(file->rdata);
-	free(tmp_data->str);
+		list_comm_init(&file->rdata);
+	free(tmp_data->buf);
 	free(tmp);
 	return err;
 }
@@ -270,7 +248,7 @@ uint32_t get_io_speed(void)
  * -1: err
  * >0: lines that have read
  */
-int text_readline(text *file, uint32_t lines)
+int regfile_readline(regfile *file, uint32_t lines)
 {
 	if (!file || !lines) {
 		err_dbg(0, err_fmt("arg check err"));
@@ -278,9 +256,9 @@ int text_readline(text *file, uint32_t lines)
 		return -1;
 	}
 
-	if (!list_comm_is_empty(file->rdata)) {
-		list_comm_str_struct_make_empty(file->rdata);
-		list_comm_init(file->rdata);
+	if (!list_comm_is_empty(&file->rdata)) {
+		list_comm_str_struct_make_empty(&file->rdata);
+		list_comm_init(&file->rdata);
 	}
 
 	size_t buf_len = io_speed;
@@ -350,7 +328,7 @@ new_alloc:
 		}
 		memset(pos, 0, strlen(pos));
 	}
-	err = str_split(file->rdata, buf, "\n");
+	err = str_split(&file->rdata, buf, "\n");
 	if (err == -1) {
 		err_dbg(1, err_fmt("str_split err"));
 		err = -1;
@@ -368,7 +346,7 @@ unlock:
  * usage: before call this function, make sure the position of the file
  * is where you want it be
  */
-int text_writelines(text *file)
+int regfile_writelines(regfile *file)
 {
 	if (!file) {
 		err_dbg(0, err_fmt("arg check err"));
@@ -377,12 +355,12 @@ int text_writelines(text *file)
 	}
 
 	list_comm *tmp_node;
-	list_comm *whead = (list_comm *)file->wdata;
+	list_comm *whead = (list_comm *)&file->wdata;
 	int err = 0;
 
 	list_for_each_entry(tmp_node, &whead->list_head, list_head) {
-		line_struct *tmp = (line_struct *)tmp_node->st;
-		err = write(file->fd, tmp->str, tmp->str_len);
+		buf_struct *tmp = (buf_struct *)tmp_node->data;
+		err = write(file->fd, tmp->buf, tmp->buf_len);
 		if (err == -1) {
 			err_dbg(1, err_fmt("write err"));
 			goto unlock;
@@ -398,17 +376,17 @@ unlock:
 	return err;
 }
 
-ssize_t text_read(text *file, void *buf, size_t count)
+ssize_t regfile_read(regfile *file, void *buf, size_t count)
 {
 	return read(file->fd, buf, count);
 }
 
-ssize_t text_write(text *file, void *buf, size_t count)
+ssize_t regfile_write(regfile *file, void *buf, size_t count)
 {
 	return write(file->fd, buf, count);
 }
 
-off_t text_lseek(text *file, off_t offs, int where)
+off_t regfile_lseek(regfile *file, off_t offs, int where)
 {
 	return lseek(file->fd, offs, where);
 }

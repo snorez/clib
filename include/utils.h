@@ -1,5 +1,5 @@
-#ifndef __UTILH__
-#define __UTILH__
+#ifndef UTILS_H_NOWJRQGI
+#define UTILS_H_NOWJRQGI
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -13,4 +13,5 @@ extern uint64_t max_64(uint64_t a, uint64_t b);
 extern void *malloc_s(size_t size);
 extern void free_s(void **addr);
 extern int hex2int(char *hex);
-#endif
+
+#endif /* end of include guard: UTILS_H_NOWJRQGI */

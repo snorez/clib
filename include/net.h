@@ -1,5 +1,5 @@
-#ifndef __NET_H__
-#define __NET_H__
+#ifndef NET_H_QGVOLRSZ
+#define NET_H_QGVOLRSZ
 
 #include <unistd.h>
 #include <sys/types.h>
@@ -189,4 +189,4 @@ extern int xchg_sock_buf_len1(sock *file);
 extern int sock_send(sock *file, void *msg, size_t len, int flag);
 extern int sock_recv(sock *file, void *msg, size_t len, int flag);
 
-#endif
+#endif /* end of include guard: NET_H_QGVOLRSZ */

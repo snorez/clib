@@ -1,5 +1,5 @@
-#ifndef __DBG_H__
-#define __DBG_H__
+#ifndef DBG_H_VSLA5ZHT
+#define DBG_H_VSLA5ZHT
 
 #include <stdio.h>
 #include <string.h>
@@ -9,4 +9,4 @@
 
 extern void set_eh(sigact_func func);
 
-#endif
+#endif /* end of include guard: DBG_H_VSLA5ZHT */

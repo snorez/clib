@@ -1,5 +1,5 @@
-#ifndef _LINUX_LIST_H
-#define _LINUX_LIST_H
+#ifndef LINUX_LIST_H_MVRX6QSF
+#define LINUX_LIST_H_MVRX6QSF
 
 /*
  * Simple doubly linked list implementation.
@@ -766,4 +766,4 @@ static inline void hlist_move_list(struct hlist_head *old,
 	     pos && ({ n = pos->member.next; 1; });			\
 	     pos = hlist_entry_safe(n, typeof(*pos), member))
 
-#endif
+#endif /* end of include guard: LINUX_LIST_H_MVRX6QSF */

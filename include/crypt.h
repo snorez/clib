@@ -1,5 +1,5 @@
-#ifndef __CRYPT_H__
-#define __CRYPT_H__
+#ifndef CRYPT_H_MS9YVIBE
+#define CRYPT_H_MS9YVIBE
 
 #include <stdio.h>
 #include <string.h>
@@ -10,4 +10,4 @@
 char *base64_enc(const char *data, int len);
 char *base64_dec(const char *data, int len);
 
-#endif
+#endif /* end of include guard: CRYPT_H_MS9YVIBE */

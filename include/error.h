@@ -1,5 +1,5 @@
-#ifndef __ERROR_H__
-#define __ERROR_H__
+#ifndef ERROR_H_BHJ5CLAO
+#define ERROR_H_BHJ5CLAO
 
 #include <stdio.h>
 #include <errno.h>
@@ -23,4 +23,4 @@ extern void err_exit(int has_errno, const char *fmt, ...);
 extern int err_ret(int has_errno, int retval, const char *fmt, ...);
 extern void set_dbg_mode(int dbg_mode_on);
 
-#endif
+#endif /* end of include guard: ERROR_H_BHJ5CLAO */

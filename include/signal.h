@@ -1,5 +1,5 @@
-#ifndef __SIGNAL_H__
-#define __SIGNAL_H__
+#ifndef SIGNAL_H_EIERSTB0
+#define SIGNAL_H_EIERSTB0
 
 #define _GNU_SOURCE
 #define __USE_GNU
@@ -12,4 +12,4 @@
 
 typedef void (*sigact_func)(int, siginfo_t *, void *);
 
-#endif
+#endif /* end of include guard: SIGNAL_H_EIERSTB0 */

@@ -1,6 +1,6 @@
-#ifndef PLUGIN_H
-#define PLUGIN_H
+#ifndef PLUGIN_H_AOWIFXRV
+#define PLUGIN_H_AOWIFXRV
 
 
 
-#endif
+#endif /* end of include guard: PLUGIN_H_AOWIFXRV */

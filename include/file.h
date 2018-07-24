@@ -1,5 +1,5 @@
-#ifndef __FILE_H__
-#define __FILE_H__
+#ifndef FILE_H_7JM8BHXT
+#define FILE_H_7JM8BHXT
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -21,42 +21,44 @@
 struct file {
 	struct stat stat;
 	char *path;		/* file path or addr if has */
-	void *rdata;		/* file input buf, maybe a list_comm */
-	void *wdata;		/* file output buf, maybe a list_comm */
+	list_comm rdata;
+	list_comm wdata;
 
 	int fd;
 	int openflag;
 };
 
-typedef str_struct line_struct;
-typedef struct file text;
-typedef struct _text_ops {
-	int	(*open)(text *file, void *path, int flag, ...);
-	ssize_t (*read)(text *file, void *buf, size_t len, int flag);
-	ssize_t (*write)(text *file, void *buf, size_t len, int flag);
-	int	(*close)(text *file);
-	off_t	(*lseek)(text *file, off_t offs, int where);
-	//long	(*ioctl)(text *file, unsigned long request, ...);
+typedef struct file regfile;
 
-	ssize_t (*readall)(text *file);
-	ssize_t (*readlines)(text *file);
-	ssize_t (*readline)(text *file);
-	ssize_t (*writelines)(text *file);
-} text_ops;
+static inline buf_struct *regfile_get_rdata(regfile *file, list_comm *next_head)
+{
+	list_comm *head = &file->rdata, *next;
+	if (list_comm_is_empty(head))
+		return NULL;
+	if (!next_head)
+		return (buf_struct *)(((list_comm *)head->list_head.next)->data);
+	if (next_head->list_head.next == (void *)head)
+		return NULL;
+	if (!list_comm_is_empty(next_head))
+		head = next_head;
+	next = (void *)head->list_head.next;
+	next_head->list_head = next->list_head;
+	return (buf_struct *)next->data;
+}
 
 extern int path_exists(const char *path);
-extern text *text_open(const char *path, int flag, ...);
-extern int text_close(text *);
+extern regfile *regfile_open(const char *path, int flag, ...);
+extern int regfile_close(regfile *);
 extern void set_file_max_size(size_t file_max_size);
 extern size_t get_file_max_size(void);
-extern int text_readall(text *);
-extern int text_readlines(text *);
+extern int regfile_readall(regfile *);
+extern int regfile_readlines(regfile *);
 extern void set_io_speed(uint32_t val);
 extern uint32_t get_io_speed(void);
-extern int text_readline(text *, uint32_t lines);
-extern int text_writelines(text *);
-extern ssize_t text_read(text *file, void *buf, size_t count);
-extern ssize_t text_write(text *file, void *buf, size_t count);
-extern off_t text_lseek(text *file, off_t offs, int where);
+extern int regfile_readline(regfile *, uint32_t lines);
+extern int regfile_writelines(regfile *);
+extern ssize_t regfile_read(regfile *file, void *buf, size_t count);
+extern ssize_t regfile_write(regfile *file, void *buf, size_t count);
+extern off_t regfile_lseek(regfile *file, off_t offs, int where);
 
-#endif
+#endif /* end of include guard: FILE_H_7JM8BHXT */

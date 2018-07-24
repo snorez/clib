@@ -1,5 +1,5 @@
-#ifndef __DISAH__
-#define __DISAH__
+#ifndef DISAS_H_QWXBDHCJ
+#define DISAS_H_QWXBDHCJ
 
 #include <stdint.h>
 #ifdef HAS_CAPSTONE
@@ -10,4 +10,4 @@
 
 extern int disas_single(int arch, int mode, void *addr);
 
-#endif
+#endif /* end of include guard: DISAS_H_QWXBDHCJ */

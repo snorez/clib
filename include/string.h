@@ -1,5 +1,5 @@
-#ifndef __STRING_H__
-#define __STRING_H__
+#ifndef STRING_H_CMNRJ3FM
+#define STRING_H_CMNRJ3FM
 
 #include <stdio.h>
 #include <string.h>
@@ -12,6 +12,11 @@
 #include <strings.h>
 #include "./error.h"
 #include "./list.h"
+
+typedef struct _buf_struct {
+	void *buf;
+	size_t buf_len;
+} buf_struct;
 
 typedef struct _str_struct {
 	char *str;
@@ -46,4 +51,4 @@ extern void list_comm_str_struct_print(list_comm *head);
 extern int get_dict_key_value(list_comm *head, char *str, char *sep);
 extern int str_split(list_comm *head, const char *str, const char *key);
 
-#endif
+#endif /* end of include guard: STRING_H_CMNRJ3FM */
