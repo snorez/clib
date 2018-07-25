@@ -360,13 +360,13 @@ void dump_mem(const char *addr, size_t len)
 
 	size_t i = 0;
 	while (i < len) {
-		printf("%02x ", (unsigned)*((unsigned char *)addr+i));
+		fprintf(stdout, "%02x ", (unsigned)*((unsigned char *)addr+i));
 		if ((i & 0x0f) == 0x0f)
-			printf("\n");
+			fprintf(stdout, "\n");
 		i++;
 	}
 	if (((i-1) & 0x0f) != 0x0f)
-		printf("\n");
+		fprintf(stdout, "\n");
 }
 
 char *pattern_in_str(const char *str, const char *pattern,
@@ -663,7 +663,7 @@ void list_comm_str_struct_print(list_comm *head)
 	list_comm *tmp;
 	list_for_each_entry(tmp, &head->list_head, list_head) {
 		str_struct *tmp_str = (str_struct *)tmp->data;
-		printf("%s\n", tmp_str->str);
+		fprintf(stdout, "%s\n", tmp_str->str);
 	}
 }
 

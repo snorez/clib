@@ -20,7 +20,7 @@ typedef struct _buf_struct {
 
 typedef struct _str_struct {
 	char *str;
-	size_t str_len;
+	size_t str_len;		/* the real data length, exclude the nul byte */
 } str_struct;
 
 extern long s_random(void);

@@ -554,71 +554,71 @@ static void dump_elf32_ehdr(elf_file *file)
 {
 	Elf32_Ehdr *ehdr = file->elf_hdr;
 	if (!ehdr) {
-		fprintf(stderr, "elf file header missing\n");
+		fprintf(stdout, "elf file header missing\n");
 		return;
 	}
 
-	fprintf(stderr, "header identify:\t\t");
+	fprintf(stdout, "header identify:\t\t");
 	dump_mem((char *)ehdr->e_ident, EI_NIDENT);
-	fprintf(stderr, "program bits:\t\t\t32 bits\n");
-	fprintf(stderr, "program endian:\t\t\t%s\n",(ehdr->e_ident[5]-1)?"big":"little");
-	fprintf(stderr, "program os ABI:\t\t\t%s\n", x_elf_oabi(ehdr->e_ident[7]));
-	fprintf(stderr, "program header padding:\t\t");
+	fprintf(stdout, "program bits:\t\t\t32 bits\n");
+	fprintf(stdout, "program endian:\t\t\t%s\n",(ehdr->e_ident[5]-1)?"big":"little");
+	fprintf(stdout, "program os ABI:\t\t\t%s\n", x_elf_oabi(ehdr->e_ident[7]));
+	fprintf(stdout, "program header padding:\t\t");
 	dump_mem((char *)&ehdr->e_ident[8], 8);
-	fprintf(stderr, "program type:\t\t\t%s\n", x_elf_type(ehdr->e_type));
-	fprintf(stderr, "program machine:\t\t%s\n", x_elf_machine(ehdr->e_machine));
-	fprintf(stderr, "program file hdr size:\t\t%04x\n", ehdr->e_ehsize);
-	fprintf(stderr, "program text entry:\t\t%08x\n", ehdr->e_entry);
-	fprintf(stderr, "program header off:\t\t%08x\n", ehdr->e_phoff);
-	fprintf(stderr, "program header size:\t\t%04x\n", ehdr->e_phentsize);
-	fprintf(stderr, "program header cnt:\t\t%04x\n", ehdr->e_phnum);
-	fprintf(stderr, "section header off:\t\t%08x\n", ehdr->e_shoff);
-	fprintf(stderr, "section header size:\t\t%04x\n", ehdr->e_shentsize);
-	fprintf(stderr, "section header cnt:\t\t%04x\n", ehdr->e_shnum);
-	fprintf(stderr, "section header idx:\t\t%04x\n", ehdr->e_shstrndx);
-	fprintf(stderr, "program flags:\t\t\t%08x\n", ehdr->e_flags);
-	fprintf(stderr, "\n");
+	fprintf(stdout, "program type:\t\t\t%s\n", x_elf_type(ehdr->e_type));
+	fprintf(stdout, "program machine:\t\t%s\n", x_elf_machine(ehdr->e_machine));
+	fprintf(stdout, "program file hdr size:\t\t%04x\n", ehdr->e_ehsize);
+	fprintf(stdout, "program text entry:\t\t%08x\n", ehdr->e_entry);
+	fprintf(stdout, "program header off:\t\t%08x\n", ehdr->e_phoff);
+	fprintf(stdout, "program header size:\t\t%04x\n", ehdr->e_phentsize);
+	fprintf(stdout, "program header cnt:\t\t%04x\n", ehdr->e_phnum);
+	fprintf(stdout, "section header off:\t\t%08x\n", ehdr->e_shoff);
+	fprintf(stdout, "section header size:\t\t%04x\n", ehdr->e_shentsize);
+	fprintf(stdout, "section header cnt:\t\t%04x\n", ehdr->e_shnum);
+	fprintf(stdout, "section header idx:\t\t%04x\n", ehdr->e_shstrndx);
+	fprintf(stdout, "program flags:\t\t\t%08x\n", ehdr->e_flags);
+	fprintf(stdout, "\n");
 }
 
 static void dump_elf64_ehdr(elf_file *file)
 {
 	Elf64_Ehdr *ehdr = file->elf_hdr;
 	if (!ehdr) {
-		fprintf(stderr, "elf file header missing\n");
+		fprintf(stdout, "elf file header missing\n");
 		return;
 	}
 
-	fprintf(stderr, "header identify:\t\t");
+	fprintf(stdout, "header identify:\t\t");
 	dump_mem((char *)ehdr->e_ident, EI_NIDENT);
-	fprintf(stderr, "program bits:\t\t\t64 bits\n");
-	fprintf(stderr, "program endian:\t\t\t%s\n",(ehdr->e_ident[5]-1)?"big":"little");
-	fprintf(stderr, "program os ABI:\t\t\t%s\n", x_elf_oabi(ehdr->e_ident[7]));
-	fprintf(stderr, "program header padding:\t\t");
+	fprintf(stdout, "program bits:\t\t\t64 bits\n");
+	fprintf(stdout, "program endian:\t\t\t%s\n",(ehdr->e_ident[5]-1)?"big":"little");
+	fprintf(stdout, "program os ABI:\t\t\t%s\n", x_elf_oabi(ehdr->e_ident[7]));
+	fprintf(stdout, "program header padding:\t\t");
 	dump_mem((char *)&ehdr->e_ident[8], 8);
-	fprintf(stderr, "program type:\t\t\t%s\n", x_elf_type(ehdr->e_type));
-	fprintf(stderr, "program machine:\t\t%s\n", x_elf_machine(ehdr->e_machine));
-	fprintf(stderr, "program file hdr size:\t\t%04x\n", ehdr->e_ehsize);
+	fprintf(stdout, "program type:\t\t\t%s\n", x_elf_type(ehdr->e_type));
+	fprintf(stdout, "program machine:\t\t%s\n", x_elf_machine(ehdr->e_machine));
+	fprintf(stdout, "program file hdr size:\t\t%04x\n", ehdr->e_ehsize);
 #ifdef __x86_64__
-	fprintf(stderr, "program text entry:\t\t%016lx\n", (uint64_t)ehdr->e_entry);
-	fprintf(stderr, "program header off:\t\t%016lx\n", (uint64_t)ehdr->e_phoff);
+	fprintf(stdout, "program text entry:\t\t%016lx\n", (uint64_t)ehdr->e_entry);
+	fprintf(stdout, "program header off:\t\t%016lx\n", (uint64_t)ehdr->e_phoff);
 #endif
 #ifdef __i386__
-	fprintf(stderr, "program text entry:\t\t%016llx\n", (uint64_t)ehdr->e_entry);
-	fprintf(stderr, "program header off:\t\t%016llx\n", (uint64_t)ehdr->e_phoff);
+	fprintf(stdout, "program text entry:\t\t%016llx\n", (uint64_t)ehdr->e_entry);
+	fprintf(stdout, "program header off:\t\t%016llx\n", (uint64_t)ehdr->e_phoff);
 #endif
-	fprintf(stderr, "program header size:\t\t%04x\n", ehdr->e_phentsize);
-	fprintf(stderr, "program header cnt:\t\t%04x\n", ehdr->e_phnum);
+	fprintf(stdout, "program header size:\t\t%04x\n", ehdr->e_phentsize);
+	fprintf(stdout, "program header cnt:\t\t%04x\n", ehdr->e_phnum);
 #ifdef __x86_64__
-	fprintf(stderr, "section header off:\t\t%016lx\n", (uint64_t)ehdr->e_shoff);
+	fprintf(stdout, "section header off:\t\t%016lx\n", (uint64_t)ehdr->e_shoff);
 #endif
 #ifdef __i386__
-	fprintf(stderr, "section header off:\t\t%016llx\n", (uint64_t)ehdr->e_shoff);
+	fprintf(stdout, "section header off:\t\t%016llx\n", (uint64_t)ehdr->e_shoff);
 #endif
-	fprintf(stderr, "section header size:\t\t%04x\n", ehdr->e_shentsize);
-	fprintf(stderr, "section header cnt:\t\t%04x\n", ehdr->e_shnum);
-	fprintf(stderr, "section header idx:\t\t%04x\n", ehdr->e_shstrndx);
-	fprintf(stderr, "program flags:\t\t\t%08x\n", ehdr->e_flags);
-	fprintf(stderr, "\n");
+	fprintf(stdout, "section header size:\t\t%04x\n", ehdr->e_shentsize);
+	fprintf(stdout, "section header cnt:\t\t%04x\n", ehdr->e_shnum);
+	fprintf(stdout, "section header idx:\t\t%04x\n", ehdr->e_shstrndx);
+	fprintf(stdout, "program flags:\t\t\t%08x\n", ehdr->e_flags);
+	fprintf(stdout, "\n");
 }
 
 void dump_elf_ehdr(elf_file *file)
@@ -635,23 +635,23 @@ static void dump_elf32_phdr(elf_file *file)
 	Elf32_Ehdr *e = file->elf_hdr;
 	Elf32_Phdr *p = file->elf_phdr;
 	if (!p) {
-		fprintf(stderr, "file program header missing\n");
+		fprintf(stdout, "file program header missing\n");
 		return;
 	}
 
 	uint16_t cnt = e->e_phnum;
 	while (cnt--) {
-		fprintf(stderr, "entry image offset:\t\t%08x\n", (uint32_t)
+		fprintf(stdout, "entry image offset:\t\t%08x\n", (uint32_t)
 		       (e->e_phoff+(char *)p-(char *)file->elf_phdr));
-		fprintf(stderr, "program header type:\t\t%08x\n", p->p_type);
-		fprintf(stderr, "program header offs:\t\t%08x\n", p->p_offset);
-		fprintf(stderr, "program header vadd:\t\t%08x\n", p->p_vaddr);
-		fprintf(stderr, "program header padd:\t\t%08x\n", p->p_paddr);
-		fprintf(stderr, "program header imgsize:\t\t%08x\n", p->p_filesz);
-		fprintf(stderr, "program header memsize:\t\t%08x\n", p->p_memsz);
-		fprintf(stderr, "program header flag:\t\t%08x\n", p->p_flags);
-		fprintf(stderr, "program header align:\t\t%08x\n", p->p_align);
-		fprintf(stderr, "\n");
+		fprintf(stdout, "program header type:\t\t%08x\n", p->p_type);
+		fprintf(stdout, "program header offs:\t\t%08x\n", p->p_offset);
+		fprintf(stdout, "program header vadd:\t\t%08x\n", p->p_vaddr);
+		fprintf(stdout, "program header padd:\t\t%08x\n", p->p_paddr);
+		fprintf(stdout, "program header imgsize:\t\t%08x\n", p->p_filesz);
+		fprintf(stdout, "program header memsize:\t\t%08x\n", p->p_memsz);
+		fprintf(stdout, "program header flag:\t\t%08x\n", p->p_flags);
+		fprintf(stdout, "program header align:\t\t%08x\n", p->p_align);
+		fprintf(stdout, "\n");
 		p = (Elf32_Phdr *)((char *)p + e->e_phentsize);
 	}
 }
@@ -661,51 +661,51 @@ static void dump_elf64_phdr(elf_file *file)
 	Elf64_Ehdr *e = file->elf_hdr;
 	Elf64_Phdr *p = file->elf_phdr;
 	if (!p) {
-		fprintf(stderr, "file program header missing\n");
+		fprintf(stdout, "file program header missing\n");
 		return;
 	}
 
 	uint16_t cnt = e->e_phnum;
 	while (cnt--) {
 #ifdef __x86_64__
-		fprintf(stderr, "entry image offset:\t\t%016lx\n", (uint64_t)
+		fprintf(stdout, "entry image offset:\t\t%016lx\n", (uint64_t)
 		       (e->e_phoff+(char *)p-(char *)file->elf_phdr));
 #endif
 #ifdef __i386__
-		fprintf(stderr, "entry image offset:\t\t%016llx\n", (uint64_t)
+		fprintf(stdout, "entry image offset:\t\t%016llx\n", (uint64_t)
 		       (e->e_phoff+(char *)p-(char *)file->elf_phdr));
 #endif
-		fprintf(stderr, "program header type:\t\t%08x\n", p->p_type);
-		fprintf(stderr, "program header flag:\t\t%08x\n", p->p_flags);
+		fprintf(stdout, "program header type:\t\t%08x\n", p->p_type);
+		fprintf(stdout, "program header flag:\t\t%08x\n", p->p_flags);
 #ifdef __x86_64__
-		fprintf(stderr, "program header offs:\t\t%016lx\n",
+		fprintf(stdout, "program header offs:\t\t%016lx\n",
 		       (uint64_t)p->p_offset);
-		fprintf(stderr, "program header vadd:\t\t%016lx\n",
+		fprintf(stdout, "program header vadd:\t\t%016lx\n",
 		       (uint64_t)p->p_vaddr);
-		fprintf(stderr, "program header padd:\t\t%016lx\n",
+		fprintf(stdout, "program header padd:\t\t%016lx\n",
 		       (uint64_t)p->p_paddr);
-		fprintf(stderr, "program headr imgsz:\t\t%016lx\n",
+		fprintf(stdout, "program headr imgsz:\t\t%016lx\n",
 		       (uint64_t)p->p_filesz);
-		fprintf(stderr, "program header memsz:\t\t%016lx\n",
+		fprintf(stdout, "program header memsz:\t\t%016lx\n",
 		       (uint64_t)p->p_memsz);
-		fprintf(stderr, "program header align:\t\t%016lx\n",
+		fprintf(stdout, "program header align:\t\t%016lx\n",
 		       (uint64_t)p->p_align);
 #endif
 #ifdef __i386__
-		fprintf(stderr, "program header offs:\t\t%016llx\n",
+		fprintf(stdout, "program header offs:\t\t%016llx\n",
 		       (uint64_t)p->p_offset);
-		fprintf(stderr, "program header vadd:\t\t%016llx\n",
+		fprintf(stdout, "program header vadd:\t\t%016llx\n",
 		       (uint64_t)p->p_vaddr);
-		fprintf(stderr, "program header padd:\t\t%016llx\n",
+		fprintf(stdout, "program header padd:\t\t%016llx\n",
 		       (uint64_t)p->p_paddr);
-		fprintf(stderr, "program headr imgsz:\t\t%016llx\n",
+		fprintf(stdout, "program headr imgsz:\t\t%016llx\n",
 		       (uint64_t)p->p_filesz);
-		fprintf(stderr, "program header memsz:\t\t%016llx\n",
+		fprintf(stdout, "program header memsz:\t\t%016llx\n",
 		       (uint64_t)p->p_memsz);
-		fprintf(stderr, "program header align:\t\t%016llx\n",
+		fprintf(stdout, "program header align:\t\t%016llx\n",
 		       (uint64_t)p->p_align);
 #endif
-		fprintf(stderr, "\n");
+		fprintf(stdout, "\n");
 		p = (Elf64_Phdr *)((char *)p + e->e_phentsize);
 	}
 }
@@ -867,82 +867,82 @@ static void dump_sechdr(elf_file *file, void *sechdr)
 	if (file->elf_bits == 32) {
 		Elf32_Ehdr *e = file->elf_hdr;
 		Elf32_Shdr *s = sechdr;
-		fprintf(stderr, "entry image offset:\t\t%08x\n", (uint32_t)
+		fprintf(stdout, "entry image offset:\t\t%08x\n", (uint32_t)
 		       (e->e_shoff+(char *)s-(char *)file->elf_shdr));
-		fprintf(stderr, "section header name:\t\t%08x\n", s->sh_name);
-		fprintf(stderr, "section header type:\t\t%08x\n", s->sh_type);
-		fprintf(stderr, "type means:\t\t\t%s\n",x_elf_shdr_type(s->sh_type));
-		fprintf(stderr, "section header flag:\t\t%08x\n", s->sh_flags);
-		fprintf(stderr, "flag means:\t\t\t%s\n",
+		fprintf(stdout, "section header name:\t\t%08x\n", s->sh_name);
+		fprintf(stdout, "section header type:\t\t%08x\n", s->sh_type);
+		fprintf(stdout, "type means:\t\t\t%s\n",x_elf_shdr_type(s->sh_type));
+		fprintf(stdout, "section header flag:\t\t%08x\n", s->sh_flags);
+		fprintf(stdout, "flag means:\t\t\t%s\n",
 					x_elf_shdr_flag(s->sh_flags));
-		fprintf(stderr, "type&flag means:\t\t%s\n",
+		fprintf(stdout, "type&flag means:\t\t%s\n",
 		       x_elf_shdr_type_flag(s->sh_type, s->sh_flags));
-		fprintf(stderr, "section header mem_addr:\t%08x\n", s->sh_addr);
-		fprintf(stderr, "section header img_offs:\t%08x\n", s->sh_offset);
-		fprintf(stderr, "section header sec_size:\t%08x\n", s->sh_size);
-		fprintf(stderr, "section header link:\t\t%08x\n", s->sh_link);
-		fprintf(stderr, "section header info:\t\t%08x\n", s->sh_info);
-		fprintf(stderr, "section header align:\t\t%08x\n", s->sh_addralign);
-		fprintf(stderr, "section header entsize:\t\t%08x\n", s->sh_entsize);
-		fprintf(stderr, "\n");
+		fprintf(stdout, "section header mem_addr:\t%08x\n", s->sh_addr);
+		fprintf(stdout, "section header img_offs:\t%08x\n", s->sh_offset);
+		fprintf(stdout, "section header sec_size:\t%08x\n", s->sh_size);
+		fprintf(stdout, "section header link:\t\t%08x\n", s->sh_link);
+		fprintf(stdout, "section header info:\t\t%08x\n", s->sh_info);
+		fprintf(stdout, "section header align:\t\t%08x\n", s->sh_addralign);
+		fprintf(stdout, "section header entsize:\t\t%08x\n", s->sh_entsize);
+		fprintf(stdout, "\n");
 		return;
 	} else if (file->elf_bits == 64) {
 		Elf64_Ehdr *e = file->elf_hdr;
 		Elf64_Shdr *s = sechdr;
 #ifdef __x86_64__
-		fprintf(stderr, "entry image offset:\t\t%016lx\n", (uint64_t)
+		fprintf(stdout, "entry image offset:\t\t%016lx\n", (uint64_t)
 		       (e->e_shoff+(char *)s-(char *)file->elf_shdr));
 #endif
 #ifdef __i386__
-		fprintf(stderr, "entry image offset:\t\t%016llx\n", (uint64_t)
+		fprintf(stdout, "entry image offset:\t\t%016llx\n", (uint64_t)
 		       (e->e_shoff+(char *)s-(char *)file->elf_shdr));
 #endif
-		fprintf(stderr, "section header name:\t\t%08x\n", s->sh_name);
-		fprintf(stderr, "section header type:\t\t%08x\n", s->sh_type);
-		fprintf(stderr, "type means:\t\t\t%s\n",x_elf_shdr_type(s->sh_type));
+		fprintf(stdout, "section header name:\t\t%08x\n", s->sh_name);
+		fprintf(stdout, "section header type:\t\t%08x\n", s->sh_type);
+		fprintf(stdout, "type means:\t\t\t%s\n",x_elf_shdr_type(s->sh_type));
 #ifdef __x86_64__
-		fprintf(stderr, "section header flag:\t\t%016lx\n",
+		fprintf(stdout, "section header flag:\t\t%016lx\n",
 		       (uint64_t)s->sh_flags);
 #endif
 #ifdef __i386__
-		fprintf(stderr, "section header flag:\t\t%016llx\n",
+		fprintf(stdout, "section header flag:\t\t%016llx\n",
 		       (uint64_t)s->sh_flags);
 #endif
-		fprintf(stderr, "flag means:\t\t\t%s\n",
+		fprintf(stdout, "flag means:\t\t\t%s\n",
 				x_elf_shdr_flag(s->sh_flags));
-		fprintf(stderr, "type&flag means:\t\t%s\n",
+		fprintf(stdout, "type&flag means:\t\t%s\n",
 		       x_elf_shdr_type_flag(s->sh_type, s->sh_flags));
 #ifdef __x86_64__
-		fprintf(stderr, "section header mem_addr:\t%016lx\n",
+		fprintf(stdout, "section header mem_addr:\t%016lx\n",
 		       (uint64_t)s->sh_addr);
-		fprintf(stderr, "section header img_offs:\t%016lx\n",
+		fprintf(stdout, "section header img_offs:\t%016lx\n",
 		       (uint64_t)s->sh_offset);
-		fprintf(stderr, "section header sec_size:\t%016lx\n",
+		fprintf(stdout, "section header sec_size:\t%016lx\n",
 		       (uint64_t)s->sh_size);
 #endif
 #ifdef __i386__
-		fprintf(stderr, "section header mem_addr:\t%016llx\n",
+		fprintf(stdout, "section header mem_addr:\t%016llx\n",
 		       (uint64_t)s->sh_addr);
-		fprintf(stderr, "section header img_offs:\t%016llx\n",
+		fprintf(stdout, "section header img_offs:\t%016llx\n",
 		       (uint64_t)s->sh_offset);
-		fprintf(stderr, "section header sec_size:\t%016llx\n",
+		fprintf(stdout, "section header sec_size:\t%016llx\n",
 		       (uint64_t)s->sh_size);
 #endif
-		fprintf(stderr, "section header link:\t\t%08x\n", s->sh_link);
-		fprintf(stderr, "section header info:\t\t%08x\n", s->sh_info);
+		fprintf(stdout, "section header link:\t\t%08x\n", s->sh_link);
+		fprintf(stdout, "section header info:\t\t%08x\n", s->sh_info);
 #ifdef __x86_64__
-		fprintf(stderr, "section header align:\t\t%016lx\n",
+		fprintf(stdout, "section header align:\t\t%016lx\n",
 		       (uint64_t)s->sh_addralign);
-		fprintf(stderr, "section header entsize:\t\t%016lx\n",
+		fprintf(stdout, "section header entsize:\t\t%016lx\n",
 		       (uint64_t)s->sh_entsize);
 #endif
 #ifdef __i386__
-		fprintf(stderr, "section header align:\t\t%016llx\n",
+		fprintf(stdout, "section header align:\t\t%016llx\n",
 		       (uint64_t)s->sh_addralign);
-		fprintf(stderr, "section header entsize:\t\t%016llx\n",
+		fprintf(stdout, "section header entsize:\t\t%016llx\n",
 		       (uint64_t)s->sh_entsize);
 #endif
-		fprintf(stderr, "\n");
+		fprintf(stdout, "\n");
 		return;
 	} else {
 		return;
@@ -954,7 +954,7 @@ static void dump_elf32_shdr(elf_file *file)
 	Elf32_Ehdr *e = file->elf_hdr;
 	Elf32_Shdr *s = file->elf_shdr;
 	if (!s) {
-		fprintf(stderr, "elf section header missing\n");
+		fprintf(stdout, "elf section header missing\n");
 		return;
 	}
 
@@ -962,24 +962,24 @@ static void dump_elf32_shdr(elf_file *file)
 	while (cnt--) {
 		dump_sechdr(file, s);
 #if 0
-		fprintf(stderr, "entry image offset:\t\t%08x\n", (uint32_t)
+		fprintf(stdout, "entry image offset:\t\t%08x\n", (uint32_t)
 		       (e->e_shoff+(char *)s-(char *)file->elf_shdr));
-		fprintf(stderr, "section header name:\t\t%08x\n", s->sh_name);
-		fprintf(stderr, "section header type:\t\t%08x\n", s->sh_type);
-		fprintf(stderr, "type means:\t\t\t%s\n",x_elf_shdr_type(s->sh_type));
-		fprintf(stderr, "section header flag:\t\t%08x\n", s->sh_flags);
-		fprintf(stderr, "flag means:\t\t\t%s\n",
+		fprintf(stdout, "section header name:\t\t%08x\n", s->sh_name);
+		fprintf(stdout, "section header type:\t\t%08x\n", s->sh_type);
+		fprintf(stdout, "type means:\t\t\t%s\n",x_elf_shdr_type(s->sh_type));
+		fprintf(stdout, "section header flag:\t\t%08x\n", s->sh_flags);
+		fprintf(stdout, "flag means:\t\t\t%s\n",
 				x_elf_shdr_flag(s->sh_flags));
-		fprintf(stderr, "type&flag means:\t\t%s\n",
+		fprintf(stdout, "type&flag means:\t\t%s\n",
 		       x_elf_shdr_type_flag(s->sh_type, s->sh_flags));
-		fprintf(stderr, "section header mem_addr:\t%08x\n", s->sh_addr);
-		fprintf(stderr, "section header img_offs:\t%08x\n", s->sh_offset);
-		fprintf(stderr, "section header sec_size:\t%08x\n", s->sh_size);
-		fprintf(stderr, "section header link:\t\t%08x\n", s->sh_link);
-		fprintf(stderr, "section header info:\t\t%08x\n", s->sh_info);
-		fprintf(stderr, "section header align:\t\t%08x\n", s->sh_addralign);
-		fprintf(stderr, "section header entsize:\t\t%08x\n", s->sh_entsize);
-		fprintf(stderr, "\n");
+		fprintf(stdout, "section header mem_addr:\t%08x\n", s->sh_addr);
+		fprintf(stdout, "section header img_offs:\t%08x\n", s->sh_offset);
+		fprintf(stdout, "section header sec_size:\t%08x\n", s->sh_size);
+		fprintf(stdout, "section header link:\t\t%08x\n", s->sh_link);
+		fprintf(stdout, "section header info:\t\t%08x\n", s->sh_info);
+		fprintf(stdout, "section header align:\t\t%08x\n", s->sh_addralign);
+		fprintf(stdout, "section header entsize:\t\t%08x\n", s->sh_entsize);
+		fprintf(stdout, "\n");
 #endif
 		s = (Elf32_Shdr *)((char *)s + e->e_shentsize);
 	}
@@ -990,7 +990,7 @@ static void dump_elf64_shdr(elf_file *file)
 	Elf64_Ehdr *e = file->elf_hdr;
 	Elf64_Shdr *s = file->elf_shdr;
 	if (!s) {
-		fprintf(stderr, "elf section header missing\n");
+		fprintf(stdout, "elf section header missing\n");
 		return;
 	}
 
@@ -999,59 +999,59 @@ static void dump_elf64_shdr(elf_file *file)
 		dump_sechdr(file, s);
 #if 0
 #ifdef __x86_64__
-		fprintf(stderr, "entry image offset:\t\t%016lx\n", (uint64_t)
+		fprintf(stdout, "entry image offset:\t\t%016lx\n", (uint64_t)
 		       (e->e_shoff+(char *)s-(char *)file->elf_shdr));
 #endif
 #ifdef __i386__
-		fprintf(stderr, "entry image offset:\t\t%016llx\n", (uint64_t)
+		fprintf(stdout, "entry image offset:\t\t%016llx\n", (uint64_t)
 		       (e->e_shoff+(char *)s-(char *)file->elf_shdr));
 #endif
-		fprintf(stderr, "section header name:\t\t%08x\n", s->sh_name);
-		fprintf(stderr, "section header type:\t\t%08x\n", s->sh_type);
-		fprintf(stderr, "type means:\t\t\t%s\n",x_elf_shdr_type(s->sh_type));
+		fprintf(stdout, "section header name:\t\t%08x\n", s->sh_name);
+		fprintf(stdout, "section header type:\t\t%08x\n", s->sh_type);
+		fprintf(stdout, "type means:\t\t\t%s\n",x_elf_shdr_type(s->sh_type));
 #ifdef __x86_64__
-		fprintf(stderr, "section header flag:\t\t%016lx\n",
+		fprintf(stdout, "section header flag:\t\t%016lx\n",
 		       (uint64_t)s->sh_flags);
 #endif
 #ifdef __i386__
-		fprintf(stderr, "section header flag:\t\t%016llx\n",
+		fprintf(stdout, "section header flag:\t\t%016llx\n",
 		       (uint64_t)s->sh_flags);
 #endif
-		fprintf(stderr, "flag means:\t\t\t%s\n",
+		fprintf(stdout, "flag means:\t\t\t%s\n",
 				x_elf_shdr_flag(s->sh_flags));
-		fprintf(stderr, "type&flag means:\t\t%s\n",
+		fprintf(stdout, "type&flag means:\t\t%s\n",
 		       x_elf_shdr_type_flag(s->sh_type, s->sh_flags));
 #ifdef __x86_64__
-		fprintf(stderr, "section header mem_addr:\t%016lx\n",
+		fprintf(stdout, "section header mem_addr:\t%016lx\n",
 		       (uint64_t)s->sh_addr);
-		fprintf(stderr, "section header img_offs:\t%016lx\n",
+		fprintf(stdout, "section header img_offs:\t%016lx\n",
 		       (uint64_t)s->sh_offset);
-		fprintf(stderr, "section header sec_size:\t%016lx\n",
+		fprintf(stdout, "section header sec_size:\t%016lx\n",
 		       (uint64_t)s->sh_size);
 #endif
 #ifdef __i386__
-		fprintf(stderr, "section header mem_addr:\t%016llx\n",
+		fprintf(stdout, "section header mem_addr:\t%016llx\n",
 		       (uint64_t)s->sh_addr);
-		fprintf(stderr, "section header img_offs:\t%016llx\n",
+		fprintf(stdout, "section header img_offs:\t%016llx\n",
 		       (uint64_t)s->sh_offset);
-		fprintf(stderr, "section header sec_size:\t%016llx\n",
+		fprintf(stdout, "section header sec_size:\t%016llx\n",
 		       (uint64_t)s->sh_size);
 #endif
-		fprintf(stderr, "section header link:\t\t%08x\n", s->sh_link);
-		fprintf(stderr, "section header info:\t\t%08x\n", s->sh_info);
+		fprintf(stdout, "section header link:\t\t%08x\n", s->sh_link);
+		fprintf(stdout, "section header info:\t\t%08x\n", s->sh_info);
 #ifdef __x86_64__
-		fprintf(stderr, "section header align:\t\t%016lx\n",
+		fprintf(stdout, "section header align:\t\t%016lx\n",
 		       (uint64_t)s->sh_addralign);
-		fprintf(stderr, "section header entsize:\t\t%016lx\n",
+		fprintf(stdout, "section header entsize:\t\t%016lx\n",
 		       (uint64_t)s->sh_entsize);
 #endif
 #ifdef __i386__
-		fprintf(stderr, "section header align:\t\t%016llx\n",
+		fprintf(stdout, "section header align:\t\t%016llx\n",
 		       (uint64_t)s->sh_addralign);
-		fprintf(stderr, "section header entsize:\t\t%016llx\n",
+		fprintf(stdout, "section header entsize:\t\t%016llx\n",
 		       (uint64_t)s->sh_entsize);
 #endif
-		fprintf(stderr, "\n");
+		fprintf(stdout, "\n");
 #endif
 		s = (Elf64_Shdr *)((char *)s + e->e_shentsize);
 	}
@@ -1067,10 +1067,10 @@ void dump_elf_shdr(elf_file *file)
 
 void dump_elf_shstr(elf_file *file)
 {
-	fprintf(stderr, ".shstrtab:\n");
+	fprintf(stdout, ".shstrtab:\n");
 	char *start = file->shstrtab;
 	if (!start || *start) {
-		fprintf(stderr, "no shstrtab OR not start with nul byte\n\n");
+		fprintf(stdout, "no shstrtab OR not start with nul byte\n\n");
 		return;
 	}
 
@@ -1078,17 +1078,17 @@ void dump_elf_shstr(elf_file *file)
 	while (1) {
 		if (!*start)
 			break;
-		fprintf(stderr, "%s\n", start);
+		fprintf(stdout, "%s\n", start);
 		start += strlen(start) + 1;
 	}
-	fprintf(stderr, "\n");
+	fprintf(stdout, "\n");
 }
 void dump_elf_strtab(elf_file *file)
 {
-	fprintf(stderr, ".strtab:\n");
+	fprintf(stdout, ".strtab:\n");
 	char *start = file->strtab;
 	if (!start || *start) {
-		fprintf(stderr, "no strtab OR not start with nul byte\n\n");
+		fprintf(stdout, "no strtab OR not start with nul byte\n\n");
 		return;
 	}
 
@@ -1096,17 +1096,17 @@ void dump_elf_strtab(elf_file *file)
 	while (1) {
 		if (!*start)
 			break;
-		fprintf(stderr, "%s\n", start);
+		fprintf(stdout, "%s\n", start);
 		start += strlen(start) + 1;
 	}
-	fprintf(stderr, "\n");
+	fprintf(stdout, "\n");
 }
 void dump_elf_dynstr(elf_file *file)
 {
-	fprintf(stderr, ".dynstr:\n");
+	fprintf(stdout, ".dynstr:\n");
 	char *start = file->dynstr;
 	if (!start || *start) {
-		fprintf(stderr, "no dynstr OR not start with nul byte\n\n");
+		fprintf(stdout, "no dynstr OR not start with nul byte\n\n");
 		return;
 	}
 
@@ -1114,33 +1114,33 @@ void dump_elf_dynstr(elf_file *file)
 	while (1) {
 		if (!*start)
 			break;
-		fprintf(stderr, "%s\n", start);
+		fprintf(stdout, "%s\n", start);
 		start += strlen(start) + 1;
 	}
-	fprintf(stderr, "\n");
+	fprintf(stdout, "\n");
 }
 
 static void dump_syms32(Elf32_Sym *sym)
 {
-	fprintf(stderr, "Sym info\n");
-	fprintf(stderr, "st_name: 0x%08x\n", sym->st_name);
-	fprintf(stderr, "st_value: 0x%08x\n", sym->st_value);
-	fprintf(stderr, "st_size: 0x%08x\n", sym->st_size);
-	fprintf(stderr, "st_info: 0x%08x\n", sym->st_info);
-	fprintf(stderr, "st_other: 0x%08x\n", sym->st_other);
-	fprintf(stderr, "st_shndx: 0x%08x\n", sym->st_shndx);
-	fprintf(stderr, "\n");
+	fprintf(stdout, "Sym info\n");
+	fprintf(stdout, "st_name: 0x%08x\n", sym->st_name);
+	fprintf(stdout, "st_value: 0x%08x\n", sym->st_value);
+	fprintf(stdout, "st_size: 0x%08x\n", sym->st_size);
+	fprintf(stdout, "st_info: 0x%08x\n", sym->st_info);
+	fprintf(stdout, "st_other: 0x%08x\n", sym->st_other);
+	fprintf(stdout, "st_shndx: 0x%08x\n", sym->st_shndx);
+	fprintf(stdout, "\n");
 }
 static void dump_syms64(Elf64_Sym *sym)
 {
-	fprintf(stderr, "Sym info\n");
-	fprintf(stderr, "st_name: 0x%08x\n", sym->st_name);
-	fprintf(stderr, "st_info: 0x%08x\n", sym->st_info);
-	fprintf(stderr, "st_other: 0x%08x\n", sym->st_other);
-	fprintf(stderr, "st_shndx: 0x%08x\n", sym->st_shndx);
-	fprintf(stderr, "st_value: 0x%016lx\n", sym->st_value);
-	fprintf(stderr, "st_size: 0x%016lx\n", sym->st_size);
-	fprintf(stderr, "\n");
+	fprintf(stdout, "Sym info\n");
+	fprintf(stdout, "st_name: 0x%08x\n", sym->st_name);
+	fprintf(stdout, "st_info: 0x%08x\n", sym->st_info);
+	fprintf(stdout, "st_other: 0x%08x\n", sym->st_other);
+	fprintf(stdout, "st_shndx: 0x%08x\n", sym->st_shndx);
+	fprintf(stdout, "st_value: 0x%016lx\n", sym->st_value);
+	fprintf(stdout, "st_size: 0x%016lx\n", sym->st_size);
+	fprintf(stdout, "\n");
 }
 void dump_elf_sym(elf_file *file)
 {
@@ -1150,11 +1150,11 @@ void dump_elf_sym(elf_file *file)
 		es = (void *)n->data;
 		if (file->elf_bits == 32) {
 			Elf32_Sym *sym = es->data;
-			fprintf(stderr, "%s\n", es->name);
+			fprintf(stdout, "%s\n", es->name);
 			dump_syms32(sym);
 		} else if (file->elf_bits == 64) {
 			Elf64_Sym *sym = es->data;
-			fprintf(stderr, "%s\n", es->name);
+			fprintf(stdout, "%s\n", es->name);
 			dump_syms64(sym);
 		} else {
 			continue;
@@ -1169,11 +1169,11 @@ void dump_elf_dynsym(elf_file *file)
 		es = (void *)n->data;
 		if (file->elf_bits == 32) {
 			Elf32_Sym *sym = es->data;
-			fprintf(stderr, "%s\n", es->name);
+			fprintf(stdout, "%s\n", es->name);
 			dump_syms32(sym);
 		} else if (file->elf_bits == 64) {
 			Elf64_Sym *sym = es->data;
-			fprintf(stderr, "%s\n", es->name);
+			fprintf(stdout, "%s\n", es->name);
 			dump_syms64(sym);
 		} else {
 			continue;

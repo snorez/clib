@@ -15,7 +15,7 @@ int disas_single(int arch, int mode, void *addr)
 	if (count > 0) {
 		size_t j;
 		for (j = 0; j < count; j++) {
-			fprintf(stderr, "%s\t%s\n", insn[j].mnemonic,
+			fprintf(stdout, "%s\t%s\n", insn[j].mnemonic,
 				insn[j].op_str);
 		}
 		cs_free(insn, count);
