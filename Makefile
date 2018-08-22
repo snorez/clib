@@ -1,8 +1,13 @@
+# this is a C program project
+# we need to compile it with gcc, and provide some libraries and header files
+# however, we should also make it compatible with g++
+#
+ARCH = 64
+# use make with ARCH=32/64
 TMP = /tmp
 LIB = ./lib
 INC = ./include
 ARCH = $(shell getconf LONG_BIT)
-#ARCH = 32
 CWD = $(shell pwd)
 vpath %.c ./src/
 vpath %.h ./include/
@@ -12,12 +17,16 @@ CC_OPT_static = $(CC) -O2 -DHAS_CAPSTONE
 CC_OPT_dynamic = $(CC) -O2 -rdynamic -DHAS_CAPSTONE
 CC_OPT_low = $(CC) -O2 -rdynamic
 
-obj_static = error.o file.o list.o string.o net.o crypt.o elf.o \
-	 utils.o signal.o dbg.o disas.o logfile.o plugin.o
-obj_dynamic = error.0 file.0 list.0 string.0 net.0 crypt.0 elf.0 \
-	 utils.0 signal.0 dbg.0 disas.0 logfile.0 plugin.0
-obj_dynamic_low = error.1 file.1 list.1 string.1 net.1 crypt.1 elf.1 \
-	 utils.1 signal.1 dbg.1 disas.1 logfile.1 memcpy.1 plugin.1
+obj_static = clib_error.o clib_file.o clib_list.o clib_string.o clib_net.o \
+	     clib_crypt.o clib_elf.o clib_utils.o clib_signal.o clib_dbg.o \
+	     clib_disas.o clib_logfile.o clib_plugin.o clib_rbtree.o
+obj_dynamic = clib_error.0 clib_file.0 clib_list.0 clib_string.0 clib_net.0 \
+	      clib_crypt.0 clib_elf.0 clib_utils.0 clib_signal.0 clib_dbg.0 \
+	      clib_disas.0 clib_logfile.0 clib_plugin.0 clib_rbtree.0
+obj_dynamic_low = clib_error.1 clib_file.1 clib_list.1 clib_string.1 clib_net.1 \
+		  clib_crypt.1 clib_elf.1 clib_utils.1 clib_signal.1 clib_dbg.1 \
+		  clib_disas.1 clib_logfile.1 clib_memcpy.1 clib_plugin.1 \
+		  clib_rbtree.1
 
 all: static shared shared_low_ver
 

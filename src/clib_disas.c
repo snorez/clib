@@ -1,5 +1,5 @@
 /* this file needed by dbg.c */
-#include "../include/disas.h"
+#include "../include/clib_disas.h"
 
 int disas_single(int arch, int mode, void *addr)
 {

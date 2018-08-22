@@ -1,4 +1,4 @@
-#include "../include/string.h"
+#include "../include/clib_string.h"
 
 char printable[] = {' ', '!', '"', '#', '$', '%', '&', '\'', '(', ')', '*',
 		'+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6',
@@ -555,6 +555,245 @@ int get_next_word_until(char **str, uint32_t *len, char *chs)
 	}
 	return 0;
 }
+
+#if 0
+char *def_seps[] = {
+	"<<=", ">>=",
+	"...",
+
+	"->", "++", "--", ">>", "<<", "<=", ">=", "==", "!=", "&&", "||", "+=",
+	"-=", "*=", "/=", "&=", "^=", "|=", "##", "%=",
+
+	"(", ")", "[", "]", "{", "}", ".", "!", "~", "+", "-", "*", "&", "/",
+	"%", "<", ">", "|", "^", "?", ":", "=", ",", ";", "#", "\"", "'",
+};
+int def_seps_cnt = sizeof(def_seps) / sizeof(char *);
+static char *check_tokens_in_seps(char *start, char **seps, int seps_cnt)
+{
+	int i = 0;
+
+	for (i = 0; i < seps_cnt; i++) {
+		size_t str_len = strlen(seps[i]);
+		if (!strncmp(start, seps[i], str_len))
+			return seps[i];
+	}
+	return NULL;
+}
+static char *get_close_paren(char *start)
+{
+	unsigned long counter = 0;
+	char *pos = start;
+
+	while (1) {
+		if (!*pos)
+			return NULL;
+
+		if ((*pos == '\'') || (*pos == '"')) {
+			pos = get_matched_quote(pos);
+			if (!pos)
+				return NULL;
+		} else if (*pos == '(') {
+			counter++;
+		} else if (*pos == ')') {
+			counter--;
+		}
+
+		if (!counter)
+			break;
+		pos++;
+	}
+	return pos;
+}
+
+static char *get_close_braket(char *start)
+{
+	unsigned long counter = 0;
+	char *pos = start;
+
+	while (1) {
+		if (!*pos)
+			return NULL;
+
+		if ((*pos == '\'') || (*pos == '"')) {
+			pos = get_matched_quote(pos);
+			if (!pos)
+				return NULL;
+		} else if (*pos == '[') {
+			counter++;
+		} else if (*pos == ']') {
+			counter--;
+		}
+
+		if (!counter)
+			break;
+		pos++;
+	}
+	return pos;
+}
+
+static char *get_close_brace(char *start)
+{
+	unsigned long counter = 0;
+	char *pos = start;
+
+	while (1) {
+		if (!*pos)
+			return NULL;
+
+		if ((*pos == '\'') || (*pos == '"')) {
+			pos = get_matched_quote(pos);
+			if (!pos)
+				return NULL;
+		} else if (*pos == '{') {
+			counter++;
+		} else if (*pos == '}') {
+			counter--;
+		}
+
+		if (!counter)
+			break;
+		pos++;
+	}
+	return pos;
+}
+
+/*
+ * get_matched_pair: get the position of the paired char
+ * return NULL if something goes wrong, return start if not a paired char,
+ */
+static char *get_matched_pair(char *start)
+{
+	char c = *start;
+	char *ret = start;
+
+	switch (c) {
+	case '(':
+		ret = get_close_paren(start);
+		break;
+	case '[':
+		ret = get_close_braket(start);
+		break;
+	case '{':
+		ret = get_close_brace(start);
+		break;
+	case '\'':
+	case '"':
+		ret = get_matched_quote(start);
+		break;
+	default:
+		break;
+	}
+	return ret;
+}
+
+/*
+ * get_next_word: get next word start at @start
+ * a word not start with seps
+ * so, this function should be called by get_next_token
+ */
+static int get_next_word(char *start, size_t *len)
+{
+	char *pos = start;
+	char *tmp;
+
+	while (1) {
+		if (!*pos) {
+			if (pos > start)
+				*len = pos-1-start;
+			else
+				*len = 0;
+			return 0;
+		}
+
+		if ((tmp = check_tokens_in_seps(pos, def_seps, def_seps_cnt))) {
+			if (pos == start) {
+				*len = strlen(tmp);
+				return 0;
+			} else {
+				*len = pos-start;
+				return 0;
+			}
+		}
+
+		if (isspace(*pos)) {
+			*len = pos-start;
+			return 0;
+		}
+		pos++;
+	}
+}
+
+/*
+ * get_next_token:
+ *	not exclude space characters
+ * @start: the address of the beginning of the buf
+ * @len: the address of the token length
+ * @use_seps: user specific separators, if true, then just check_tokens_in_seps
+ * @sep_cnt: the count of the separators
+ */
+int get_next_token(char **start, size_t *len, char **use_seps, int sep_cnt)
+{
+	/*
+	 * what could be a token?
+	 * tokens, a word
+	 * and if we meet ( [ { ' ", these could be paired, we take them all
+	 * what is a token? all operators, all words,
+	 * if seps is NULL, then we use ordinary operators as a seperater
+	 */
+	char *pos = *start;
+	char *tmp_seps;
+	char *orig_pos;
+	*len = 0;
+
+	while (1) {
+		if (!*pos)
+			return 0;
+
+		if (!isspace(*pos))
+			break;
+		pos++;
+		*start += 1;
+	}
+	pos = *start;
+	orig_pos = pos;
+
+	int specific = 1;
+	if (!use_seps) {
+		use_seps = def_seps;
+		sep_cnt = def_seps_cnt;
+		specific = 0;
+	}
+	if (!specific) {
+		pos = get_matched_pair(orig_pos);
+		if (!pos)
+			return -1;
+		else if (pos != orig_pos) {
+			*len = pos+1-orig_pos;
+			return 0;
+		}
+	}
+
+	tmp_seps = check_tokens_in_seps(pos, use_seps, sep_cnt);
+	if (tmp_seps) {
+		*len = strlen(tmp_seps);
+		return 0;
+	}
+	if (specific)
+		return -1;
+
+	if (specific) {
+		pos = get_matched_pair(orig_pos);
+		if (!pos)
+			return -1;
+		else if (pos != orig_pos) {
+			*len = pos+1-orig_pos;
+			return 0;
+		}
+	}
+
+	return get_next_word(pos, len);
+}
+#endif
 
 /* get_context_in get the value in `ch` . `ch`, the first char *MUST* be ch */
 int get_context_in_quote(char **str, uint32_t *len)

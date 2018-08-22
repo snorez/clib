@@ -1,4 +1,4 @@
-#include "../include/logfile.h"
+#include "../include/clib_logfile.h"
 
 logfile *logfile_open(char *path)
 {
@@ -18,19 +18,19 @@ int logfile_write(logfile *file, logfile_level level, char *fmt, ...)
 	char *msg = NULL;
 	memset(buf, 0, MAXLINE);
 	switch (level) {
-	case debug:
+	case clib_debug:
 		msg = "DEBUG:";
 		break;
-	case info:
+	case clib_info:
 		msg = "INFO: ";
 		break;
-	case warn:
+	case clib_warn:
 		msg = "WARN: ";
 		break;
-	case error:
+	case clib_error:
 		msg = "ERROR:";
 		break;
-	case fatal:
+	case clib_fatal:
 		msg = "FATAL:";
 		break;
 	default:

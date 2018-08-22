@@ -1,6 +1,10 @@
 #ifndef FILE_H_7JM8BHXT
 #define FILE_H_7JM8BHXT
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -13,10 +17,10 @@
 #include <sys/file.h>
 #include <dirent.h>
 #include <linux/limits.h>
-#include "./error.h"
-#include "./string.h"
-#include "./list.h"
-#include "./utils.h"
+#include "./clib_error.h"
+#include "./clib_string.h"
+#include "./clib_list.h"
+#include "./clib_utils.h"
 
 struct file {
 	struct stat stat;
@@ -41,7 +45,7 @@ static inline buf_struct *regfile_get_rdata(regfile *file, list_comm *next_head)
 		return NULL;
 	if (!list_comm_is_empty(next_head))
 		head = next_head;
-	next = (void *)head->list_head.next;
+	next = (list_comm *)head->list_head.next;
 	next_head->list_head = next->list_head;
 	return (buf_struct *)next->data;
 }
@@ -60,5 +64,9 @@ extern int regfile_writelines(regfile *);
 extern ssize_t regfile_read(regfile *file, void *buf, size_t count);
 extern ssize_t regfile_write(regfile *file, void *buf, size_t count);
 extern off_t regfile_lseek(regfile *file, off_t offs, int where);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* end of include guard: FILE_H_7JM8BHXT */

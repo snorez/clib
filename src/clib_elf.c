@@ -1,4 +1,4 @@
-#include "../include/elf.h"
+#include "../include/clib_elf.h"
 
 static void dump_sechdr(elf_file *file, void *sechdr);
 
@@ -1138,8 +1138,14 @@ static void dump_syms64(Elf64_Sym *sym)
 	fprintf(stdout, "st_info: 0x%08x\n", sym->st_info);
 	fprintf(stdout, "st_other: 0x%08x\n", sym->st_other);
 	fprintf(stdout, "st_shndx: 0x%08x\n", sym->st_shndx);
+#ifdef __x86_64__
 	fprintf(stdout, "st_value: 0x%016lx\n", sym->st_value);
 	fprintf(stdout, "st_size: 0x%016lx\n", sym->st_size);
+#endif
+#ifdef __i386__
+	fprintf(stdout, "st_value: 0x%016llx\n", sym->st_value);
+	fprintf(stdout, "st_size: 0x%016llx\n", sym->st_size);
+#endif
 	fprintf(stdout, "\n");
 }
 void dump_elf_sym(elf_file *file)

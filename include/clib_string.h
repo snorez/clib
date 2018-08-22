@@ -1,6 +1,10 @@
 #ifndef STRING_H_CMNRJ3FM
 #define STRING_H_CMNRJ3FM
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -10,8 +14,8 @@
 #include <errno.h>
 #include <ctype.h>
 #include <strings.h>
-#include "./error.h"
-#include "./list.h"
+#include "./clib_error.h"
+#include "./clib_list.h"
 
 typedef struct _buf_struct {
 	void *buf;
@@ -50,5 +54,9 @@ extern int list_comm_str_struct_comb_free(list_comm *prev,
 extern void list_comm_str_struct_print(list_comm *head);
 extern int get_dict_key_value(list_comm *head, char *str, char *sep);
 extern int str_split(list_comm *head, const char *str, const char *key);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* end of include guard: STRING_H_CMNRJ3FM */

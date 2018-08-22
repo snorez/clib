@@ -1,7 +1,7 @@
 /*
  * come from linux kernel list.h
  */
-#include "../include/list.h"
+#include "../include/clib_list.h"
 
 void list_comm_init(list_comm *head)
 {

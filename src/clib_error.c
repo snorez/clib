@@ -1,7 +1,7 @@
 /*
  * this file comes from `Advanced Unix programming`
  */
-#include "../include/error.h"
+#include "../include/clib_error.h"
 
 static int dbg_mode;
 
@@ -59,6 +59,17 @@ void err_dbg(int has_errno, const char *fmt, ...)
 	}
 }
 
+void err_dbg1(int errval, const char *fmt, ...)
+{
+	if (dbg_mode) {
+		va_list ap;
+
+		va_start(ap, fmt);
+		err_common(1, errval, fmt, ap);
+		va_end(ap);
+	}
+}
+
 void err_dump(const char *fmt, ...)
 {
 	va_list ap;
@@ -95,4 +106,9 @@ int err_ret(int has_errno, int retval, const char *fmt, ...)
 void set_dbg_mode(int val)
 {
 	dbg_mode = val;
+}
+
+int get_dbg_mode(void)
+{
+	return !!dbg_mode;
 }

@@ -1,10 +1,14 @@
 #ifndef ELF_H_DAGNAQG6
 #define ELF_H_DAGNAQG6
 
-#include "../include/error.h"
-#include "../include/string.h"
-#include "../include/list.h"
-#include "../include/file.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "../include/clib_error.h"
+#include "../include/clib_string.h"
+#include "../include/clib_list.h"
+#include "../include/clib_file.h"
 #include <elf.h>
 
 struct _elf_sym {
@@ -44,5 +48,9 @@ extern void dump_elf_dynstr(elf_file *);
 
 extern void dump_elf_sym(elf_file *);
 extern void dump_elf_dynsym(elf_file *);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* end of include guard: ELF_H_DAGNAQG6 */

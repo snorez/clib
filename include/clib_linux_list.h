@@ -1,6 +1,15 @@
 #ifndef LINUX_LIST_H_MVRX6QSF
 #define LINUX_LIST_H_MVRX6QSF
 
+#ifdef __cplusplus
+extern "C" {
+
+#ifndef NULL
+#define NULL (void *)0
+#endif
+
+#endif
+
 /*
  * Simple doubly linked list implementation.
  *
@@ -51,14 +60,14 @@ static inline void INIT_LIST_HEAD(struct list_head *list)
  * This is only for internal list manipulation where we know
  * the prev/next entries already!
  */
-static inline void __list_add(struct list_head *new,
+static inline void __list_add(struct list_head *new_node,
 			      struct list_head *prev,
 			      struct list_head *next)
 {
-	next->prev = new;
-	new->next = next;
-	new->prev = prev;
-	prev->next = new;
+	next->prev = new_node;
+	new_node->next = next;
+	new_node->prev = prev;
+	prev->next = new_node;
 }
 
 /**
@@ -69,9 +78,9 @@ static inline void __list_add(struct list_head *new,
  * Insert a new entry after the specified head.
  * This is good for implementing stacks.
  */
-static inline void list_add(struct list_head *new, struct list_head *head)
+static inline void list_add(struct list_head *new_node, struct list_head *head)
 {
-	__list_add(new, head, head->next);
+	__list_add(new_node, head, head->next);
 }
 
 
@@ -83,9 +92,9 @@ static inline void list_add(struct list_head *new, struct list_head *head)
  * Insert a new entry before the specified head.
  * This is useful for implementing queues.
  */
-static inline void list_add_tail(struct list_head *new, struct list_head *head)
+static inline void list_add_tail(struct list_head *new_node, struct list_head *head)
 {
-	__list_add(new, head->prev, head);
+	__list_add(new_node, head->prev, head);
 }
 
 /*
@@ -116,8 +125,8 @@ static inline void __list_del_entry(struct list_head *entry)
 static inline void list_del(struct list_head *entry)
 {
 	__list_del(entry->prev, entry->next);
-	entry->next = LIST_POISON1;
-	entry->prev = LIST_POISON2;
+	entry->next = (struct list_head *)LIST_POISON1;
+	entry->prev = (struct list_head *)LIST_POISON2;
 }
 
 /**
@@ -128,18 +137,18 @@ static inline void list_del(struct list_head *entry)
  * If @old was empty, it will be overwritten.
  */
 static inline void list_replace(struct list_head *old,
-				struct list_head *new)
+				struct list_head *new_node)
 {
-	new->next = old->next;
-	new->next->prev = new;
-	new->prev = old->prev;
-	new->prev->next = new;
+	new_node->next = old->next;
+	new_node->next->prev = new_node;
+	new_node->prev = old->prev;
+	new_node->prev->next = new_node;
 }
 
 static inline void list_replace_init(struct list_head *old,
-					struct list_head *new)
+					struct list_head *new_node)
 {
-	list_replace(old, new);
+	list_replace(old, new_node);
 	INIT_LIST_HEAD(old);
 }
 
@@ -615,8 +624,8 @@ static inline void list_splice_tail_init(struct list_head *list,
 #define INIT_HLIST_HEAD(ptr) ((ptr)->first = NULL)
 static inline void INIT_HLIST_NODE(struct hlist_node *h)
 {
-	h->next = NULL;
-	h->pprev = NULL;
+	h->next = (struct hlist_node *)NULL;
+	h->pprev = (struct hlist_node **)NULL;
 }
 
 static inline int hlist_unhashed(const struct hlist_node *h)
@@ -643,8 +652,8 @@ static inline void __hlist_del(struct hlist_node *n)
 static inline void hlist_del(struct hlist_node *n)
 {
 	__hlist_del(n);
-	n->next = LIST_POISON1;
-	n->pprev = LIST_POISON2;
+	n->next = (struct hlist_node *)LIST_POISON1;
+	n->pprev = (struct hlist_node **)LIST_POISON2;
 }
 
 static inline void hlist_del_init(struct hlist_node *n)
@@ -702,12 +711,12 @@ static inline int hlist_fake(struct hlist_node *h)
  * reference of the first entry if it exists.
  */
 static inline void hlist_move_list(struct hlist_head *old,
-				   struct hlist_head *new)
+				   struct hlist_head *new_node)
 {
-	new->first = old->first;
-	if (new->first)
-		new->first->pprev = &new->first;
-	old->first = NULL;
+	new_node->first = old->first;
+	if (new_node->first)
+		new_node->first->pprev = &new_node->first;
+	old->first = (struct hlist_node *)NULL;
 }
 
 #define hlist_entry(ptr, type, member) container_of(ptr,type,member)
@@ -765,5 +774,9 @@ static inline void hlist_move_list(struct hlist_head *old,
 	for (pos = hlist_entry_safe((head)->first, typeof(*pos), member);\
 	     pos && ({ n = pos->member.next; 1; });			\
 	     pos = hlist_entry_safe(n, typeof(*pos), member))
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* end of include guard: LINUX_LIST_H_MVRX6QSF */
