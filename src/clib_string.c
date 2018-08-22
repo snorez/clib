@@ -869,19 +869,17 @@ int list_comm_str_struct_new(list_comm *head, char *str, uint32_t len)
 
 void list_comm_str_struct_make_empty(list_comm *head)
 {
-	list_comm *prev = head, *next = head;
-	list_for_each_entry(next, &head->list_head, list_head) {
-		str_struct *tmp = (str_struct *)next->data;
+	list_comm *node, *next;
+	list_for_each_entry_safe(node, next, &head->list_head, list_head) {
+		str_struct *tmp = (str_struct *)node->data;
+		list_del(&node->list_head);
 		free(tmp->str);
-		prev = (list_comm *)next->list_head.prev;
-		list_del(&next->list_head);
-		free(next);
-		next = prev;
+		free(node);
 	}
 	list_comm_init(head);
 }
 
-int list_comm_str_struct_comb_free(list_comm *b, list_comm *e)
+int list_comm_str_struct_merge(list_comm *b, list_comm *e)
 {
 	str_struct *b_data = (str_struct *)b->data;
 	str_struct *e_data = (str_struct *)e->data;

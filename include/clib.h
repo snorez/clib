@@ -21,6 +21,7 @@ extern "C" {
 #include "../include/clib_plugin.h"
 #include "../include/clib_elf.h"
 #include "../include/clib_pe.h"
+#include "../include/clib_cmd_auto_completion.h"
 
 #ifdef __cplusplus
 }

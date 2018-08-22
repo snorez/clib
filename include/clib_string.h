@@ -49,7 +49,7 @@ extern int get_context_in_quote(char **pos, uint32_t *len);
 extern int list_comm_str_struct_new(list_comm *head, char *str,
 				      uint32_t len);
 extern void list_comm_str_struct_make_empty(list_comm *head);
-extern int list_comm_str_struct_comb_free(list_comm *prev,
+extern int list_comm_str_struct_merge(list_comm *prev,
 					    list_comm *next);
 extern void list_comm_str_struct_print(list_comm *head);
 extern int get_dict_key_value(list_comm *head, char *str, char *sep);
