@@ -65,7 +65,7 @@ void err_dbg1(int errval, const char *fmt, ...)
 		va_list ap;
 
 		va_start(ap, fmt);
-		err_common(1, errval, fmt, ap);
+		err_common(1, (errval < 0) ? -errval : errval, fmt, ap);
 		va_end(ap);
 	}
 }

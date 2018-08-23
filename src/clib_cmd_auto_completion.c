@@ -84,6 +84,7 @@ void clib_cmd_del(char *buf)
 		list_del(&node->list_head);
 		free(s->str);
 		free(node);
+		return;
 	}
 }
 

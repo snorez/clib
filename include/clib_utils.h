@@ -15,6 +15,13 @@ extern "C" {
 #include <sys/user.h>
 #include <linux/limits.h>
 
+#ifndef likely
+#define likely(x)		__builtin_expect(!!(x), 1)
+#endif
+#ifndef unlikely
+#define unlikely(x)		__builtin_expect(!!(x), 0)
+#endif
+
 #define clib__round_mask(x, y)	((__typeof__(x))((y)-1))
 #define clib_round_up(x, y)	((((x)-1) | clib__round_mask(x, y)) + 1)
 #define clib_round_down(x, y)	((x) & ~clib__round_mask(x, y))
