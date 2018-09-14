@@ -59,11 +59,13 @@ else
 	cd $(TMP);rm -rf clib_static;mkdir clib_static;cd clib_static;ar x /usr/lib32/libdl.a;ar x /usr/lib32/libcapstone.a;ar x /usr/lib/i386-linux-gnu/libreadline.a;cd ..;ar -rcs libclib32.a $(obj_static_32) $(TMP)/clib_static/*.o;cd $(CWD);cp $(TMP)/libclib32.a $(LIB)/
 endif
 
+# before copy, we need to use rm to delete the file first, then do the copy
+# otherwise, program load this lib will crash
 shared: $(obj_dynamic)
-	cd $(TMP);$(CC_OPT_dynamic) -rdynamic -shared -fPIC $(obj_dynamic) -lpthread -ldl -lcapstone -lreadline -o libclib$(ARCH).so;cd $(CWD);cp $(TMP)/libclib$(ARCH).so $(LIB)/
+	cd $(TMP);$(CC_OPT_dynamic) -rdynamic -shared -fPIC $(obj_dynamic) -lpthread -ldl -lcapstone -lreadline -o libclib$(ARCH).so;cd $(CWD);rm -f $(LIB)/libclib$(ARCH).so;cp $(TMP)/libclib$(ARCH).so $(LIB)/
 
 shared_low_ver: $(obj_dynamic_low)
-	cd $(TMP);$(CC_OPT_low) $(obj_dynamic_low) -Wl,--wrap=memcpy -rdynamic -shared -fPIC -ldl -lpthread -o libclib$(ARCH)_low.so;cd $(CWD);cp $(TMP)/libclib$(ARCH)_low.so $(LIB)/
+	cd $(TMP);$(CC_OPT_low) $(obj_dynamic_low) -Wl,--wrap=memcpy -rdynamic -shared -fPIC -ldl -lpthread -o libclib$(ARCH)_low.so;cd $(CWD);rm -f $(LIB)/libclib$(ARCH)_low.so;cp $(TMP)/libclib$(ARCH)_low.so $(LIB)/
 
 clean:
 	@rm -vf $(TMP)/*.o

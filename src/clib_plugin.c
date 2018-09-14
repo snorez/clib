@@ -108,6 +108,7 @@ static void clib_plugin_remove(struct clib_plugin *cp)
 static const char *plugin_entry_sym = "clib_plugin_init";
 static const char *plugin_exit_sym = "clib_plugin_exit";
 static const char *plugin_name_sym = "clib_plugin_name";
+static const char *plugin_needed_sym = "clib_plugin_needed";
 static char *clib_plugin_get_pluginname(struct clib_plugin *cp)
 {
 	void *nameaddr = dlsym(cp->handle, plugin_name_sym);
@@ -121,15 +122,107 @@ static char *clib_plugin_get_pluginname(struct clib_plugin *cp)
 	}
 }
 
-static int clib_plugin_open(struct clib_plugin *cp)
+static int clib_plugin_check_needed(struct clib_plugin *p,
+					  struct list_head *head)
+{
+	struct clib_plugin *tmp;
+	char **needed = dlsym(p->handle, plugin_needed_sym);
+	if (!needed)
+		return 0;
+	for (int i = 0; needed[i]; i++) {
+		tmp = clib_plugin_find_by_pluginname(needed[i], head);
+		if (!tmp)
+			return -1;
+	}
+	return 0;
+}
+
+/*
+ * clib_plugin_*_needed called by plugin, not main routine
+ */
+static int clib_plugin_add_needed(char *plugin_name, struct list_head *head)
+{
+	struct clib_plugin *targetp = clib_plugin_find_by_pluginname(plugin_name,
+								     head);
+	if (!targetp) {
+		err_dbg(0, err_fmt("target plugin not loaded yet"));
+		return -1;
+	}
+
+	targetp->refcount++;
+	return 0;
+}
+
+static int clib_plugin_remove_needed(char *plugin_name, struct list_head *head)
+{
+	struct clib_plugin *targetp = clib_plugin_find_by_pluginname(plugin_name,
+								     head);
+	if (!targetp) {
+		err_dbg(0, err_fmt("target plugin not loaded yet"));
+		return -1;
+	}
+
+	targetp->refcount--;
+	return 0;
+}
+
+static int clib_plugin_handle_needed(struct clib_plugin *cp,
+					   struct list_head *head,
+					   int is_add)
+{
+	int err0 = 0, err1 = 0;
+	char **needed = dlsym(cp->handle, plugin_needed_sym);
+	if (!needed)
+		return 0;
+
+	int i = 0;
+	for (i = 0; needed[i]; i++) {
+		if (is_add) {
+			err0 = clib_plugin_add_needed(needed[i], head);
+			if (err0) {
+				err_dbg(0, err_fmt("clib_plugin_add_needed err"));
+				break;
+			}
+		}
+	}
+	if (err0 || (!is_add)) {
+		for (int j = 0; j < i; j++) {
+			err1 = clib_plugin_remove_needed(needed[j], head);
+			if (err1) {
+				err_dbg(0, err_fmt("clib_plugin_remove_needed err"));
+				return -1;
+			}
+		}
+	}
+	if (err0)
+		return -1;
+	return 0;
+}
+
+static int clib_plugin_open(struct clib_plugin *cp, struct list_head *head)
 {
 	if (cp->state != CLIB_PLUGIN_UNLOAD)
 		return 0;
 	int flag = RTLD_NOW | RTLD_GLOBAL;
 	cp->handle = dlopen(cp->path, flag);
 	if (!cp->handle) {
-		err_dbg(0, err_fmt("dlopen err: %s. maybe dependencies issues"),
+		err_dbg(0, err_fmt("dlopen err: %s. maybe needed issues"),
 					dlerror());
+		return -1;
+	}
+
+	int err = clib_plugin_check_needed(cp, head);
+	if (err) {
+		err_dbg(0, err_fmt("needed issues"));
+		dlclose(cp->handle);
+		cp->handle = NULL;
+		return -1;
+	}
+	err = clib_plugin_handle_needed(cp, head, 1);
+	if (err) {
+		err_dbg(0, err_fmt("add_needed err"));
+		dlclose(cp->handle);
+		cp->handle = NULL;
 		return -1;
 	}
 	cp->state = CLIB_PLUGIN_LOADED;
@@ -138,12 +231,21 @@ static int clib_plugin_open(struct clib_plugin *cp)
 	return 0;
 }
 
-static int clib_plugin_close(struct clib_plugin *cp)
+static int clib_plugin_close(struct clib_plugin *cp, struct list_head *head,
+			     int force)
 {
 	if (cp->state == CLIB_PLUGIN_UNLOAD)
 		return 0;
 
 	int err = 0;
+	if (!force) {
+		err = clib_plugin_handle_needed(cp, head, 0);
+		if (err == -1) {
+			err_dbg(0, err_fmt("remove_needed err"));
+			return -1;
+		}
+	}
+
 	if (cp->handle)
 		err = dlclose(cp->handle);
 	if (err) {
@@ -163,6 +265,7 @@ static int clib_plugin_do_entry(struct clib_plugin *cp, int argc, char *argv[],
 	int err;
 	if (cp->state == CLIB_PLUGIN_FORMAT_ERR)
 		return -1;
+
 	/*
 	 * if old, that means a same name plugin has been loaded
 	 * if !old, that means no other loaded plugin using this name
@@ -194,6 +297,7 @@ static int clib_plugin_do_entry(struct clib_plugin *cp, int argc, char *argv[],
 		err_dbg(0, err_fmt("plugin entry return err"));
 		return -EINVAL;
 	}
+
 	return 0;
 }
 
@@ -201,7 +305,6 @@ static int clib_plugin_do_exit(struct clib_plugin *cp)
 {
 	if (cp->state != CLIB_PLUGIN_LOADED)
 		return 0;
-
 	void *addr = dlsym(cp->handle, plugin_exit_sym);
 	if (!addr) {
 		cp->state = CLIB_PLUGIN_FORMAT_ERR;
@@ -209,35 +312,6 @@ static int clib_plugin_do_exit(struct clib_plugin *cp)
 	}
 	void (*exithandler)(void) = (void (*)(void))addr;
 	exithandler();
-	return 0;
-}
-
-/*
- * clib_plugin_*_needed called by plugin, not main routine
- */
-int clib_plugin_add_needed(char *plugin_name, struct list_head *head)
-{
-	struct clib_plugin *targetp = clib_plugin_find_by_pluginname(plugin_name,
-								     head);
-	if (!targetp) {
-		err_dbg(0, err_fmt("target plugin not loaded yet"));
-		return -1;
-	}
-
-	targetp->refcount++;
-	return 0;
-}
-
-int clib_plugin_remove_needed(char *plugin_name, struct list_head *head)
-{
-	struct clib_plugin *targetp = clib_plugin_find_by_pluginname(plugin_name,
-								     head);
-	if (!targetp) {
-		err_dbg(0, err_fmt("target plugin not loaded yet"));
-		return -1;
-	}
-
-	targetp->refcount--;
 	return 0;
 }
 
@@ -266,7 +340,7 @@ int clib_plugin_load(int argc, char *argv[], struct list_head *head)
 			return 0;
 		}
 
-		err = clib_plugin_open(old);
+		err = clib_plugin_open(old, head);
 		if (err) {
 			err_dbg(0, err_fmt("clib_plugin_open err"));
 			return -1;
@@ -275,7 +349,7 @@ int clib_plugin_load(int argc, char *argv[], struct list_head *head)
 		err = clib_plugin_do_entry(old, argc-1, &argv[1], head);
 		if (err) {
 			err_dbg(0, err_fmt("clib_plugin_do_entry err"));
-			clib_plugin_close(old);
+			clib_plugin_close(old, head, 0);
 			return -1;
 		}
 		return 0;
@@ -291,7 +365,7 @@ int clib_plugin_load(int argc, char *argv[], struct list_head *head)
 		return -1;
 	}
 
-	err = clib_plugin_open(newp);
+	err = clib_plugin_open(newp, head);
 	if (err) {
 		err_dbg(0, err_fmt("clib_plugin_open err"));
 		clib_plugin_free(newp);
@@ -300,7 +374,7 @@ int clib_plugin_load(int argc, char *argv[], struct list_head *head)
 
 	err = clib_plugin_do_entry(newp, argc-1, &argv[1], head);
 	if (err) {
-		clib_plugin_close(newp);
+		clib_plugin_close(newp, head, 0);
 		clib_plugin_free(newp);
 		err_dbg1(err, err_fmt("clib_plugin_do_entry err"));
 		return -1;
@@ -343,7 +417,7 @@ found:
 		err_dbg(0, err_fmt("clib_plugin_do_exit err"));
 		/* do not return now, clean the plugin */
 	}
-	err = clib_plugin_close(target);
+	err = clib_plugin_close(target, head, 0);
 	if (err) {
 		err_dbg(0, err_fmt("clib_plugin_close err"));
 		return -1;
@@ -376,6 +450,10 @@ int clib_plugin_reload(int argc, char *argv[], struct list_head *head)
 
 int clib_plugin_init_root(const char *dir, struct list_head *head)
 {
+	if (*dir != '/') {
+		err_dbg(0, err_fmt("dir must be absolute path"));
+		return -1;
+	}
 	DIR *root = opendir(dir);
 	if (!root) {
 		err_dbg(1, err_fmt("opendir err"));
@@ -399,6 +477,8 @@ int clib_plugin_init_root(const char *dir, struct list_head *head)
 			continue;
 		memset(full_path+base_len, 0, 4096-base_len);
 		memcpy(full_path+base_len, dp->d_name, strlen(dp->d_name));
+		if (clib_plugin_find_by_id_path(full_path, head))
+			continue;
 		struct clib_plugin *newp = clib_plugin_alloc(full_path);
 		if (!newp) {
 			err_dbg(0, err_fmt("clib_plugin_alloc err"));
@@ -418,7 +498,7 @@ void clib_plugin_cleanup(struct list_head *head)
 	int err;
 	list_for_each_entry_safe(tmp, next, head, sibling) {
 		clib_plugin_do_exit(tmp);
-		err = clib_plugin_close(tmp);
+		err = clib_plugin_close(tmp, head, 1);
 		if (err)
 			err_dbg(0, err_fmt("clib_plugin_close %s err"), tmp->path);
 		clib_plugin_remove(tmp);

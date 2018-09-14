@@ -43,8 +43,6 @@ extern void clib_plugin_do_exit(struct clib_plugin *cp);
 extern struct clib_plugin *clib_plugin_find_by_pluginname(char *plugin_name,
 							  struct list_head *head);
 #endif
-extern int clib_plugin_add_needed(char *plugin_name, struct list_head *head);
-extern int clib_plugin_remove_needed(char *plugin_name, struct list_head *head);
 extern int clib_plugin_load(int argc, char *argv[], struct list_head *head);
 extern int clib_plugin_unload(int argc, char *argv[], struct list_head *head);
 extern int clib_plugin_reload(int argc, char *argv[], struct list_head *head);

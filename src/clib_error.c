@@ -4,7 +4,12 @@
 #include "../include/clib_error.h"
 
 static int dbg_mode;
-#define	COLOR_B		"\033[00;31m"	/* default is red color */
+/*
+ * COLOR_B selections
+ *	00(normal) 01(bold) 02(normal-light) 03(Italic) 04(underline) 07 09(mid-line)
+ *	30-36 40-49
+ */
+#define	COLOR_B		"\033[07;31m"
 #define COLOR_E		"\033[0m"
 #define	COLOR_OFF	"\0"
 static int color_p = 1;
