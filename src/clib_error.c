@@ -4,8 +4,12 @@
 #include "../include/clib_error.h"
 
 static int dbg_mode;
-#define	COLOR_B "\033[03;31m"	/* default is red color */
-#define COLOR_E "\033[0m"
+#define	COLOR_B		"\033[00;31m"	/* default is red color */
+#define COLOR_E		"\033[0m"
+#define	COLOR_OFF	"\0"
+static int color_p = 1;
+static char *last_color_b = COLOR_B;
+static char *last_color_e = COLOR_E;
 static char *color_prompt_b = COLOR_B;
 static char *color_prompt_e = COLOR_E;
 
@@ -120,4 +124,25 @@ void set_dbg_mode(int val)
 int get_dbg_mode(void)
 {
 	return !!dbg_mode;
+}
+
+void err_color_on(void)
+{
+	color_p = 1;
+	color_prompt_b = last_color_b;
+	color_prompt_e = last_color_e;
+}
+
+void err_color_off(void)
+{
+	color_p = 0;
+	color_prompt_b = COLOR_OFF;
+	color_prompt_e = COLOR_OFF;
+}
+
+void err_set_color(char *b, char *e)
+{
+	last_color_b = b;
+	last_color_e = e;
+	err_color_on();
 }

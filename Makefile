@@ -15,6 +15,9 @@ ARCH = $(shell getconf LONG_BIT)
 CWD = $(shell pwd)
 vpath %.c ./src/
 vpath %.h ./include/
+vpath %.o $(TMP)/
+vpath %.0 $(TMP)/
+vpath %.1 $(TMP)/
 
 CC_DBG=-g
 CC = gcc

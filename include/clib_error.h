@@ -80,6 +80,9 @@ extern void err_exit(int has_errno, const char *fmt, ...);
 extern int err_ret(int has_errno, int retval, const char *fmt, ...);
 extern void set_dbg_mode(int dbg_mode_on);
 extern int get_dbg_mode(void);
+extern void err_color_on(void);
+extern void err_color_off(void);
+extern void err_set_color(char *b, char *e);
 
 #ifdef __cplusplus
 }
