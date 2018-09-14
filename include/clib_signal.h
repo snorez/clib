@@ -16,6 +16,7 @@ extern "C" {
 #include <dlfcn.h>
 #include <execinfo.h>
 #include <signal.h>
+#include <setjmp.h>
 #include "../include/clib_error.h"
 
 typedef void (*sigact_func)(int, siginfo_t *, void *);

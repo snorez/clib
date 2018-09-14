@@ -374,6 +374,11 @@ err_free0:
 	return -1;
 }
 
+elf_file *elf_open(char *path)
+{
+	return elf_parse(path);
+}
+
 elf_file *elf_parse(char *path)
 {
 	int err;
@@ -387,7 +392,7 @@ elf_file *elf_parse(char *path)
 	list_comm_init(&ef->syms);
 	list_comm_init(&ef->dynsyms);
 
-	ef->file = regfile_open(path, O_RDONLY);
+	ef->file = regfile_open(path, O_RDWR);
 	if (!ef->file) {
 		err_dbg(1, err_fmt("regfile_open err"));
 		err = -1;
@@ -1186,3 +1191,106 @@ void dump_elf_dynsym(elf_file *file)
 		}
 	}
 }
+
+#ifdef USELIB
+/*
+ * use sys_uselib to load elf library at specific address
+ * check SYSCALL_DEFINE1(uselib, ...)
+ * an example: https://github.com/ganboing/ski-uselib/blob/master/mklib.c
+ * TODO: sys_uselib return function not implement
+ */
+int elf_uselib(char *libname, unsigned long load_addr)
+{
+	/*
+	 * TODO:
+	 *	(MAY NOT need)check libname whether an elf library or not
+	 *	modify elf header, section header
+	 *	call sys_uselib
+	 */
+	int err = 0;
+	elf_file *ef = elf_open(libname);
+	if (!ef) {
+		err_dbg(0, err_fmt("elf_open err"));
+		return -1;
+	}
+
+	long subval = 0;
+#ifdef __x86_64__
+	Elf64_Ehdr *eh = ef->elf_hdr;
+	if (!eh->e_phnum) {
+		err_dbg(0, err_fmt("%s has no program headers"));
+		elf_cleanup(ef);
+		return -1;
+	}
+	uint16_t cnt = eh->e_phnum;
+	Elf64_Phdr *p = ef->elf_phdr;
+	subval = load_addr - p->p_vaddr;
+	while (cnt--) {
+		if (p->p_type != PT_LOAD)
+			goto next_loop;
+		if (!(p->p_flags & PF_X))
+			goto next_loop;
+		p->p_vaddr = subval + p->p_vaddr;
+next_loop:
+		p = (Elf64_Phdr *)((void *)p + eh->e_phentsize);
+	}
+
+	err = regfile_lseek(ef->file, eh->e_phoff, SEEK_SET);
+	if (err < 0) {
+		err_dbg(0, err_fmt("regfile_lseek err"));
+		elf_cleanup(ef);
+		return -1;
+	}
+	err = write(ef->file->fd, ef->elf_phdr, ef->elf_phdr_size);
+	if (err < 0) {
+		err_dbg(0, err_fmt("write err"));
+		elf_cleanup(ef);
+		return -1;
+	}
+	elf_cleanup(ef);
+#elif defined(__i386__)
+	Elf32_Ehdr *eh = ef->elf_hdr;
+	if (!eh->e_phnum) {
+		err_dbg(0, err_fmt("%s has no program headers"));
+		elf_cleanup(ef);
+		return -1;
+	}
+	uint16_t cnt = eh->e_phnum;
+	Elf32_Phdr *p = ef->elf_phdr;
+	subval = load_addr - p->p_vaddr;
+	while (cnt--) {
+		if (p->p_type != PT_LOAD)
+			goto next_loop;
+		if (!(p->p_flags & PF_X))
+			goto next_loop;
+		p->p_vaddr = subval + p->p_vaddr;
+next_loop:
+		p = (Elf32_Phdr *)((void *)p + eh->e_phentsize);
+	}
+
+	err = regfile_lseek(ef->file, eh->e_phoff, SEEK_SET);
+	if (err < 0) {
+		err_dbg(0, err_fmt("regfile_lseek err"));
+		elf_cleanup(ef);
+		return -1;
+	}
+	err = write(ef->file->fd, ef->elf_phdr, ef->elf_phdr_size);
+	if (err < 0) {
+		err_dbg(0, err_fmt("write err"));
+		elf_cleanup(ef);
+		return -1;
+	}
+	elf_cleanup(ef);
+#else
+	err_msg(err_fmt("file format not recognized"));
+	return -1;
+#endif
+
+	err = syscall(__NR_uselib, libname);
+	if (err == -1) {
+		err_dbg(1, err_fmt("uselib err"));
+		return -1;
+	}
+	return 0;
+}
+#endif

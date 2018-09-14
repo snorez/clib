@@ -12,8 +12,12 @@ extern "C" {
 #include <errno.h>
 #include <ctype.h>
 #include <unistd.h>
+#include <sys/types.h>
 #include <sys/user.h>
 #include <linux/limits.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/personality.h>
 
 #ifndef likely
 #define likely(x)		__builtin_expect(!!(x), 1)
@@ -22,6 +26,7 @@ extern "C" {
 #define unlikely(x)		__builtin_expect(!!(x), 0)
 #endif
 
+#include "../include/clib_error.h"
 #define clib__round_mask(x, y)	((__typeof__(x))((y)-1))
 #define clib_round_up(x, y)	((((x)-1) | clib__round_mask(x, y)) + 1)
 #define clib_round_down(x, y)	((x) & ~clib__round_mask(x, y))
@@ -34,6 +39,7 @@ extern uint64_t max_64(uint64_t a, uint64_t b);
 extern void *malloc_s(size_t size);
 extern void free_s(void **addr);
 extern int hex2int(char *hex);
+extern int no_aslr(int argc, char *argv[]);
 
 static inline int get_online_cpus(void)
 {

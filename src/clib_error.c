@@ -4,25 +4,34 @@
 #include "../include/clib_error.h"
 
 static int dbg_mode;
+#define	COLOR_B "\033[03;31m"	/* default is red color */
+#define COLOR_E "\033[0m"
+static char *color_prompt_b = COLOR_B;
+static char *color_prompt_e = COLOR_E;
 
 static void err_common(int has_errno, int error, const char *fmt,
 		       va_list ap)
 {
 	char buf[MAXLINE];
 	memset(buf, 0, MAXLINE);
-	vsnprintf(buf, MAXLINE, fmt, ap);
+	memcpy(buf, color_prompt_b, strlen(color_prompt_b));
+	vsnprintf(buf+strlen(buf), MAXLINE-strlen(buf), fmt, ap);
 	if (has_errno)
 		snprintf(buf+strlen(buf), MAXLINE-strlen(buf), ": %s",
 			 strerror(errno));
 	size_t len = strlen(buf);
-	if (len >= MAXLINE-1) {
-		buf[MAXLINE-5] = '.';
-		buf[MAXLINE-4] = '.';
-		buf[MAXLINE-3] = '.';
+	if (len >= MAXLINE-1-strlen(color_prompt_e)) {
+		buf[MAXLINE-strlen(color_prompt_e)-5] = '.';
+		buf[MAXLINE-strlen(color_prompt_e)-4] = '.';
+		buf[MAXLINE-strlen(color_prompt_e)-3] = '.';
+		memcpy(&buf[MAXLINE-strlen(color_prompt_e)-2], color_prompt_e,
+				strlen(color_prompt_e));
 		buf[MAXLINE-2] = '\n';
 		buf[MAXLINE-1] = '\0';
-	} else
-		buf[len] = '\n';
+	} else {
+		memcpy(buf+len, color_prompt_e, strlen(color_prompt_e));
+		buf[len+strlen(color_prompt_e)] = '\n';
+	}
 	fflush(stdout);
 	fputs(buf, stderr);
 	fflush(NULL);

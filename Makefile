@@ -16,10 +16,13 @@ CWD = $(shell pwd)
 vpath %.c ./src/
 vpath %.h ./include/
 
-CC = gcc -Wall -std=gnu11 -m$(ARCH) -D_FILE_OFFSET_BITS=64 -g
-CC_OPT_static = $(CC) -O2 -DHAS_CAPSTONE
-CC_OPT_dynamic = $(CC) -O2 -rdynamic -DHAS_CAPSTONE
-CC_OPT_low = $(CC) -O2 -rdynamic
+CC_DBG=-g
+CC = gcc
+EXTRA_CFLAGS=
+CC_FLAGS=-Wall -std=gnu11 -m$(ARCH) -D_FILE_OFFSET_BITS=64 $(CC_DBG) $(EXTRA_CFLAGS)
+CC_OPT_static = $(CC) $(CC_FLAGS) -O2 -DHAS_CAPSTONE
+CC_OPT_dynamic = $(CC) $(CC_FLAGS) -O2 -rdynamic -DHAS_CAPSTONE
+CC_OPT_low = $(CC) $(CC_FLAGS) -O2 -rdynamic
 
 obj_static = clib_error.o clib_file.o clib_list.o clib_string.o clib_net.o \
 	     clib_crypt.o clib_elf.o clib_utils.o clib_signal.o clib_dbg.o \
@@ -35,7 +38,8 @@ obj_dynamic_low = clib_error.1 clib_file.1 clib_list.1 clib_string.1 clib_net.1 
 		  clib_rbtree.1 \
 		  clib_cmd_auto_completion.1
 
-all: static shared shared_low_ver
+# all: static shared shared_low_ver
+all: shared
 
 $(obj_static): %.o : %.c %.h
 	$(CC_OPT_static) -c $< -o $(TMP)/$@
@@ -59,11 +63,11 @@ shared_low_ver: $(obj_dynamic_low)
 	cd $(TMP);$(CC_OPT_low) $(obj_dynamic_low) -Wl,--wrap=memcpy -rdynamic -shared -fPIC -ldl -lpthread -o libclib$(ARCH)_low.so;cd $(CWD);cp $(TMP)/libclib$(ARCH)_low.so $(LIB)/
 
 clean:
-	rm -vf $(TMP)/*.o
-	rm -vf $(TMP)/*.0
-	rm -vf $(TMP)/*.1
-	rm -vf $(TMP)/libclib*
-	rm -v -rf $(TMP)/clib_static
+	@rm -vf $(TMP)/*.o
+	@rm -vf $(TMP)/*.0
+	@rm -vf $(TMP)/*.1
+	@rm -vf $(TMP)/libclib*
+	@rm -v -rf $(TMP)/clib_static
 
 dist_clean: clean
-	rm -vf ./lib/libclib*
+	@rm -vf ./lib/libclib*

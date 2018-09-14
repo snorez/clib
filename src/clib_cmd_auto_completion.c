@@ -54,11 +54,14 @@ void clib_set_cmd_completor(void)
 
 char *clib_readline_add_history(char *prompt)
 {
-	char *ret = readline(prompt);
+	char *ret;
+redo:
+	ret = readline(prompt);
 	if (!ret) {
 		err_dbg(1, err_fmt("readline err"));
 		return NULL;
-	}
+	} else if (!*ret)
+		goto redo;
 	add_history(ret);
 	return ret;
 }

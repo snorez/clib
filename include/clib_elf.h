@@ -10,6 +10,7 @@ extern "C" {
 #include "../include/clib_list.h"
 #include "../include/clib_file.h"
 #include <elf.h>
+#include <syscall.h>
 
 struct _elf_sym {
 	char		*name;
@@ -35,6 +36,7 @@ typedef struct _elf_file {
 	list_comm	dynsyms;		/* struct _elf_sym nodes */
 } elf_file;
 
+extern elf_file *elf_open(char *);
 extern elf_file *elf_parse(char *);
 extern int elf_cleanup(elf_file *);
 
@@ -48,6 +50,10 @@ extern void dump_elf_dynstr(elf_file *);
 
 extern void dump_elf_sym(elf_file *);
 extern void dump_elf_dynsym(elf_file *);
+
+#ifdef USELIB
+extern int elf_uselib(char *libname, unsigned long load_addr);
+#endif
 
 #ifdef __cplusplus
 }

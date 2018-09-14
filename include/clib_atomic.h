@@ -332,7 +332,7 @@ static inline void do_nop(size_t times)
 
 static inline bool mutex_lock_bit(lock_t *v, size_t bit)
 {
-	while (test_and_set_bit(bit, (volatile unsigned long *)&v->counter));
+	while (test_and_set_bit(bit, (volatile unsigned long *)&v->counter))
 		do_nop(0x10);
 	return true;
 }
