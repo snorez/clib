@@ -114,7 +114,7 @@ static char *clib_plugin_get_pluginname(struct clib_plugin *cp)
 {
 	void *nameaddr = dlsym(cp->handle, plugin_name_sym);
 	char *name = NULL;
-	if (nameaddr && (name = *(char **)nameaddr)) {
+	if (nameaddr && (name = (char *)nameaddr)) {
 		return name;
 	} else {
 		cp->state = CLIB_PLUGIN_FORMAT_ERR;

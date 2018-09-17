@@ -27,6 +27,30 @@ struct clib_plugin {
 	enum clib_plugin_state	state;
 };
 
+#define	CLIB_PLUGIN_INIT()	\
+C_SYM int clib_plugin_init(struct clib_plugin *cp, int argc, char *argv[])
+
+#define	CLIB_PLUGIN_EXIT()	\
+C_SYM void clib_plugin_exit(void)
+
+#define	CLIB_PLUGIN_NAME(x)	\
+char clib_plugin_name[] = x
+
+#define	CLIB_PLUGIN_NEEDED0()	\
+const char *clib_plugin_needed[] = {NULL}
+#define	CLIB_PLUGIN_NEEDED1(x)	\
+const char *clib_plugin_needed[] = {x, NULL}
+#define	CLIB_PLUGIN_NEEDED2(x0, x1)	\
+const char *clib_plugin_needed[] = {x0, x1, NULL}
+#define	CLIB_PLUGIN_NEEDED3(x0, x1, x2)	\
+const char *clib_plugin_needed[] = {x0, x1, x2, NULL}
+#define	CLIB_PLUGIN_NEEDED4(x0, x1, x2, x3)	\
+const char *clib_plugin_needed[] = {x0, x1, x2, x3, NULL}
+#define	CLIB_PLUGIN_NEEDED5(x0, x1, x2, x3, x4)	\
+const char *clib_plugin_needed[] = {x0, x1, x2, x3, x4, NULL}
+#define	CLIB_PLUGIN_NEEDED6(x0, x1, x2, x3, x4, x5)	\
+const char *clib_plugin_needed[] = {x0, x1, x2, x3, x4, x5, NULL}
+
 #if 0
 extern struct clib_plugin *clib_plugin_find_by_id_path(char *str,
 							struct list_head *head);
