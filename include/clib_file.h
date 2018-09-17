@@ -1,10 +1,10 @@
 #ifndef FILE_H_7JM8BHXT
 #define FILE_H_7JM8BHXT
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
+#include "../include/clib_utils.h"
+#include "../include/clib_error.h"
+#include "../include/clib_string.h"
+#include "../include/clib_list.h"
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -17,10 +17,8 @@ extern "C" {
 #include <sys/file.h>
 #include <dirent.h>
 #include <linux/limits.h>
-#include "./clib_error.h"
-#include "./clib_string.h"
-#include "./clib_list.h"
-#include "./clib_utils.h"
+
+DECL_BEGIN
 
 struct file {
 	struct stat stat;
@@ -65,8 +63,6 @@ extern ssize_t regfile_read(regfile *file, void *buf, size_t count);
 extern ssize_t regfile_write(regfile *file, void *buf, size_t count);
 extern off_t regfile_lseek(regfile *file, off_t offs, int where);
 
-#ifdef __cplusplus
-}
-#endif
+DECL_END
 
 #endif /* end of include guard: FILE_H_7JM8BHXT */

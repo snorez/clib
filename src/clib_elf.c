@@ -1,4 +1,4 @@
-#include "../include/clib_elf.h"
+#include "../include/clib.h"
 
 static void dump_sechdr(elf_file *file, void *sechdr);
 

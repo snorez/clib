@@ -1,10 +1,9 @@
 #ifndef NET_H_QGVOLRSZ
 #define NET_H_QGVOLRSZ
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
+#include "../include/clib_utils.h"
+#include "../include/clib_error.h"
+#include "../include/clib_string.h"
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -12,8 +11,8 @@ extern "C" {
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netdb.h>
-#include "./clib_error.h"
-#include "./clib_string.h"
+
+DECL_BEGIN
 
 typedef struct _sock {
 	int family;
@@ -193,8 +192,6 @@ extern int xchg_sock_buf_len1(sock *file);
 extern int sock_send(sock *file, void *msg, size_t len, int flag);
 extern int sock_recv(sock *file, void *msg, size_t len, int flag);
 
-#ifdef __cplusplus
-}
-#endif
+DECL_END
 
 #endif /* end of include guard: NET_H_QGVOLRSZ */

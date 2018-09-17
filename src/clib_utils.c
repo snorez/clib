@@ -1,4 +1,4 @@
-#include "../include/clib_utils.h"
+#include "../include/clib.h"
 
 uint32_t min_32(uint32_t a, uint32_t b)
 {

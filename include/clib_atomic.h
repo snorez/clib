@@ -5,11 +5,9 @@
 #ifndef ATOMIC_H_ED79JAJV
 #define ATOMIC_H_ED79JAJV
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "../include/clib_utils.h"
+
+DECL_BEGIN
 
 #ifdef __x86_64__
 #define CONFIG_X86_64
@@ -521,8 +519,6 @@ static inline void ref_set(ref_t *v, size_t val)
 	mutex_unlock_bit(v, 0);
 }
 
-#ifdef __cplusplus
-}
-#endif
+DECL_END
 
 #endif /* end of include guard: ATOMIC_H_ED79JAJV */

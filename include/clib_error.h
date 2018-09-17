@@ -1,16 +1,14 @@
 #ifndef ERROR_H_BHJ5CLAO
 #define ERROR_H_BHJ5CLAO
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
+#include "../include/clib_utils.h"
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
-#include "../include/clib_utils.h"
+
+DECL_BEGIN
 
 /*
  * these code come from linux kernel include/linux/err.h
@@ -84,8 +82,6 @@ extern void err_color_on(void);
 extern void err_color_off(void);
 extern void err_set_color(char *b, char *e);
 
-#ifdef __cplusplus
-}
-#endif
+DECL_END
 
 #endif /* end of include guard: ERROR_H_BHJ5CLAO */

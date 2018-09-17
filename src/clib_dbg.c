@@ -1,4 +1,4 @@
-#include "../include/clib_dbg.h"
+#include "../include/clib.h"
 
 /*
  * *NOTE* capstone used here

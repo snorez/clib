@@ -1,10 +1,7 @@
 #ifndef PE_H_53FSYVP7
 #define PE_H_53FSYVP7
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
+#include "../include/clib_utils.h"
 #include "../include/clib_crypt.h"
 #include "../include/clib_disas.h"
 #include "../include/clib_dbg.h"
@@ -14,8 +11,8 @@ extern "C" {
 #include "../include/clib_file.h"
 #include "../include/clib_net.h"
 
-#ifdef __cplusplus
-}
-#endif
+DECL_BEGIN
+
+DECL_END
 
 #endif /* end of include guard: PE_H_53FSYVP7 */

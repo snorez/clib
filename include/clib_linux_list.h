@@ -1,14 +1,9 @@
 #ifndef LINUX_LIST_H_MVRX6QSF
 #define LINUX_LIST_H_MVRX6QSF
 
-#ifdef __cplusplus
-extern "C" {
+#include "../include/clib_utils.h"
 
-#ifndef NULL
-#define NULL (void *)0
-#endif
-
-#endif
+DECL_BEGIN
 
 /*
  * Simple doubly linked list implementation.
@@ -775,8 +770,6 @@ static inline void hlist_move_list(struct hlist_head *old,
 	     pos && ({ n = pos->member.next; 1; });			\
 	     pos = hlist_entry_safe(n, typeof(*pos), member))
 
-#ifdef __cplusplus
-}
-#endif
+DECL_END
 
 #endif /* end of include guard: LINUX_LIST_H_MVRX6QSF */

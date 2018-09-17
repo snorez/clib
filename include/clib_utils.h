@@ -1,10 +1,6 @@
 #ifndef UTILS_H_NOWJRQGI
 #define UTILS_H_NOWJRQGI
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -19,6 +15,26 @@ extern "C" {
 #include <sys/stat.h>
 #include <sys/personality.h>
 
+#ifdef __cplusplus
+
+#define	DECL_BEGIN	extern "C" {
+#define DECL_END	}
+#define	C_SYM		extern "C"
+
+#else /* !__cplusplus */
+
+#define DECL_BEGIN
+#define DECL_END
+#define C_SYM		extern
+
+#endif
+
+DECL_BEGIN
+
+#ifndef NULL
+#define NULL (void *)0
+#endif
+
 #ifndef likely
 #define likely(x)		__builtin_expect(!!(x), 1)
 #endif
@@ -26,7 +42,6 @@ extern "C" {
 #define unlikely(x)		__builtin_expect(!!(x), 0)
 #endif
 
-#include "../include/clib_error.h"
 #define clib__round_mask(x, y)	((__typeof__(x))((y)-1))
 #define clib_round_up(x, y)	((((x)-1) | clib__round_mask(x, y)) + 1)
 #define clib_round_down(x, y)	((x) & ~clib__round_mask(x, y))
@@ -58,8 +73,6 @@ static inline char *get_arg(char *argv[], char *target)
 	return NULL;
 }
 
-#ifdef __cplusplus
-}
-#endif
+DECL_END
 
 #endif /* end of include guard: UTILS_H_NOWJRQGI */

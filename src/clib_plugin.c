@@ -1,4 +1,5 @@
-#include "../include/clib_plugin.h"
+#include "../include/clib.h"
+
 static struct clib_plugin *clib_plugin_find_by_id_path(char *str,
 							struct list_head *head)
 {

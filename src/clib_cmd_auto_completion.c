@@ -1,4 +1,4 @@
-#include "../include/clib_cmd_auto_completion.h"
+#include "../include/clib.h"
 
 static LIST_HEAD(buf_head);
 

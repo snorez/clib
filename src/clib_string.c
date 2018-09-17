@@ -1,4 +1,4 @@
-#include "../include/clib_string.h"
+#include "../include/clib.h"
 
 char printable[] = {' ', '!', '"', '#', '$', '%', '&', '\'', '(', ')', '*',
 		'+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6',

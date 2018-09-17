@@ -1,7 +1,7 @@
 /*
  * this file comes from `Advanced Unix programming`
  */
-#include "../include/clib_error.h"
+#include "../include/clib.h"
 
 static int dbg_mode;
 /*

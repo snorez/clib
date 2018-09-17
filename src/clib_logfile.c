@@ -1,4 +1,4 @@
-#include "../include/clib_logfile.h"
+#include "../include/clib.h"
 
 logfile *logfile_open(char *path)
 {

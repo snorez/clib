@@ -1,16 +1,15 @@
 #ifndef ELF_H_DAGNAQG6
 #define ELF_H_DAGNAQG6
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
+#include "../include/clib_utils.h"
 #include "../include/clib_error.h"
 #include "../include/clib_string.h"
 #include "../include/clib_list.h"
 #include "../include/clib_file.h"
 #include <elf.h>
 #include <syscall.h>
+
+DECL_BEGIN
 
 struct _elf_sym {
 	char		*name;
@@ -55,8 +54,6 @@ extern void dump_elf_dynsym(elf_file *);
 extern int elf_uselib(char *libname, unsigned long load_addr);
 #endif
 
-#ifdef __cplusplus
-}
-#endif
+DECL_END
 
 #endif /* end of include guard: ELF_H_DAGNAQG6 */

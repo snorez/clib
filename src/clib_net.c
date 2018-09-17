@@ -1,5 +1,4 @@
-#include "../include/clib_net.h"
-#include "../include/clib_utils.h"
+#include "../include/clib.h"
 
 sock *sock_open(int family, int socktype, int protocol)
 {

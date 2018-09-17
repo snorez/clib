@@ -1,7 +1,7 @@
 /*
  * please compile with -D_FILE_OFFSET_BITS=64
  */
-#include "../include/clib_file.h"
+#include "../include/clib.h"
 
 int path_exists(const char *path)
 {

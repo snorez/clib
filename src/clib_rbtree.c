@@ -36,7 +36,7 @@
   linux/lib/rbtree.c
 */
 
-#include "../include/clib_rbtree.h"
+#include "../include/clib.h"
 
 static void __rb_rotate_left(struct rb_node *node, struct rb_root *root)
 {

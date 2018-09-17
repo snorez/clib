@@ -1,14 +1,13 @@
 #ifndef PLUGIN_H_AOWIFXRV
 #define PLUGIN_H_AOWIFXRV
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
+#include "../include/clib_utils.h"
+#include "../include/clib_list.h"
 #include <sys/types.h>
 #include <dlfcn.h>
 #include <dirent.h>
-#include "../include/clib_list.h"
+
+DECL_BEGIN
 
 enum clib_plugin_state {
 	CLIB_PLUGIN_UNLOAD,	/* set when close */
@@ -50,8 +49,6 @@ extern int clib_plugin_init_root(const char *dir, struct list_head *head);
 extern void clib_plugin_cleanup(struct list_head *head);
 extern void clib_plugin_print(struct list_head *head);
 
-#ifdef __cplusplus
-}
-#endif
+DECL_END
 
 #endif /* end of include guard: PLUGIN_H_AOWIFXRV */

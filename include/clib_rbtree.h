@@ -110,9 +110,9 @@ static inline struct page * rb_insert_page_cache(struct inode * inode,
 #ifndef RBTREE_H_WIMKBSVZ
 #define RBTREE_H_WIMKBSVZ
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "../include/clib_utils.h"
+
+DECL_BEGIN
 
 #if defined(container_of)
   #undef container_of
@@ -216,8 +216,6 @@ static inline void rb_link_node(struct rb_node * node, struct rb_node * parent,
 	*rb_link = node;
 }
 
-#ifdef __cplusplus
-}
-#endif
+DECL_END
 
 #endif /* end of include guard: RBTREE_H_WIMKBSVZ */
