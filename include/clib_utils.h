@@ -55,6 +55,9 @@ extern void *malloc_s(size_t size);
 extern void free_s(void **addr);
 extern int hex2int(char *hex);
 extern int no_aslr(int argc, char *argv[]);
+extern int tmp_close_std(int close_fd);
+extern int restore_std(int closed_fd);
+extern int output_tmp_std(void);
 
 static inline int get_online_cpus(void)
 {

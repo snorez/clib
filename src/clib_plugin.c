@@ -1,5 +1,7 @@
 #include "../include/clib.h"
 
+static LIST_HEAD(plugin_head);
+
 static struct clib_plugin *clib_plugin_find_by_id_path(char *str,
 							struct list_head *head)
 {
@@ -322,8 +324,9 @@ static int clib_plugin_do_exit(struct clib_plugin *cp)
  * check if argv[0] is existed in head
  * if not existed, alloc a new one, check the plugin_name(TODO) again
  */
-int clib_plugin_load(int argc, char *argv[], struct list_head *head)
+int clib_plugin_load(int argc, char *argv[])
 {
+	struct list_head *head = &plugin_head;
 	int err;
 	if (argc < 1) {
 		err_dbg(0, err_fmt("argc invalid"));
@@ -384,8 +387,9 @@ int clib_plugin_load(int argc, char *argv[], struct list_head *head)
 	return 0;
 }
 
-int clib_plugin_unload(int argc, char *argv[], struct list_head *head)
+int clib_plugin_unload(int argc, char *argv[])
 {
+	struct list_head *head = &plugin_head;
 	int err;
 	if (argc != 1) {
 		err_dbg(0, err_fmt("argc invalid"));
@@ -426,35 +430,61 @@ found:
 	return 0;
 }
 
-int clib_plugin_reload(int argc, char *argv[], struct list_head *head)
+int clib_plugin_reload(int argc, char *argv[])
 {
+	struct list_head *head = &plugin_head;
 	int err;
 	if (argc < 1) {
 		err_dbg(0, err_fmt("argc invalid"));
 		return -1;
 	}
 
-	err = clib_plugin_unload(1, argv, head);
+	/* check if argv[0] is a plugin_name */
+	struct clib_plugin *old = clib_plugin_find_by_pluginname(argv[0], head);
+	char *arg0 = NULL;
+	if (old) {
+		arg0 = malloc(strlen(old->path) + 1);
+		if (!arg0) {
+			err_dbg(0, err_fmt("malloc err"));
+			return -1;
+		}
+		memcpy(arg0, old->path, strlen(old->path)+1);
+		argv[0] = arg0;
+	}
+
+	err = clib_plugin_unload(1, argv);
 	if (err) {
 		err_dbg(0, err_fmt("clib_plugin_unload err"));
-		return -1;
+		goto out;
 	}
 
-	err = clib_plugin_load(argc, argv, head);
+	err = clib_plugin_load(argc, argv);
 	if (err) {
 		err_dbg(0, err_fmt("clib_plugin_load err"));
-		return -1;
+		goto out;
 	}
 
-	return 0;
+out:
+	if (arg0)
+		free(arg0);
+	return err;
 }
 
-int clib_plugin_init_root(const char *dir, struct list_head *head)
+#define	FULL_PATH_MAX	4096
+#define	FULL_PATH_RESERVE	0x10
+static char root_path[FULL_PATH_MAX];
+int clib_plugin_init_root(const char *dir)
 {
+	struct list_head *head = &plugin_head;
 	if (*dir != '/') {
 		err_dbg(0, err_fmt("dir must be absolute path"));
 		return -1;
 	}
+	if (strlen(dir) >= (FULL_PATH_MAX-FULL_PATH_RESERVE)) {
+		err_dbg(0, err_fmt("dir name too long"));
+		return -1;
+	}
+
 	DIR *root = opendir(dir);
 	if (!root) {
 		err_dbg(1, err_fmt("opendir err"));
@@ -462,11 +492,13 @@ int clib_plugin_init_root(const char *dir, struct list_head *head)
 	}
 
 	struct dirent *dp;
-	char full_path[4096];
-	memset(full_path, 0, 4096);
-	memcpy(full_path, dir, strlen(dir));
-	if (full_path[strlen(full_path)-1] != '/')
-		full_path[strlen(dir)] = '/';
+	char full_path[FULL_PATH_MAX];
+	memset(root_path, 0, FULL_PATH_MAX);
+	memset(full_path, 0, FULL_PATH_MAX);
+	memcpy(root_path, dir, strlen(dir));
+	if (root_path[strlen(root_path)-1] != '/')
+		root_path[strlen(dir)] = '/';
+	memcpy(full_path, root_path, strlen(root_path));
 	size_t base_len = strlen(full_path);
 
 	while ((dp = readdir(root))) {
@@ -476,7 +508,7 @@ int clib_plugin_init_root(const char *dir, struct list_head *head)
 			continue;
 		if (strcmp(&dp->d_name[strlen(dp->d_name)-3], ".so"))
 			continue;
-		memset(full_path+base_len, 0, 4096-base_len);
+		memset(full_path+base_len, 0, FULL_PATH_MAX-base_len);
 		memcpy(full_path+base_len, dp->d_name, strlen(dp->d_name));
 		if (clib_plugin_find_by_id_path(full_path, head))
 			continue;
@@ -493,8 +525,30 @@ int clib_plugin_init_root(const char *dir, struct list_head *head)
 	return 0;
 }
 
-void clib_plugin_cleanup(struct list_head *head)
+/* this should called after init_root */
+int clib_plugin_load_default(struct clib_plugin_load_arg *s, int cnt)
 {
+	char abs_path[FULL_PATH_MAX];
+	int i = 0;
+	int err = 0;
+	for (i = 0; i < cnt; i++) {
+		memset(abs_path, 0, FULL_PATH_MAX);
+		snprintf(abs_path, FULL_PATH_MAX-1, "%s%s.so",
+					root_path, s[i].so_name);
+		s[i].argv[0] = abs_path;
+		s[i].argv[s[i].argc] = NULL;
+		err = clib_plugin_load(s[i].argc, s[i].argv);
+		if (err == -1) {
+			err_dbg(0, err_fmt("clib_plugin_load %s err"), abs_path);
+			return -1;
+		}
+	}
+	return 0;
+}
+
+void clib_plugin_cleanup(void)
+{
+	struct list_head *head = &plugin_head;
 	struct clib_plugin *tmp, *next;
 	int err;
 	list_for_each_entry_safe(tmp, next, head, sibling) {
@@ -521,8 +575,9 @@ static char *get_state_string(enum clib_plugin_state state)
 		return NULL;
 	}
 }
-void clib_plugin_print(struct list_head *head)
+void clib_plugin_print()
 {
+	struct list_head *head = &plugin_head;
 	struct clib_plugin *tmp;
 	int i = 0;
 	list_for_each_entry(tmp, head, sibling) {
@@ -533,4 +588,96 @@ void clib_plugin_print(struct list_head *head)
 				tmp->plugin_name,
 				tmp->path);
 	}
+}
+
+struct list_head *clib_plugin_get_head(void)
+{
+	return &plugin_head;
+}
+
+#define	CALL_FUNC_MAX_ARGS	6
+int clib_plugin_call_func(char *plugin_name, char *func_name, int argc, ...)
+{
+	if (argc > CALL_FUNC_MAX_ARGS) {
+		err_dbg(0, err_fmt("argc too many"));
+		return -1;
+	}
+
+	struct list_head *head = &plugin_head;
+	struct clib_plugin *cp = clib_plugin_find_by_pluginname(plugin_name, head);
+	if (!cp) {
+		err_dbg(0, err_fmt("%s not loaded yet"), plugin_name);
+		return -1;
+	}
+
+	void *addr = dlsym(cp->handle, func_name);
+	if (!addr) {
+		err_dbg(0, err_fmt("%s not found in %s"), func_name, plugin_name);
+		return -1;
+	}
+
+	va_list va;
+	long err;
+	va_start(va, argc);
+	long arg[argc];
+	for (int i = 0; i < argc; i++) {
+		arg[i] = va_arg(va, long);
+	}
+
+	switch (argc) {
+	case 0:
+	{
+		long (*func_addr)(void);
+		func_addr = addr;
+		err = func_addr();
+		break;
+	}
+	case 1:
+	{
+		long (*func_addr)(long);
+		func_addr = addr;
+		err = func_addr(arg[0]);
+		break;
+	}
+	case 2:
+	{
+		long (*func_addr)(long,long);
+		func_addr = addr;
+		err = func_addr(arg[0], arg[1]);
+		break;
+	}
+	case 3:
+	{
+		long (*func_addr)(long,long,long);
+		func_addr = addr;
+		err = func_addr(arg[0], arg[1], arg[2]);
+		break;
+	}
+	case 4:
+	{
+		long (*func_addr)(long,long,long,long);
+		func_addr = addr;
+		err = func_addr(arg[0], arg[1], arg[2], arg[3]);
+		break;
+	}
+	case 5:
+	{
+		long (*func_addr)(long,long,long,long,long);
+		func_addr = addr;
+		err = func_addr(arg[0], arg[1], arg[2], arg[3], arg[4]);
+		break;
+	}
+	case 6:
+	{
+		long (*func_addr)(long,long,long,long,long,long);
+		func_addr = addr;
+		err = func_addr(arg[0], arg[1], arg[2], arg[3], arg[4], arg[5]);
+		break;
+	}
+	default:
+		BUG();
+	}
+
+	va_end(va);
+	return err;
 }

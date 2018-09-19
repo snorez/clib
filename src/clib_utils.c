@@ -99,3 +99,61 @@ int no_aslr(int argc, char *argv[])
 		return 0;
 	}
 }
+
+static int tmp_std_fd = -1;
+static const char *tmp_std_file = "/tmp/tmp_std_file";
+int tmp_close_std(int close_fd)
+{
+	int err = 0;
+	tmp_std_fd = dup(close_fd);
+	if (tmp_std_fd == -1) {
+		err_dbg(1, err_fmt("dup err"));
+		return -1;
+	}
+
+	int fd = open(tmp_std_file, O_RDWR | O_CREAT | O_TRUNC,
+					S_IRUSR | S_IWUSR);
+	if (fd == -1) {
+		err_dbg(1, err_fmt("open err"));
+		close(tmp_std_fd);
+		return -1;
+	}
+
+	err = dup2(fd, close_fd);
+	if (err != close_fd) {
+		err_dbg(1, err_fmt("dup2 err"));
+		close(fd);
+		close(tmp_std_fd);
+		return -1;
+	}
+	close(fd);
+	return 0;
+}
+
+int restore_std(int closed_fd)
+{
+	fflush(stdout);
+	fflush(stderr);
+	int err = dup2(tmp_std_fd, closed_fd);
+	if (err != closed_fd) {
+		err_dbg(1, err_fmt("dup2 err, %d"), err);
+		return -1;
+	}
+
+	close(tmp_std_fd);
+	tmp_std_fd = -1;
+	return 0;
+}
+
+int output_tmp_std(void)
+{
+	char cmd[64];
+	memset(cmd, 0, 64);
+	snprintf(cmd, 64, "cat %s", tmp_std_file);
+	int err = system(cmd);
+	if (err) {
+		err_dbg(1, err_fmt("run %s err"), cmd);
+		return -1;
+	}
+	return 0;
+}

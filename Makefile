@@ -8,7 +8,7 @@
 #
 ARCH = 64
 # use make with ARCH=32/64
-TMP = /tmp
+TMP = /tmp/clib_make
 LIB = ./lib
 INC = ./include
 ARCH = $(shell getconf LONG_BIT)
@@ -30,19 +30,22 @@ CC_OPT_low = $(CC) $(CC_FLAGS) -O2 -rdynamic
 obj_static = clib_error.o clib_file.o clib_list.o clib_string.o clib_net.o \
 	     clib_crypt.o clib_elf.o clib_utils.o clib_signal.o clib_dbg.o \
 	     clib_disas.o clib_logfile.o clib_plugin.o clib_rbtree.o \
-	     clib_cmd_auto_completion.o
+	     clib_cmd.o
 obj_dynamic = clib_error.0 clib_file.0 clib_list.0 clib_string.0 clib_net.0 \
 	      clib_crypt.0 clib_elf.0 clib_utils.0 clib_signal.0 clib_dbg.0 \
 	      clib_disas.0 clib_logfile.0 clib_plugin.0 clib_rbtree.0 \
-	      clib_cmd_auto_completion.0
+	      clib_cmd.0
 obj_dynamic_low = clib_error.1 clib_file.1 clib_list.1 clib_string.1 clib_net.1 \
 		  clib_crypt.1 clib_elf.1 clib_utils.1 clib_signal.1 clib_dbg.1 \
 		  clib_disas.1 clib_logfile.1 clib_memcpy.1 clib_plugin.1 \
 		  clib_rbtree.1 \
-		  clib_cmd_auto_completion.1
+		  clib_cmd.1
 
 # all: static shared shared_low_ver
-all: shared
+all: prepare shared
+
+prepare:
+	@mkdir -p $(TMP)
 
 $(obj_static): %.o : %.c %.h
 	$(CC_OPT_static) -c $< -o $(TMP)/$@

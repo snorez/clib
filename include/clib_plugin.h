@@ -3,6 +3,7 @@
 
 #include "../include/clib_utils.h"
 #include "../include/clib_list.h"
+#include "../include/clib_cmd.h"
 #include <sys/types.h>
 #include <dlfcn.h>
 #include <dirent.h>
@@ -25,6 +26,12 @@ struct clib_plugin {
 	/* if not 0, reload/unload should take care of */
 	unsigned long		refcount;
 	enum clib_plugin_state	state;
+};
+
+struct clib_plugin_load_arg {
+	char			*so_name;		/* exclude .so */
+	int			argc;
+	char			*argv[CMD_ARGS_MAX];	/* argv[0] will be reset */
 };
 
 #define	CLIB_PLUGIN_INIT()	\
@@ -66,12 +73,15 @@ extern void clib_plugin_do_exit(struct clib_plugin *cp);
 extern struct clib_plugin *clib_plugin_find_by_pluginname(char *plugin_name,
 							  struct list_head *head);
 #endif
-extern int clib_plugin_load(int argc, char *argv[], struct list_head *head);
-extern int clib_plugin_unload(int argc, char *argv[], struct list_head *head);
-extern int clib_plugin_reload(int argc, char *argv[], struct list_head *head);
-extern int clib_plugin_init_root(const char *dir, struct list_head *head);
-extern void clib_plugin_cleanup(struct list_head *head);
-extern void clib_plugin_print(struct list_head *head);
+extern int clib_plugin_load(int argc, char *argv[]);
+extern int clib_plugin_unload(int argc, char *argv[]);
+extern int clib_plugin_reload(int argc, char *argv[]);
+extern int clib_plugin_init_root(const char *dir);
+extern int clib_plugin_load_default(struct clib_plugin_load_arg *s, int cnt);
+extern void clib_plugin_cleanup(void);
+extern void clib_plugin_print(void);
+struct list_head *clib_plugin_get_head(void);
+extern int clib_plugin_call_func(char *plugin_name, char *func_name, int argc, ...);
 
 DECL_END
 
