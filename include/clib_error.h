@@ -75,7 +75,23 @@ extern void err_dbg(int has_errno, const char *fmt, ...);
 extern void err_dbg1(int errval, const char *fmt, ...);
 extern void err_dump(const char *fmt, ...);
 extern void err_exit(int has_errno, const char *fmt, ...);
-extern int err_ret(int has_errno, int retval, const char *fmt, ...);
+#define err_retval(has_errno, retval, fmt, ...) \
+do {\
+	err_dbg(has_errno, fmt, ##__VA_ARGS__);\
+	return retval;\
+} while(0);
+#define err_ret(has_errno, retval, fmt, ...) \
+do {\
+	err_dbg(has_errno, fmt, ##__VA_ARGS__);\
+	errno = (retval < 0) ? -retval : retval;\
+	return -1;\
+} while(0);
+#define err_ptr_ret(has_errno, retval, fmt, ...) \
+do {\
+	err_dbg(has_errno, fmt, ##__VA_ARGS__);\
+	errno = (retval < 0) ? -retval : retval;\
+	return NULL;\
+} while(0);
 extern void set_dbg_mode(int dbg_mode_on);
 extern int get_dbg_mode(void);
 extern void err_color_on(void);

@@ -7,6 +7,8 @@
 #include "../include/clib_string.h"
 #include <readline/readline.h>
 #include <readline/history.h>
+#include <setjmp.h>
+#include <signal.h>
 
 DECL_BEGIN
 

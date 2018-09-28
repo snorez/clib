@@ -68,8 +68,8 @@ int no_aslr(int argc, char *argv[])
 		execve(argv[0], argv, environ);
 		return 0;
 	} else if (fd != 4) {
-		err_dbg(0, err_fmt("fd not right, must equal 3 or 4"));
 		BUG();
+		err_dbg(0, err_fmt("fd not right, must equal 3 or 4"));
 		return -1;
 	} else {
 		struct stat f3, f4;
@@ -156,4 +156,36 @@ int output_tmp_std(void)
 		return -1;
 	}
 	return 0;
+}
+
+long get_memory_avail(void)
+{
+	int fd = open("/proc/meminfo", O_RDONLY);
+	if (fd == -1) {
+		err_dbg(1, err_fmt("open err"));
+		return -1;
+	}
+
+	char buf[4096];
+	memset(buf, 0, 4096);
+	int err = read(fd, buf, 4096);
+	if (err == -1) {
+		err_dbg(1, err_fmt("read err"));
+		close(fd);
+		return -1;
+	}
+	close(fd);
+
+	char *string = "MemAvailable:";
+	char *p = strstr(buf, string);
+	if (!p) {
+		err_dbg(0, err_fmt("MemAvailable not found"));
+		return -1;
+	}
+
+	p += strlen(string);
+	while (isspace(*p))
+		p++;
+
+	return (unsigned long)1024 * atoll(p);
 }

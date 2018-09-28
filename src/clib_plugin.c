@@ -41,7 +41,7 @@ static struct clib_plugin *clib_plugin_find_by_id_path(char *str,
 /*
  * find plugin_name in loaded plugins
  */
-static struct clib_plugin *clib_plugin_find_by_pluginname(char *plugin_name,
+static struct clib_plugin *clib_plugin_find_by_pluginname(const char *plugin_name,
 							struct list_head *head)
 {
 	if (!plugin_name)
@@ -595,8 +595,8 @@ struct list_head *clib_plugin_get_head(void)
 	return &plugin_head;
 }
 
-#define	CALL_FUNC_MAX_ARGS	6
-int clib_plugin_call_func(char *plugin_name, char *func_name, int argc, ...)
+long clib_plugin_call_func(const char *plugin_name, const char *func_name,
+			   int argc, ...)
 {
 	if (argc > CALL_FUNC_MAX_ARGS) {
 		err_dbg(0, err_fmt("argc too many"));
@@ -674,10 +674,62 @@ int clib_plugin_call_func(char *plugin_name, char *func_name, int argc, ...)
 		err = func_addr(arg[0], arg[1], arg[2], arg[3], arg[4], arg[5]);
 		break;
 	}
+	case 7:
+	{
+		long (*func_addr)(long,long,long,long,long,long,long);
+		func_addr = addr;
+		err = func_addr(arg[0], arg[1], arg[2], arg[3],
+				arg[4], arg[5], arg[6]);
+		break;
+	}
+	case 8:
+	{
+		long (*func_addr)(long,long,long,long,long,long,long,long);
+		func_addr = addr;
+		err = func_addr(arg[0], arg[1], arg[2], arg[3],
+				arg[4], arg[5], arg[6], arg[7]);
+		break;
+	}
+	case 9:
+	{
+		long (*func_addr)(long,long,long,long,long,long,long,long);
+		func_addr = addr;
+		err = func_addr(arg[0], arg[1], arg[2], arg[3],
+				arg[4], arg[5], arg[6], arg[7]);
+		break;
+	}
 	default:
 		BUG();
 	}
 
 	va_end(va);
 	return err;
+}
+
+int clib_cmd_plugin_setup(struct clib_cmd *cs, int cs_cnt, char *plugin_root,
+				 struct clib_plugin_load_arg *defplugin,
+				 size_t plugin_cnt)
+{
+	int err = 0;
+	err = clib_cmd_add_array(cs, cs_cnt);
+	if (err) {
+		err_dbg(0, err_fmt("clib_cmd_add_array err"));
+		return -1;
+	}
+
+	err = clib_plugin_init_root(plugin_root);
+	if (err) {
+		err_dbg(0, err_fmt("clib_plugin_init_root err"));
+		return -1;
+	}
+
+	err = clib_plugin_load_default(defplugin, plugin_cnt);
+	if (err) {
+		err_dbg(0, err_fmt("clib_plugin_load_default err"));
+		return -1;
+	}
+
+	clib_set_cmd_completor();
+
+	return 0;
 }

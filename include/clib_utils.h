@@ -41,9 +41,38 @@ DECL_BEGIN
 #ifndef unlikely
 #define unlikely(x)		__builtin_expect(!!(x), 0)
 #endif
+#ifndef __weak
+#define	__weak			__attribute__((weak))
+#endif
+#ifndef __always_inline
+#define	__always_inline		inline __attribute__((always_inline))
+#endif
+#ifndef noinline
+#define	noinline		__attribute__((noinline))
+#endif
+#ifndef __deprecated
+#define	__deprecated		__attribute__((deprecated))
+#endif
+#ifndef __packed
+#define	__packed		__attribute__((packed))
+#endif
+#ifndef __alias
+#define	__alias(symbol)		__attribute__((alias(#symbol)))
+#endif
+#ifndef __maybe_unused
+#define	__maybe_unused		__attribute__((unused))
+#endif
+#ifndef __always_unused
+#define	__always_unused		__attribute__((unused))
+#endif
+#ifndef weak_alias
+#define weak_alias(name,aliasname) _weak_alias(name, aliasname)
+#define _weak_alias(name,aliasname) \
+extern __typeof (name) aliasname __attribute__((weak,alias(#name)))
+#endif
 
 #define clib__round_mask(x, y)	((__typeof__(x))((y)-1))
-#define clib_round_up(x, y)	((((x)-1) | clib__round_mask(x, y)) + 1)
+#define clib_round_up(x, y)	((((x)-1)|clib__round_mask(x, y)) + 1)
 #define clib_round_down(x, y)	((x) & ~clib__round_mask(x, y))
 
 extern uint32_t min_32(uint32_t a, uint32_t b);
@@ -58,6 +87,7 @@ extern int no_aslr(int argc, char *argv[]);
 extern int tmp_close_std(int close_fd);
 extern int restore_std(int closed_fd);
 extern int output_tmp_std(void);
+extern long get_memory_avail(void);
 
 static inline int get_online_cpus(void)
 {

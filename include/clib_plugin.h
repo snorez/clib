@@ -33,6 +33,8 @@ struct clib_plugin_load_arg {
 	int			argc;
 	char			*argv[CMD_ARGS_MAX];	/* argv[0] will be reset */
 };
+#define	CLIB_PLUGIN_LOAD_ARG1(plugin_name) \
+{#plugin_name, 1, {NULL}}
 
 #define	CLIB_PLUGIN_INIT()	\
 C_SYM int clib_plugin_init(struct clib_plugin *cp, int argc, char *argv[])
@@ -41,22 +43,28 @@ C_SYM int clib_plugin_init(struct clib_plugin *cp, int argc, char *argv[])
 C_SYM void clib_plugin_exit(void)
 
 #define	CLIB_PLUGIN_NAME(x)	\
-char clib_plugin_name[] = x
+char clib_plugin_name[] = #x
 
 #define	CLIB_PLUGIN_NEEDED0()	\
 const char *clib_plugin_needed[] = {NULL}
 #define	CLIB_PLUGIN_NEEDED1(x)	\
-const char *clib_plugin_needed[] = {x, NULL}
+const char *clib_plugin_needed[] = {#x, NULL}
 #define	CLIB_PLUGIN_NEEDED2(x0, x1)	\
-const char *clib_plugin_needed[] = {x0, x1, NULL}
+const char *clib_plugin_needed[] = {#x0, #x1, NULL}
 #define	CLIB_PLUGIN_NEEDED3(x0, x1, x2)	\
-const char *clib_plugin_needed[] = {x0, x1, x2, NULL}
+const char *clib_plugin_needed[] = {#x0, #x1, #x2, NULL}
 #define	CLIB_PLUGIN_NEEDED4(x0, x1, x2, x3)	\
-const char *clib_plugin_needed[] = {x0, x1, x2, x3, NULL}
+const char *clib_plugin_needed[] = {#x0, #x1, #x2, #x3, NULL}
 #define	CLIB_PLUGIN_NEEDED5(x0, x1, x2, x3, x4)	\
-const char *clib_plugin_needed[] = {x0, x1, x2, x3, x4, NULL}
+const char *clib_plugin_needed[] = {#x0, #x1, #x2, #x3, #x4, NULL}
 #define	CLIB_PLUGIN_NEEDED6(x0, x1, x2, x3, x4, x5)	\
-const char *clib_plugin_needed[] = {x0, x1, x2, x3, x4, x5, NULL}
+const char *clib_plugin_needed[] = {#x0, #x1, #x2, #x3, #x4, #x5, NULL}
+#define	CLIB_PLUGIN_NEEDED7(x0, x1, x2, x3, x4, x5, x6)	\
+const char *clib_plugin_needed[] = {#x0, #x1, #x2, #x3, #x4, #x5, #x6, NULL}
+#define	CLIB_PLUGIN_NEEDED8(x0, x1, x2, x3, x4, x5, x6, x7)	\
+const char *clib_plugin_needed[] = {#x0, #x1, #x2, #x3, #x4, #x5, #x6, #x7, NULL}
+#define	CLIB_PLUGIN_NEEDED9(x0, x1, x2, x3, x4, x5, x6, x7, x8)	\
+const char *clib_plugin_needed[] = {#x0, #x1, #x2, #x3, #x4, #x5, #x6, #x7, #x8, NULL}
 
 #if 0
 extern struct clib_plugin *clib_plugin_find_by_id_path(char *str,
@@ -81,7 +89,38 @@ extern int clib_plugin_load_default(struct clib_plugin_load_arg *s, int cnt);
 extern void clib_plugin_cleanup(void);
 extern void clib_plugin_print(void);
 struct list_head *clib_plugin_get_head(void);
-extern int clib_plugin_call_func(char *plugin_name, char *func_name, int argc, ...);
+#define	CALL_FUNC_MAX_ARGS	9
+extern long clib_plugin_call_func(const char *plugin_name,
+				  const char *func_name,
+				  int argc, ...);
+
+/*
+ * sometimes several plugins have the same exported symbol, use this macro
+ * to call the specific plugin function, which means you should call with
+ * `plugin_name`__`symbol_name`
+ */
+#define	CLIB_PLUGIN_CALL_FUNC_HEAD(plugin_name,ret_type,func_name,arg_list) \
+static __maybe_unused ret_type plugin_name##__##func_name arg_list
+
+#define	CLIB_PLUGIN_CALL_FUNC_TAIL(func_name,ret_type,arg_list) \
+C_SYM ret_type func_name arg_list
+
+#ifdef CLIB_PLUGIN_SYMBOL_CONFLICT
+#define	CLIB_PLUGIN_CALL_FUNC(plugin_name, func_name, ret_type, arg_list, argc, ...) \
+CLIB_PLUGIN_CALL_FUNC_HEAD(plugin_name,ret_type,func_name,arg_list)\
+{\
+return (ret_type)clib_plugin_call_func(#plugin_name,#func_name,argc,##__VA_ARGS__);\
+}\
+CLIB_PLUGIN_CALL_FUNC_TAIL(func_name,ret_type,arg_list)
+#else	/* !CLIB_PLUGIN_SYMBOL_CONFLICT */
+#define	CLIB_PLUGIN_CALL_FUNC(plugin_name, func_name, ret_type, arg_list, argc, ...) \
+CLIB_PLUGIN_CALL_FUNC_TAIL(func_name,ret_type,arg_list);\
+static ret_type plugin_name##__##func_name arg_list __attribute__((weakref,alias(#func_name)))
+#endif
+
+extern int clib_cmd_plugin_setup(struct clib_cmd *cs, int cs_cnt, char *plugin_root,
+				 struct clib_plugin_load_arg *defplugin,
+				 size_t plugin_cnt);
 
 DECL_END
 

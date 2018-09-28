@@ -63,10 +63,8 @@ static void *get_sh_by_name(elf_file *file, const char *str)
 static int add_symbol(list_comm *head, char *name, void *data)
 {
 	list_comm *n = malloc_s(sizeof(list_comm) + sizeof(struct _elf_sym));
-	if (!n) {
-		err_dbg(0, err_fmt("malloc_s err"));
-		return -1;
-	}
+	if (!n)
+		err_ret(0, -ENOMEM, err_fmt("malloc_s err"));
 
 	struct _elf_sym *newsym = (void *)n->data;
 	newsym->name = name;
@@ -120,7 +118,7 @@ static int parse_elf32(elf_file *file, char *buf)
 	file->elf_hdr_size = sizeof(Elf32_Ehdr);
 	file->elf_hdr = (Elf32_Ehdr *)malloc(file->elf_hdr_size);
 	if (!file->elf_hdr)
-		return err_ret(0, -1, err_fmt("malloc err"));
+		err_ret(0, -EINVAL, err_fmt("malloc err"));
 	memset(file->elf_hdr, 0, file->elf_hdr_size);
 	memcpy(file->elf_hdr, buf, file->elf_hdr_size);
 
@@ -251,7 +249,7 @@ static int parse_elf64(elf_file *file, char *buf)
 	file->elf_hdr_size = sizeof(Elf64_Ehdr);
 	file->elf_hdr = (Elf64_Ehdr *)malloc(file->elf_hdr_size);
 	if (!file->elf_hdr)
-		return err_ret(0, -1, err_fmt("malloc err"));
+		err_ret(0, -EINVAL, err_fmt("malloc err"));
 	memset(file->elf_hdr, 0, file->elf_hdr_size);
 	memcpy(file->elf_hdr, buf, file->elf_hdr_size);
 

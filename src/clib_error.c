@@ -111,16 +111,6 @@ void err_exit(int flag_err, const char *fmt, ...)
 	exit(0);
 }
 
-int err_ret(int has_errno, int retval, const char *fmt, ...)
-{
-	va_list ap;
-	va_start(ap, fmt);
-	err_dbg(has_errno, fmt, ap);
-	va_end(ap);
-
-	return retval;
-}
-
 void set_dbg_mode(int val)
 {
 	dbg_mode = val;

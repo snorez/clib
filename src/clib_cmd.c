@@ -52,10 +52,28 @@ void clib_set_cmd_completor(void)
 	rl_attempted_completion_function = clib_completion;
 }
 
+static sigjmp_buf rl_jmp_env;
+static int sigint_is_set = 0;
+static void rl_sigint(int signo)
+{
+	siglongjmp(rl_jmp_env, 1);
+}
+
 char *clib_readline_add_history(char *prompt)
 {
 	char *ret;
+	if (unlikely(!sigint_is_set)) {
+		sigint_is_set = 1;
+		signal(SIGINT, rl_sigint);
+	}
+
 redo:
+	if (sigsetjmp(rl_jmp_env, 1)) {
+		fprintf(stdout, "\n");
+		fflush(stdin);
+		fflush(stdout);
+		fflush(stderr);
+	}
 	ret = readline(prompt);
 	if (!ret) {
 		err_dbg(1, err_fmt("readline err"));
@@ -126,10 +144,8 @@ long clib_cmd_add(struct clib_cmd *newcmd)
 {
 	int i = 0, err = 0;
 	struct clib_cmd *old = clib_cmd_find(newcmd->cmd);
-	if (old) {
-		err_dbg(0, err_fmt("cmd %s already exists"), newcmd->cmd);
-		return -1;
-	}
+	if (old)
+		err_ret(0, -EEXIST, err_fmt("cmd %s already exists"), newcmd->cmd);
 
 	struct clib_cmd *b = NULL;
 	int cnt = 0;
@@ -146,17 +162,14 @@ long clib_cmd_add(struct clib_cmd *newcmd)
 			break;
 	}
 
-	if (i == cnt) {
-		err_dbg(0, err_fmt("cmd cnt exceed"));
-		return -1;
-	}
+	if (i == cnt)
+		err_ret(0, -EDQUOT, err_fmt("cmd cnt exceed"));
 
 	b[i] = *newcmd;
 	err = clib_cmd_ac_add(b[i].cmd);
 	if (err) {
-		err_dbg(0, err_fmt("clib_cmd_ac_add err"));
 		memset(&b[i], 0, sizeof(b[i]));
-		return -1;
+		err_retval(0, err, err_fmt("clib_cmd_ac_add err"));
 	}
 	fprintf(stdout, "NEW CMD: %s\n", b[i].cmd);
 	if (b[i].usage) {
@@ -174,8 +187,8 @@ long clib_cmd_add_array(struct clib_cmd *cs, int cs_cnt)
 			continue;
 		err = clib_cmd_add(&cs[i]);
 		if (err) {
-			err_dbg(0, err_fmt("clib_cmd_add err"));
 			clib_cmd_cleanup();
+			err_dbg(0, err_fmt("clib_cmd_add err"));
 			goto set_cmds_user;
 		}
 	}
@@ -223,16 +236,13 @@ void clib_cmd_cleanup(void)
 long clib_cmd_exec(char *cmd, int argc, char **argv)
 {
 	struct clib_cmd *t = clib_cmd_find(cmd);
-	if (!t) {
-		err_dbg(0, err_fmt("cmd %s not found"), cmd);
-		return -1;
-	}
+	if (!t)
+		err_ret(0, -ENOENT, err_fmt("cmd %s not found"), cmd);
 
 	if (t->cb) {
 		return t->cb(argc, argv);
 	} else {
-		err_dbg(0, err_fmt("cmd %s has no callback function"));
-		return -1;
+		err_ret(0, -EINVAL, err_fmt("cmd %s has no callback function"), cmd);
 	}
 }
 
@@ -265,10 +275,8 @@ void clib_cmd_usages(void)
 long clib_cmd_getarg(char *buf, size_t buflen, int *argc, char **argv)
 {
 	char *pos = buf;
-	if (pos[buflen-1]) {
-		err_dbg(0, err_fmt("input format error\n"));
-		return -1;
-	}
+	if (pos[buflen-1])
+		err_ret(0, -EINVAL, err_fmt("input format err"));
 
 	int in_word = 0;
 	*argc = 0;
@@ -278,10 +286,8 @@ long clib_cmd_getarg(char *buf, size_t buflen, int *argc, char **argv)
 				in_word = 0;
 			*pos = '\0';
 		} else if (!in_word) {
-			if (*argc >= CMD_ARGS_MAX) {
-				err_dbg(0, err_fmt("cmd args too many"));
-				return -1;
-			}
+			if (*argc >= CMD_ARGS_MAX)
+				err_ret(0, -EINVAL, err_fmt("cmd args too many"));
 			argv[*argc] = pos;
 			*argc = *argc + 1;
 			in_word = 1;

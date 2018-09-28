@@ -34,11 +34,8 @@ char *base64_enc(const char *data, int data_len)
     ret_len = ret_len*4 + 1;
     ret = (char *)malloc(ret_len);
 
-    if (ret == NULL) {
-	    errno = ENOMEM;
-	    err_dbg(1, err_fmt("malloc error"));
-	    return NULL;
-    }
+    if (ret == NULL)
+	    err_ptr_ret(0, -ENOMEM, err_fmt("malloc err"));
 
     memset(ret, 0, ret_len);
     f = ret;
@@ -107,11 +104,8 @@ char *base64_dec(const char *data, int data_len)
     }
 
     ret = (char *)malloc(ret_len);
-    if (ret == NULL) {
-	    errno = ENOMEM;
-	    err_dbg(1, err_fmt("malloc error"));
-	    return NULL;
-    }
+    if (ret == NULL)
+	    err_ptr_ret(0, -ENOMEM, err_fmt("malloc err"));
     memset(ret, 0, ret_len);
     f = ret;
     while (tmp < (data_len - equal_count))
