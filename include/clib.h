@@ -18,6 +18,7 @@
 #include "../include/clib_elf.h"
 #include "../include/clib_pe.h"
 #include "../include/clib_cmd.h"
+#include "../include/clib_mm.h"
 
 DECL_BEGIN
 

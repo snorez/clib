@@ -35,10 +35,12 @@ static inline int IS_ERR_OR_NULL(const void *ptr)
 	return unlikely(!ptr) || IS_ERR_VALUE((unsigned long)ptr);
 }
 
+extern void show_bt(void);
 /* for BUG BUG_ON WARN WARN_ON */
 #define	BUG()	\
 	do {\
 	fprintf(stderr,"***BUG***: %s|%s|%d\n",__FILE__,__FUNCTION__,__LINE__);\
+	show_bt();\
 	exit(-1);\
 	} while (0)
 #define	BUG_ON(cond) \
@@ -49,6 +51,7 @@ static inline int IS_ERR_OR_NULL(const void *ptr)
 #define	WARN()	\
 	do {\
 	fprintf(stderr,"***WARN***: %s|%s|%d\n",__FILE__,__FUNCTION__,__LINE__);\
+	show_bt();\
 	} while (0)
 #define	WARN_ON(cond)	\
 	do {\

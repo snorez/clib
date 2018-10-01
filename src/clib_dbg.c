@@ -1,4 +1,4 @@
-#include "../include/clib.h"
+#include "../include/clib_dbg.h"
 
 /*
  * *NOTE* capstone used here
@@ -260,4 +260,18 @@ void set_eh(sigact_func func)
 	sigaction(SIGBUS, &new_act, &old_act);
 
 	callback = func;
+}
+
+void show_bt(void)
+{
+	ucontext_t uc;
+	int err = getcontext(&uc);
+	if (err == -1) {
+		err_dbg(1, err_fmt("getcontext err"));
+		return;
+	}
+
+	fprintf(stdout, "Call Stack:\n");
+	print_bt_info(&uc);
+	fprintf(stdout, "\n");
 }

@@ -11,6 +11,7 @@
 DECL_BEGIN
 
 extern void set_eh(sigact_func func);
+extern void show_bt(void);
 
 DECL_END
 

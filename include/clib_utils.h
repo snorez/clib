@@ -88,6 +88,9 @@ extern int tmp_close_std(int close_fd);
 extern int restore_std(int closed_fd);
 extern int output_tmp_std(void);
 extern long get_memory_avail(void);
+extern void time_acct_start(void);
+extern void time_acct_end(void);
+extern void show_progress(double cur, double total);
 
 static inline int get_online_cpus(void)
 {

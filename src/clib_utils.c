@@ -189,3 +189,42 @@ long get_memory_avail(void)
 
 	return (unsigned long)1024 * atoll(p);
 }
+
+static __thread struct timeval tv;
+void time_acct_start(void)
+{
+	int err = gettimeofday(&tv, NULL);
+	if (err == -1) {
+		err_dbg(1, err_fmt("gettimeofday err"));
+		memset(&tv, 0, sizeof(tv));
+		return;
+	}
+}
+
+void time_acct_end(void)
+{
+	struct timeval tv0;
+	if (!tv.tv_sec)
+		return;
+
+	int err = gettimeofday(&tv0, NULL);
+	if (err == -1) {
+		err_dbg(1, err_fmt("gettimeofday err"));
+		memset(&tv, 0, sizeof(tv));
+		return;
+	}
+
+	fprintf(stdout, "process take %ld seconds\n", tv0.tv_sec - tv.tv_sec);
+}
+
+static __thread int show_process_byte = 0;
+void show_progress(double cur, double total)
+{
+	if (show_process_byte)
+		for (int i = 0; i < show_process_byte; i++)
+			fprintf(stdout, "\b");
+	show_process_byte = fprintf(stdout, "%.3f%%", cur * 100 / total);
+	fflush(stdout);
+	if (cur == total)
+		show_process_byte = 0;
+}

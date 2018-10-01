@@ -18,7 +18,14 @@
 
 DECL_BEGIN
 
+#ifndef sigact_func
 typedef void (*sigact_func)(int, siginfo_t *, void *);
+#endif
+
+extern void set_timer(unsigned long sec, sigact_func func, int need_loop);
+extern void unset_timer(void);
+extern void set_timer_show_progress(unsigned long sec, void *cur, void *total);
+extern void unset_timer_show_progress(void);
 
 DECL_END
 
