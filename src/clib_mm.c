@@ -1,13 +1,16 @@
 #include "../include/clib_mm.h"
 
 static LIST_HEAD(clib_mm_head);
+static lock_t mm_head_lock;
 
 static struct clib_mm *clib_mm_find(char *desc)
 {
 	struct clib_mm *t;
 	list_for_each_entry(t, &clib_mm_head, sibling) {
-		if (!strcmp(t->desc, desc))
+		if (!strcmp(t->desc, desc)) {
+			atomic_inc(&t->refcount);
 			return t;
+		}
 	}
 	return NULL;
 }
@@ -117,6 +120,14 @@ static int clib_mm_expand(struct clib_mm *t, size_t size_need)
 	}
 }
 
+static void clib_mm_put(struct clib_mm *t)
+{
+	if (atomic_dec_and_test(&t->refcount)) {
+		list_del(&t->sibling);
+		free(t);
+	}
+}
+
 int clib_mm_setup(char *desc, int fd, unsigned long start, size_t len, int expandable)
 {
 	if (unlikely(strlen(desc) >= CLIB_MM_DESC_LEN)) {
@@ -129,15 +140,19 @@ int clib_mm_setup(char *desc, int fd, unsigned long start, size_t len, int expan
 	}
 
 	int err = 0;
+	mutex_lock(&mm_head_lock);
 	struct clib_mm *t = clib_mm_find(desc);
 	if (t) {
+		clib_mm_put(t);
 		err_dbg(0, err_fmt("clib_mm desc exists"));
+		mutex_unlock(&mm_head_lock);
 		return -1;
 	}
 
 	t = (struct clib_mm *)malloc(sizeof(*t));
 	if (!t) {
 		err_dbg(0, err_fmt("malloc err"));
+		mutex_unlock(&mm_head_lock);
 		return -1;
 	}
 	memset(t, 0, sizeof(*t));
@@ -147,9 +162,12 @@ int clib_mm_setup(char *desc, int fd, unsigned long start, size_t len, int expan
 	if (err) {
 		err_dbg(0, err_fmt("clib_mm_init err"));
 		err = -1;
+		mutex_unlock(&mm_head_lock);
 		goto err_free;
 	}
+	atomic_set(&t->refcount, 1);
 	list_add_tail(&t->sibling, &clib_mm_head);
+	mutex_unlock(&mm_head_lock);
 	return 0;
 
 err_free:
@@ -160,45 +178,56 @@ err_free:
 int clib_mm_cleanup(char *desc)
 {
 	int err = 0;
+	mutex_lock(&mm_head_lock);
 	struct clib_mm *t = clib_mm_find(desc);
 	if (!t) {
 		err_dbg(0, err_fmt("clib_mm desc not found"));
+		mutex_unlock(&mm_head_lock);
 		return -1;
 	}
 
 	err = clib_mm_dump(t);
 	if (err == -1) {
 		err_dbg(0, err_fmt("clib_mm_dump err"));
+		mutex_unlock(&mm_head_lock);
 		return -1;
 	}
 
 	err = munmap((void *)t->mm_start, t->mm_tail - t->mm_start);
 	if (err == -1) {
 		err_dbg(1, err_fmt("munmap err"));
+		mutex_unlock(&mm_head_lock);
 		return -1;
 	}
 
-	list_del(&t->sibling);
-	free(t);
+	clib_mm_put(t);
+	clib_mm_put(t);
+	mutex_unlock(&mm_head_lock);
 	return 0;
 }
 
 unsigned long clib_mm_get(char *desc, size_t len)
 {
 	int err = 0;
+	mutex_lock(&mm_head_lock);
 	struct clib_mm *t = clib_mm_find(desc);
 	if (!t) {
 		err_dbg(0, err_fmt("clib_mm desc not found"));
+		mutex_unlock(&mm_head_lock);
 		return 0;
 	}
 
 	err = clib_mm_expand(t, len);
 	if (err) {
 		err_dbg(0, err_fmt("clib_mm_expand err"));
+		clib_mm_put(t);
+		mutex_unlock(&mm_head_lock);
 		return 0;
 	}
 
 	unsigned long ret = t->mm_cur;
 	t->mm_cur += len;
+	clib_mm_put(t);
+	mutex_unlock(&mm_head_lock);
 	return ret;
 }

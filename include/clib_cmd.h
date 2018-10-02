@@ -2,6 +2,7 @@
 #define CLIB_CMD_AUTO_COMPLETION_H_PLTLGD8H
 
 #include "../include/clib_utils.h"
+#include "../include/clib_atomic.h"
 #include "../include/clib_error.h"
 #include "../include/clib_list.h"
 #include "../include/clib_string.h"
@@ -18,6 +19,7 @@ struct clib_cmd {
 	char	*cmd;
 	long	(*cb)(int argc, char **argv);
 	void	(*usage)(void);
+	ref_t	refcount;
 };
 
 extern void clib_set_cmd_completor(void);

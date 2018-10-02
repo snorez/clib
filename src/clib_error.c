@@ -8,6 +8,7 @@ static int dbg_mode;
  * COLOR_B selections
  *	00(normal) 01(bold) 02(normal-light) 03(Italic) 04(underline) 07 09(mid-line)
  *	30-36 40-49
+ * XXX: DO NOT use these functions in different threads
  */
 #define	COLOR_B		"\033[07;31m"
 #define COLOR_E		"\033[0m"

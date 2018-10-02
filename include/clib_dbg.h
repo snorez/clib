@@ -2,6 +2,7 @@
 #define DBG_H_VSLA5ZHT
 
 #include "../include/clib_utils.h"
+#include "../include/clib_atomic.h"
 #include "../include/clib_disas.h"
 #include "../include/clib_signal.h"
 #include <stdio.h>

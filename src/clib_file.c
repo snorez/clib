@@ -1,5 +1,6 @@
 /*
  * please compile with -D_FILE_OFFSET_BITS=64
+ * TODO, multithread support
  */
 #include "../include/clib.h"
 

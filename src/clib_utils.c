@@ -1,5 +1,7 @@
 #include "../include/clib.h"
 
+/* TODO: multithread support */
+
 uint32_t min_32(uint32_t a, uint32_t b)
 {
 	return (a > b) ? b : a;
@@ -190,41 +192,36 @@ long get_memory_avail(void)
 	return (unsigned long)1024 * atoll(p);
 }
 
-static __thread struct timeval tv;
+static __thread struct timeval tv0, tv1;
 void time_acct_start(void)
 {
-	int err = gettimeofday(&tv, NULL);
+	int err = gettimeofday(&tv0, NULL);
 	if (err == -1) {
 		err_dbg(1, err_fmt("gettimeofday err"));
-		memset(&tv, 0, sizeof(tv));
+		memset(&tv0, 0, sizeof(tv0));
 		return;
 	}
 }
 
 void time_acct_end(void)
 {
-	struct timeval tv0;
-	if (!tv.tv_sec)
+	if (!tv0.tv_sec)
 		return;
 
-	int err = gettimeofday(&tv0, NULL);
+	int err = gettimeofday(&tv1, NULL);
 	if (err == -1) {
 		err_dbg(1, err_fmt("gettimeofday err"));
-		memset(&tv, 0, sizeof(tv));
+		memset(&tv0, 0, sizeof(tv0));
 		return;
 	}
 
-	fprintf(stdout, "process take %ld seconds\n", tv0.tv_sec - tv.tv_sec);
-}
-
-static __thread int show_process_byte = 0;
-void show_progress(double cur, double total)
-{
-	if (show_process_byte)
-		for (int i = 0; i < show_process_byte; i++)
-			fprintf(stdout, "\b");
-	show_process_byte = fprintf(stdout, "%.3f%%", cur * 100 / total);
-	fflush(stdout);
-	if (cur == total)
-		show_process_byte = 0;
+	if (tv1.tv_usec < tv0.tv_usec) {
+		fprintf(stdout, "process take %ld seconds, %ld microsec\n",
+				tv1.tv_sec-1-tv0.tv_sec,
+				tv1.tv_usec+1000-tv0.tv_usec);
+	} else {
+		fprintf(stdout, "process take %ld seconds, %ld microsec\n",
+				tv1.tv_sec - tv0.tv_sec,
+				tv1.tv_usec-tv0.tv_usec);
+	}
 }

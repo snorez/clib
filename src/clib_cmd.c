@@ -1,6 +1,7 @@
-#include "../include/clib.h"
+#include "../include/clib_cmd.h"
 
 static LIST_HEAD(cmd_head);
+static lock_t cmd_head_lock;
 
 static char *xdupstr(char *str)
 {
@@ -22,6 +23,7 @@ static char *clib_generator(const char *text, int state)
 		len = strlen(text);
 	}
 
+	read_lock(&cmd_head_lock);
 	list_for_each_entry(node, &cmd_head, list_head) {
 		if ((!skip_done) && (i < idx)) {
 			i++;
@@ -30,9 +32,12 @@ static char *clib_generator(const char *text, int state)
 		idx++;
 		skip_done = 1;
 		str_struct *s = (void *)node->data;
-		if (!strncmp(s->str, text, len))
+		if (!strncmp(s->str, text, len)) {
+			read_unlock(&cmd_head_lock);
 			return xdupstr(s->str);
+		}
 	}
+	read_unlock(&cmd_head_lock);
 
 	return NULL;
 }
@@ -87,17 +92,24 @@ redo:
 int clib_cmd_ac_add(char *buf)
 {
 	list_comm *node;
+	write_lock(&cmd_head_lock);
 	list_for_each_entry(node, &cmd_head, list_head) {
 		str_struct *s = (str_struct *)node->data;
-		if (!strcmp(s->str, buf))
+		if (!strcmp(s->str, buf)) {
+			read_unlock(&cmd_head_lock);
 			return 0;
+		}
 	}
-	return list_comm_str_struct_new((void *)&cmd_head, buf, strlen(buf));
+
+	int err = list_comm_str_struct_new((void *)&cmd_head, buf, strlen(buf));
+	write_unlock(&cmd_head_lock);
+	return err;
 }
 
 void clib_cmd_ac_del(char *buf)
 {
 	list_comm *node;
+	write_lock(&cmd_head_lock);
 	list_for_each_entry(node, &cmd_head, list_head) {
 		str_struct *s = (str_struct *)node->data;
 		if (strcmp(s->str, buf))
@@ -105,15 +117,20 @@ void clib_cmd_ac_del(char *buf)
 		list_del(&node->list_head);
 		free(s->str);
 		free(node);
+		write_unlock(&cmd_head_lock);
 		return;
 	}
+	write_unlock(&cmd_head_lock);
 }
 
 void clib_cmd_ac_cleanup(void)
 {
+	write_lock(&cmd_head_lock);
 	list_comm_str_struct_make_empty((void *)&cmd_head);
+	write_unlock(&cmd_head_lock);
 }
 
+static lock_t cmds___lock = {0};
 static struct clib_cmd cmds[CLIB_CMD_MAX] = { 0 };
 static struct clib_cmd *cmds_user = NULL;
 static int cmds_user_cnt = 0;
@@ -123,6 +140,7 @@ struct clib_cmd *clib_cmd_find(char *name)
 	int i = 0;
 	struct clib_cmd *b = NULL;
 	int cnt = 0;
+
 	if (cmds_user) {
 		b = cmds_user;
 		cnt = cmds_user_cnt;
@@ -134,18 +152,32 @@ struct clib_cmd *clib_cmd_find(char *name)
 	for (i = 0; i < cnt; i++) {
 		if (!b[i].cmd)
 			continue;
-		if ((!strcmp(name, b[i].cmd)))
+		if ((!strcmp(name, b[i].cmd))) {
+			atomic_inc(&b[i].refcount);
 			return &b[i];
+		}
 	}
 	return NULL;
+}
+
+static void clib_cmd_put(struct clib_cmd *c)
+{
+	if (atomic_dec_and_test(&c->refcount)) {
+		clib_cmd_ac_del(c->cmd);
+		memset(c, 0, sizeof(*c));
+	}
 }
 
 long clib_cmd_add(struct clib_cmd *newcmd)
 {
 	int i = 0, err = 0;
+	write_lock(&cmds___lock);
 	struct clib_cmd *old = clib_cmd_find(newcmd->cmd);
-	if (old)
+	if (old) {
+		atomic_dec(&old->refcount);
+		write_unlock(&cmds___lock);
 		err_ret(0, -EEXIST, err_fmt("cmd %s already exists"), newcmd->cmd);
+	}
 
 	struct clib_cmd *b = NULL;
 	int cnt = 0;
@@ -162,15 +194,20 @@ long clib_cmd_add(struct clib_cmd *newcmd)
 			break;
 	}
 
-	if (i == cnt)
+	if (i == cnt) {
+		write_unlock(&cmds___lock);
 		err_ret(0, -EDQUOT, err_fmt("cmd cnt exceed"));
+	}
 
 	b[i] = *newcmd;
+	atomic_set(&b[i].refcount, 1);
 	err = clib_cmd_ac_add(b[i].cmd);
 	if (err) {
 		memset(&b[i], 0, sizeof(b[i]));
+		write_unlock(&cmds___lock);
 		err_retval(0, err, err_fmt("clib_cmd_ac_add err"));
 	}
+	write_unlock(&cmds___lock);
 	fprintf(stdout, "NEW CMD: %s\n", b[i].cmd);
 	if (b[i].usage) {
 		fprintf(stdout, "USAGE:\n");
@@ -183,10 +220,16 @@ long clib_cmd_add_array(struct clib_cmd *cs, int cs_cnt)
 {
 	int err = 0;
 	for (int i = 0; i < cs_cnt; i++) {
-		if (!cs[i].cmd)
+		read_lock(&cmds___lock);
+		if (!cs[i].cmd) {
+			read_unlock(&cmds___lock);
 			continue;
+		}
+		read_unlock(&cmds___lock);
 		err = clib_cmd_add(&cs[i]);
 		if (err) {
+			if (errno == EEXIST)
+				continue;
 			clib_cmd_cleanup();
 			err_dbg(0, err_fmt("clib_cmd_add err"));
 			goto set_cmds_user;
@@ -196,20 +239,25 @@ long clib_cmd_add_array(struct clib_cmd *cs, int cs_cnt)
 		return 0;
 
 set_cmds_user:
+	write_lock(&cmds___lock);
 	cmds_user = cs;
 	cmds_user_cnt = cs_cnt;
+	write_unlock(&cmds___lock);
 	return 0;
 }
 
 void clib_cmd_del(char *name)
 {
+	write_lock(&cmds___lock);
 	struct clib_cmd *old = clib_cmd_find(name);
 	if (!old) {
 		err_dbg(0, err_fmt("cmd %s not found"), name);
+		write_unlock(&cmds___lock);
 		return;
 	}
-	clib_cmd_ac_del(old->cmd);
-	memset(old, 0, sizeof(*old));
+	clib_cmd_put(old);
+	clib_cmd_put(old);
+	write_unlock(&cmds___lock);
 }
 
 void clib_cmd_cleanup(void)
@@ -217,6 +265,7 @@ void clib_cmd_cleanup(void)
 	int i = 0;
 	struct clib_cmd *b = NULL;
 	int cnt = 0;
+	write_lock(&cmds___lock);
 	if (cmds_user) {
 		b = cmds_user;
 		cnt = cmds_user_cnt;
@@ -231,6 +280,7 @@ void clib_cmd_cleanup(void)
 		clib_cmd_ac_del(b[i].cmd);
 		memset(&b[i], 0, sizeof(b[i]));
 	}
+	write_unlock(&cmds___lock);
 }
 
 long clib_cmd_exec(char *cmd, int argc, char **argv)
@@ -239,11 +289,15 @@ long clib_cmd_exec(char *cmd, int argc, char **argv)
 	if (!t)
 		err_ret(0, -ENOENT, err_fmt("cmd %s not found"), cmd);
 
+	long ret = 0;
 	if (t->cb) {
-		return t->cb(argc, argv);
+		ret = t->cb(argc, argv);
 	} else {
-		err_ret(0, -EINVAL, err_fmt("cmd %s has no callback function"), cmd);
+		ret = -EINVAL;
+		err_dbg(0, err_fmt("cmd %s has no callback function"), cmd);
 	}
+	clib_cmd_put(t);
+	return ret;
 }
 
 void clib_cmd_usages(void)
@@ -251,6 +305,7 @@ void clib_cmd_usages(void)
 	int i = 0;
 	struct clib_cmd *b = NULL;
 	int cnt = 0;
+	read_lock(&cmds___lock);
 	if (cmds_user) {
 		b = cmds_user;
 		cnt = cmds_user_cnt;
@@ -270,6 +325,7 @@ void clib_cmd_usages(void)
 			fprintf(stdout, "\tcommand has no usage\n");
 	}
 	fprintf(stdout, "========= USAGE END =========\n");
+	read_unlock(&cmds___lock);
 }
 
 long clib_cmd_getarg(char *buf, size_t buflen, int *argc, char **argv)

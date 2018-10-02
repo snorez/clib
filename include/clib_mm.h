@@ -16,6 +16,7 @@ struct clib_mm {
 	struct list_head	sibling;
 	char			desc[8];	/* string, include nul byte */
 	int			fd;
+	ref_t			refcount;
 
 	unsigned long		mm_start;	/* mmap start at */
 	unsigned long		mm_head;	/* first object */

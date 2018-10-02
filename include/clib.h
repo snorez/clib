@@ -19,6 +19,7 @@
 #include "../include/clib_pe.h"
 #include "../include/clib_cmd.h"
 #include "../include/clib_mm.h"
+#include "../include/clib_print.h"
 
 DECL_BEGIN
 

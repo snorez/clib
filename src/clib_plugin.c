@@ -1,6 +1,7 @@
 #include "../include/clib.h"
 
 static LIST_HEAD(plugin_head);
+static lock_t plugin_head_lock;
 
 static struct clib_plugin *clib_plugin_find_by_id_path(char *str,
 							struct list_head *head)
@@ -334,19 +335,23 @@ int clib_plugin_load(int argc, char *argv[])
 	}
 
 	/* First, find by id or path */
+	mutex_lock(&plugin_head_lock);
 	struct clib_plugin *old = clib_plugin_find_by_id_path(argv[0], head);
 	if (old) {
 		if (old->state == CLIB_PLUGIN_LOADED) {
 			err_dbg(0, err_fmt("plugin has been loaded"));
+			mutex_unlock(&plugin_head_lock);
 			return 0;
 		} else if (old->state == CLIB_PLUGIN_FORMAT_ERR) {
 			err_dbg(0, err_fmt("plugin can not be loaded"));
+			mutex_unlock(&plugin_head_lock);
 			return 0;
 		}
 
 		err = clib_plugin_open(old, head);
 		if (err) {
 			err_dbg(0, err_fmt("clib_plugin_open err"));
+			mutex_unlock(&plugin_head_lock);
 			return -1;
 		}
 
@@ -354,11 +359,14 @@ int clib_plugin_load(int argc, char *argv[])
 		if (err) {
 			err_dbg(0, err_fmt("clib_plugin_do_entry err"));
 			clib_plugin_close(old, head, 0);
+			mutex_unlock(&plugin_head_lock);
 			return -1;
 		}
+		mutex_unlock(&plugin_head_lock);
 		return 0;
 	} else if (IS_ERR(old)) {
 		err_dbg(0, err_fmt("clib_plugin_find_by_id_path err"));
+		mutex_unlock(&plugin_head_lock);
 		return -1;
 	}
 
@@ -366,6 +374,7 @@ int clib_plugin_load(int argc, char *argv[])
 	struct clib_plugin *newp = clib_plugin_alloc(argv[0]);
 	if (!newp) {
 		err_dbg(0, err_fmt("clib_plugin_alloc err"));
+		mutex_unlock(&plugin_head_lock);
 		return -1;
 	}
 
@@ -373,6 +382,7 @@ int clib_plugin_load(int argc, char *argv[])
 	if (err) {
 		err_dbg(0, err_fmt("clib_plugin_open err"));
 		clib_plugin_free(newp);
+		mutex_unlock(&plugin_head_lock);
 		return -1;
 	}
 
@@ -381,9 +391,11 @@ int clib_plugin_load(int argc, char *argv[])
 		clib_plugin_close(newp, head, 0);
 		clib_plugin_free(newp);
 		err_dbg1(err, err_fmt("clib_plugin_do_entry err"));
+		mutex_unlock(&plugin_head_lock);
 		return -1;
 	}
 	clib_plugin_insert(newp, head);
+	mutex_unlock(&plugin_head_lock);
 	return 0;
 }
 
@@ -396,25 +408,31 @@ int clib_plugin_unload(int argc, char *argv[])
 		return -1;
 	}
 
+	mutex_lock(&plugin_head_lock);
 	struct clib_plugin *target = clib_plugin_find_by_id_path(argv[0], head);
 	if (target) {
 		goto found;
 	} else if (IS_ERR(target)) {
 		err_dbg(0, err_fmt("clib_plugin_find_by_id_path err"));
+		mutex_unlock(&plugin_head_lock);
 		return -1;
 	}
 
 	target = clib_plugin_find_by_pluginname(argv[0], head);
 	if (!target) {
 		err_dbg(0, err_fmt("plugin %s not found"), argv[0]);
+		mutex_unlock(&plugin_head_lock);
 		return -1;
 	}
 
 found:
-	if (target->state != CLIB_PLUGIN_LOADED)
+	if (target->state != CLIB_PLUGIN_LOADED) {
+		mutex_unlock(&plugin_head_lock);
 		return 0;
+	}
 	if (target->refcount) {
 		err_dbg(0, err_fmt("plugin %s in use"), target->path);
+		mutex_unlock(&plugin_head_lock);
 		return -1;
 	}
 	err = clib_plugin_do_exit(target);
@@ -425,8 +443,10 @@ found:
 	err = clib_plugin_close(target, head, 0);
 	if (err) {
 		err_dbg(0, err_fmt("clib_plugin_close err"));
+		mutex_unlock(&plugin_head_lock);
 		return -1;
 	}
+	mutex_unlock(&plugin_head_lock);
 	return 0;
 }
 
@@ -439,6 +459,7 @@ int clib_plugin_reload(int argc, char *argv[])
 		return -1;
 	}
 
+	mutex_lock(&plugin_head_lock);
 	/* check if argv[0] is a plugin_name */
 	struct clib_plugin *old = clib_plugin_find_by_pluginname(argv[0], head);
 	char *arg0 = NULL;
@@ -446,11 +467,13 @@ int clib_plugin_reload(int argc, char *argv[])
 		arg0 = malloc(strlen(old->path) + 1);
 		if (!arg0) {
 			err_dbg(0, err_fmt("malloc err"));
+			mutex_unlock(&plugin_head_lock);
 			return -1;
 		}
 		memcpy(arg0, old->path, strlen(old->path)+1);
 		argv[0] = arg0;
 	}
+	mutex_unlock(&plugin_head_lock);
 
 	err = clib_plugin_unload(1, argv);
 	if (err) {
@@ -501,6 +524,7 @@ int clib_plugin_init_root(const char *dir)
 	memcpy(full_path, root_path, strlen(root_path));
 	size_t base_len = strlen(full_path);
 
+	mutex_lock(&plugin_head_lock);
 	while ((dp = readdir(root))) {
 		if (dp->d_type != DT_REG)
 			continue;
@@ -516,10 +540,12 @@ int clib_plugin_init_root(const char *dir)
 		if (!newp) {
 			err_dbg(0, err_fmt("clib_plugin_alloc err"));
 			closedir(root);
+			mutex_unlock(&plugin_head_lock);
 			return -1;
 		}
 		clib_plugin_insert(newp, head);
 	}
+	mutex_unlock(&plugin_head_lock);
 
 	closedir(root);
 	return 0;
@@ -551,6 +577,7 @@ void clib_plugin_cleanup(void)
 	struct list_head *head = &plugin_head;
 	struct clib_plugin *tmp, *next;
 	int err;
+	mutex_lock(&plugin_head_lock);
 	list_for_each_entry_safe(tmp, next, head, sibling) {
 		clib_plugin_do_exit(tmp);
 		err = clib_plugin_close(tmp, head, 1);
@@ -559,6 +586,7 @@ void clib_plugin_cleanup(void)
 		clib_plugin_remove(tmp);
 		clib_plugin_free(tmp);
 	}
+	mutex_unlock(&plugin_head_lock);
 	return;
 }
 
@@ -580,6 +608,7 @@ void clib_plugin_print()
 	struct list_head *head = &plugin_head;
 	struct clib_plugin *tmp;
 	int i = 0;
+	mutex_lock(&plugin_head_lock);
 	list_for_each_entry(tmp, head, sibling) {
 		fprintf(stdout, "%d\t%ld\t%s\t\t%s\n\t%s\t\n",
 				i++,
@@ -588,6 +617,7 @@ void clib_plugin_print()
 				tmp->plugin_name,
 				tmp->path);
 	}
+	mutex_unlock(&plugin_head_lock);
 }
 
 struct list_head *clib_plugin_get_head(void)
@@ -603,16 +633,19 @@ long clib_plugin_call_func(const char *plugin_name, const char *func_name,
 		return -1;
 	}
 
+	mutex_lock(&plugin_head_lock);
 	struct list_head *head = &plugin_head;
 	struct clib_plugin *cp = clib_plugin_find_by_pluginname(plugin_name, head);
 	if (!cp) {
 		err_dbg(0, err_fmt("%s not loaded yet"), plugin_name);
+		mutex_unlock(&plugin_head_lock);
 		return -1;
 	}
 
 	void *addr = dlsym(cp->handle, func_name);
 	if (!addr) {
 		err_dbg(0, err_fmt("%s not found in %s"), func_name, plugin_name);
+		mutex_unlock(&plugin_head_lock);
 		return -1;
 	}
 
@@ -703,6 +736,7 @@ long clib_plugin_call_func(const char *plugin_name, const char *func_name,
 	}
 
 	va_end(va);
+	mutex_unlock(&plugin_head_lock);
 	return err;
 }
 

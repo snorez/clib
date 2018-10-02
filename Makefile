@@ -5,6 +5,7 @@
 # dependencies:
 # 	libcapstone
 # 	readline
+# 	ncurses
 #
 ARCH = 64
 # use make with ARCH=32/64
@@ -30,16 +31,16 @@ CC_OPT_low = $(CC) $(CC_FLAGS) -O2 -rdynamic
 obj_static = clib_error.o clib_file.o clib_list.o clib_string.o clib_net.o \
 	     clib_crypt.o clib_elf.o clib_utils.o clib_signal.o clib_dbg.o \
 	     clib_disas.o clib_logfile.o clib_plugin.o clib_rbtree.o \
-	     clib_cmd.o clib_mm.o
+	     clib_cmd.o clib_mm.o clib_print.o
 obj_dynamic = clib_error.0 clib_file.0 clib_list.0 clib_string.0 clib_net.0 \
 	      clib_crypt.0 clib_elf.0 clib_utils.0 clib_signal.0 clib_dbg.0 \
 	      clib_disas.0 clib_logfile.0 clib_plugin.0 clib_rbtree.0 \
-	      clib_cmd.0 clib_mm.0
+	      clib_cmd.0 clib_mm.0 clib_print.0
 obj_dynamic_low = clib_error.1 clib_file.1 clib_list.1 clib_string.1 clib_net.1 \
 		  clib_crypt.1 clib_elf.1 clib_utils.1 clib_signal.1 clib_dbg.1 \
 		  clib_disas.1 clib_logfile.1 clib_memcpy.1 clib_plugin.1 \
 		  clib_rbtree.1 \
-		  clib_cmd.1 clib_mm.1
+		  clib_cmd.1 clib_mm.1 clib_print.1
 
 # all: static shared shared_low_ver
 all: prepare shared
@@ -65,7 +66,7 @@ endif
 # before copy, we need to use rm to delete the file first, then do the copy
 # otherwise, program load this lib will crash
 shared: $(obj_dynamic)
-	cd $(TMP);$(CC_OPT_dynamic) -rdynamic -shared -fPIC $(obj_dynamic) -lpthread -ldl -lcapstone -lreadline -o libclib$(ARCH).so;cd $(CWD);rm -f $(LIB)/libclib$(ARCH).so;cp $(TMP)/libclib$(ARCH).so $(LIB)/
+	cd $(TMP);$(CC_OPT_dynamic) -rdynamic -shared -fPIC $(obj_dynamic) -lpthread -ldl -lcapstone -lreadline -lncurses -o libclib$(ARCH).so;cd $(CWD);rm -f $(LIB)/libclib$(ARCH).so;cp $(TMP)/libclib$(ARCH).so $(LIB)/
 
 shared_low_ver: $(obj_dynamic_low)
 	cd $(TMP);$(CC_OPT_low) $(obj_dynamic_low) -Wl,--wrap=memcpy -rdynamic -shared -fPIC -ldl -lpthread -o libclib$(ARCH)_low.so;cd $(CWD);rm -f $(LIB)/libclib$(ARCH)_low.so;cp $(TMP)/libclib$(ARCH)_low.so $(LIB)/

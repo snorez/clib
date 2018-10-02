@@ -9,6 +9,7 @@
 #endif
 #include "../include/clib_utils.h"
 #include "../include/clib_error.h"
+#include "../include/clib_list.h"
 #include <ucontext.h>
 #include <link.h>
 #include <dlfcn.h>
@@ -22,10 +23,17 @@ DECL_BEGIN
 typedef void (*sigact_func)(int, siginfo_t *, void *);
 #endif
 
-extern void set_timer(unsigned long sec, sigact_func func, int need_loop);
-extern void unset_timer(void);
-extern void set_timer_show_progress(unsigned long sec, void *cur, void *total);
-extern void unset_timer_show_progress(void);
+struct clib_timer_signal {
+	struct list_head	sibling;
+	void			(*sig_action)(int signo, siginfo_t *si, void *arg0);
+	void			*arg;
+	struct timeval		tv;
+	pthread_t		threadid;
+	int			timeout;
+};
+
+extern int mt_add_timer(int timeout, sigact_func func, void *arg);
+extern void mt_del_timer(void);
 
 DECL_END
 

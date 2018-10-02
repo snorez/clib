@@ -1,5 +1,7 @@
 #include "../include/clib.h"
 
+/* TODO: multithread support */
+
 sock *sock_open(int family, int socktype, int protocol)
 {
 	sock *ret = (sock *)malloc_s(sizeof(sock));

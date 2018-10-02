@@ -191,6 +191,7 @@ static void dump_bus(int code)
 
 static struct sigaction new_act, old_act;
 static sigact_func callback;
+static atomic_t registered;
 static void self_sigact(int signo, siginfo_t *si, void *arg)
 {
 	switch (signo) {
@@ -242,6 +243,8 @@ static void self_sigact(int signo, siginfo_t *si, void *arg)
 
 void set_eh(sigact_func func)
 {
+	if (test_and_set_bit(1, (volatile unsigned long *)&registered.counter))
+		return;
 	memset((char *)&new_act, 0, sizeof(struct sigaction));
 	memset((char *)&old_act, 0, sizeof(struct sigaction));
 	callback = NULL;

@@ -1,5 +1,7 @@
 #include "../include/clib.h"
 
+/* TODO, multithread support */
+
 static void dump_sechdr(elf_file *file, void *sechdr);
 
 static int id_elf(char *buf)
