@@ -20,13 +20,13 @@ vpath %.o $(TMP)/
 vpath %.0 $(TMP)/
 vpath %.1 $(TMP)/
 
-CC_DBG=-g
+CC_DBG=-g -O3
 CC = gcc
 EXTRA_CFLAGS=
 CC_FLAGS=-Wall -std=gnu11 -m$(ARCH) -D_FILE_OFFSET_BITS=64 $(CC_DBG) $(EXTRA_CFLAGS)
-CC_OPT_static = $(CC) $(CC_FLAGS) -O2 -DHAS_CAPSTONE
-CC_OPT_dynamic = $(CC) $(CC_FLAGS) -O2 -rdynamic -DHAS_CAPSTONE
-CC_OPT_low = $(CC) $(CC_FLAGS) -O2 -rdynamic
+CC_OPT_static = $(CC) $(CC_FLAGS) -DHAS_CAPSTONE
+CC_OPT_dynamic = $(CC) $(CC_FLAGS) -rdynamic -DHAS_CAPSTONE
+CC_OPT_low = $(CC) $(CC_FLAGS) -rdynamic
 
 obj_static = clib_error.o clib_file.o clib_list.o clib_string.o clib_net.o \
 	     clib_crypt.o clib_elf.o clib_utils.o clib_signal.o clib_dbg.o \

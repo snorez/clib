@@ -50,6 +50,25 @@ static inline void INIT_LIST_HEAD(struct list_head *list)
 }
 
 /*
+ * adjust the list_head element, this is happened when copy the list_head
+ */
+static inline void list_move_head(struct list_head *head,
+					struct list_head *orig_head)
+{
+	if (orig_head->next == orig_head) {
+		INIT_LIST_HEAD(head);
+		return;
+	}
+
+	*head = *orig_head;
+
+	if ((head->next->prev != head) || (head->prev->next != head)) {
+		head->next->prev = head;
+		head->prev->next = head;
+	}
+}
+
+/*
  * Insert a new entry between two known consecutive entries.
  *
  * This is only for internal list manipulation where we know

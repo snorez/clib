@@ -81,6 +81,9 @@ int mt_add_timer(int timeout, sigact_func func, void *arg)
 		timeout_less = timeout;
 	write_unlock(&timer_head_lock);
 
+#ifdef SIG_ACT_IMM
+	t->sig_action(SIGALRM, NULL, t->arg);
+#endif
 	alarm(timeout_less);
 	return 0;
 }
@@ -91,7 +94,8 @@ void mt_del_timer(void)
 
 	struct clib_timer_signal *tmp, *next;
 	write_lock(&timer_head_lock);
-	list_for_each_entry_safe(tmp, next, &timer_head, sibling) {
+	/* delete the last registered timer */
+	list_for_each_entry_safe_reverse(tmp, next, &timer_head, sibling) {
 		if (pthread_equal(tmp->threadid, del_id)) {
 			tmp->sig_action(SIGALRM, NULL, tmp->arg);
 			list_del(&tmp->sibling);

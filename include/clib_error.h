@@ -43,7 +43,7 @@ static inline int IS_ERR_OR_NULL(const void *ptr)
 	} while (0)
 #define	BUG_ON(cond) \
 	do {\
-		if (cond)\
+		if (unlikely(cond))\
 			BUG();\
 	} while (0)
 #define	WARN()	\
@@ -52,8 +52,19 @@ static inline int IS_ERR_OR_NULL(const void *ptr)
 	} while (0)
 #define	WARN_ON(cond)	\
 	do {\
-		if (cond)\
+		if (unlikely(cond))\
 			WARN();\
+	} while (0)
+#define	ERR_BUG()	\
+	do {\
+	fprintf(stderr,"***BUG***: %s|%s|%d %d\n",__FILE__, __FUNCTION__,__LINE__,\
+			errno);\
+	exit(-1);\
+	} while (0)
+#define	ERR_BUG_ON(cond)	\
+	do {\
+		if (unlikely(cond))\
+			ERR_BUG();\
 	} while (0)
 
 #ifndef MAXLINE
