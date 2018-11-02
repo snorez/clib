@@ -37,7 +37,7 @@ static void mt_timer_callback(int signo, siginfo_t *si, void *arg)
  */
 int mt_add_timer(int timeout, sigact_func func, void *arg)
 {
-	if (timeout < 1) {
+	if (unlikely(timeout < 1)) {
 		err_dbg(0, err_fmt("timeout invalid"));
 		return -1;
 	}

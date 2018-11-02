@@ -29,7 +29,7 @@ struct clib_timer_signal {
 	void			*arg;
 	struct timeval		tv;
 	pthread_t		threadid;
-	int			timeout;
+	int			timeout;	/* in second */
 };
 
 extern int mt_add_timer(int timeout, sigact_func func, void *arg);

@@ -16,6 +16,17 @@ struct _elf_sym {
 	void		*data;		/* Elf32_sym / Elf64_sym */
 };
 
+struct _elf_sym_full {
+	struct list_head	sibling;
+	char			*name;
+	union {
+		Elf32_Sym	sym0;
+		Elf64_Sym	sym1;
+	} data;
+
+	void			*load_addr;
+};
+
 typedef struct _elf_file {
 	regfile		*file;
 	uint8_t		elf_bits;
@@ -35,8 +46,7 @@ typedef struct _elf_file {
 	list_comm	dynsyms;		/* struct _elf_sym nodes */
 } elf_file;
 
-extern elf_file *elf_open(char *);
-extern elf_file *elf_parse(char *);
+extern elf_file *elf_parse(char *path, int flag);
 extern int elf_cleanup(elf_file *);
 
 extern void dump_elf_ehdr(elf_file *);
@@ -49,6 +59,9 @@ extern void dump_elf_dynstr(elf_file *);
 
 extern void dump_elf_sym(elf_file *);
 extern void dump_elf_dynsym(elf_file *);
+
+extern int elf_get_syms(char *path, struct list_head *head, uint8_t *bits);
+extern void elf_drop_syms(struct list_head *head);
 
 #ifdef USELIB
 extern int elf_uselib(char *libname, unsigned long load_addr);

@@ -106,16 +106,31 @@ static __maybe_unused ret_type plugin_name##__##func_name arg_list
 C_SYM ret_type func_name arg_list
 
 #ifdef CLIB_PLUGIN_SYMBOL_CONFLICT
+
+#define	CLIB_PLUGIN_CALL_FUNC0(plugin_name, func_name, ret_type) \
+static __maybe_unused ret_type plugin_name##__##func_name (void)\
+{\
+return (ret_type)clib_plugin_call_func(#plugin_name,#func_name,0);\
+}\
+C_SYM ret_type func_name (void)
+
 #define	CLIB_PLUGIN_CALL_FUNC(plugin_name, func_name, ret_type, arg_list, argc, ...) \
 CLIB_PLUGIN_CALL_FUNC_HEAD(plugin_name,ret_type,func_name,arg_list)\
 {\
 return (ret_type)clib_plugin_call_func(#plugin_name,#func_name,argc,##__VA_ARGS__);\
 }\
 CLIB_PLUGIN_CALL_FUNC_TAIL(func_name,ret_type,arg_list)
+
 #else	/* !CLIB_PLUGIN_SYMBOL_CONFLICT */
+
+#define	CLIB_PLUGIN_CALL_FUNC0(plugin_name, func_name, ret_type) \
+C_SYM ret_type func_name (void);\
+static ret_type plugin_name##__##func_name (void) __attribute__((weakref,alias(#func_name)))
+
 #define	CLIB_PLUGIN_CALL_FUNC(plugin_name, func_name, ret_type, arg_list, argc, ...) \
 CLIB_PLUGIN_CALL_FUNC_TAIL(func_name,ret_type,arg_list);\
 static ret_type plugin_name##__##func_name arg_list __attribute__((weakref,alias(#func_name)))
+
 #endif
 
 extern int clib_cmd_plugin_setup(struct clib_cmd *cs, int cs_cnt, char *plugin_root,

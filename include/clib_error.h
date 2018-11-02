@@ -1,12 +1,13 @@
 #ifndef ERROR_H_BHJ5CLAO
 #define ERROR_H_BHJ5CLAO
 
-#include "../include/clib_utils.h"
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include "../include/clib_utils.h"
+#include "../include/clib_dbg.h"
 
 DECL_BEGIN
 
@@ -39,6 +40,7 @@ static inline int IS_ERR_OR_NULL(const void *ptr)
 #define	BUG()	\
 	do {\
 	fprintf(stderr,"***BUG***: %s|%s|%d\n",__FILE__,__FUNCTION__,__LINE__);\
+	show_bt();\
 	exit(-1);\
 	} while (0)
 #define	BUG_ON(cond) \
@@ -49,22 +51,12 @@ static inline int IS_ERR_OR_NULL(const void *ptr)
 #define	WARN()	\
 	do {\
 	fprintf(stderr,"***WARN***: %s|%s|%d\n",__FILE__,__FUNCTION__,__LINE__);\
+	show_bt();\
 	} while (0)
 #define	WARN_ON(cond)	\
 	do {\
 		if (unlikely(cond))\
 			WARN();\
-	} while (0)
-#define	ERR_BUG()	\
-	do {\
-	fprintf(stderr,"***BUG***: %s|%s|%d %d\n",__FILE__, __FUNCTION__,__LINE__,\
-			errno);\
-	exit(-1);\
-	} while (0)
-#define	ERR_BUG_ON(cond)	\
-	do {\
-		if (unlikely(cond))\
-			ERR_BUG();\
 	} while (0)
 
 #ifndef MAXLINE

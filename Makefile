@@ -14,6 +14,8 @@ LIB = ./lib
 INC = ./include
 ARCH = $(shell getconf LONG_BIT)
 CWD = $(shell pwd)
+CAPSTONE_ALIB64=/usr/lib
+CAPSTONE_ALIB32=/usr/lib32
 vpath %.c ./src/
 vpath %.h ./include/
 vpath %.o $(TMP)/
@@ -24,7 +26,7 @@ CC_DBG=-g -O3
 CC = gcc
 EXTRA_CFLAGS=
 CC_FLAGS=-Wall -std=gnu11 -m$(ARCH) -D_FILE_OFFSET_BITS=64 $(CC_DBG) $(EXTRA_CFLAGS)
-CC_OPT_static = $(CC) $(CC_FLAGS) -DHAS_CAPSTONE
+CC_OPT_static = $(CC) $(CC_FLAGS) -rdynamic -DHAS_CAPSTONE
 CC_OPT_dynamic = $(CC) $(CC_FLAGS) -rdynamic -DHAS_CAPSTONE
 CC_OPT_low = $(CC) $(CC_FLAGS) -rdynamic
 
@@ -58,9 +60,9 @@ $(obj_dynamic_low): %.1 : %.c
 
 static: $(obj_static)
 ifeq ($(ARCH),64)
-	cd $(TMP);rm -rf clib_static;mkdir clib_static;cd clib_static;ar x /usr/lib/x86_64-linux-gnu/libdl.a;ar x /usr/lib64/libcapstone.a;ar x /usr/lib/x86_64-linux-gnu/libreadline.a;cd ..;ar -rcs libclib64.a $(obj_static_64) $(TMP)/clib_static/*.o;cd $(CWD);cp $(TMP)/libclib64.a $(LIB)/
+	cd $(TMP);rm -rf clib_static;mkdir clib_static;cd clib_static;ar x $(CAPSTONE_ALIB64)/x86_64-linux-gnu/libdl.a;ar x $(CAPSTONE_ALIB64)/libcapstone.a;ar x $(CAPSTONE_ALIB64)/x86_64-linux-gnu/libreadline.a;cd ..;ar -rcs libclib64.a $(obj_static_64) $(TMP)/clib_static/*.o;cd $(CWD);cp $(TMP)/libclib64.a $(LIB)/
 else
-	cd $(TMP);rm -rf clib_static;mkdir clib_static;cd clib_static;ar x /usr/lib32/libdl.a;ar x /usr/lib32/libcapstone.a;ar x /usr/lib/i386-linux-gnu/libreadline.a;cd ..;ar -rcs libclib32.a $(obj_static_32) $(TMP)/clib_static/*.o;cd $(CWD);cp $(TMP)/libclib32.a $(LIB)/
+	cd $(TMP);rm -rf clib_static;mkdir clib_static;cd clib_static;ar x $(CAPSTONE_ALIB32)/libdl.a;ar x $(CAPSTONE_ALIB32)/libcapstone.a;ar x $(CAPSTONE_ALIB32)/i386-linux-gnu/libreadline.a;cd ..;ar -rcs libclib32.a $(obj_static_32) $(TMP)/clib_static/*.o;cd $(CWD);cp $(TMP)/libclib32.a $(LIB)/
 endif
 
 # before copy, we need to use rm to delete the file first, then do the copy

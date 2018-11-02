@@ -374,12 +374,7 @@ err_free0:
 	return -1;
 }
 
-elf_file *elf_open(char *path)
-{
-	return elf_parse(path);
-}
-
-elf_file *elf_parse(char *path)
+elf_file *elf_parse(char *path, int flag)
 {
 	int err;
 	elf_file *ef = (elf_file *)malloc(sizeof(elf_file));
@@ -392,7 +387,7 @@ elf_file *elf_parse(char *path)
 	list_comm_init(&ef->syms);
 	list_comm_init(&ef->dynsyms);
 
-	ef->file = regfile_open(path, O_RDWR);
+	ef->file = regfile_open(path, flag);
 	if (!ef->file) {
 		err_dbg(1, err_fmt("regfile_open err"));
 		err = -1;
@@ -452,6 +447,66 @@ int elf_cleanup(elf_file *file)
 	list_comm_make_empty(&file->dynsyms, NULL);
 	free(file);
 	return 0;
+}
+
+/*
+ * get all elf symbols, use _elf_sym_full
+ */
+int elf_get_syms(char *path, struct list_head *head, uint8_t *bits)
+{
+	elf_file *ef = elf_parse(path, O_RDONLY);
+	if (!ef) {
+		err_dbg(0, err_fmt("elf_parse err"));
+		return -1;
+	}
+
+	INIT_LIST_HEAD(head);
+	*bits = ef->elf_bits;
+	list_comm *tmp;
+	struct _elf_sym_full *_new;
+	list_for_each_entry(tmp, &ef->syms.list_head, list_head) {
+		struct _elf_sym *sym = (struct _elf_sym *)tmp->data;
+		_new = (struct _elf_sym_full *)malloc_s(sizeof(*_new));
+		_new->name = malloc(strlen(sym->name)+1);
+		memcpy(_new->name, sym->name, strlen(sym->name)+1);
+		if (*bits == 32)
+			memcpy((char *)&_new->data.sym0,
+				(char *)sym->data, sizeof(Elf32_Sym));
+		else if (*bits == 64)
+			memcpy((char *)&_new->data.sym1,
+				(char *)sym->data, sizeof(Elf64_Sym));
+		else
+			BUG();
+		list_add_tail(&_new->sibling, head);
+	}
+
+	list_for_each_entry(tmp, &ef->dynsyms.list_head, list_head) {
+		struct _elf_sym *sym = (struct _elf_sym *)tmp->data;
+		_new = (struct _elf_sym_full *)malloc_s(sizeof(*_new));
+		_new->name = malloc(strlen(sym->name)+1);
+		memcpy(_new->name, sym->name, strlen(sym->name)+1);
+		if (*bits == 32)
+			memcpy((char *)&_new->data.sym0,
+				(char *)sym->data, sizeof(Elf32_Sym));
+		else if (*bits == 64)
+			memcpy((char *)&_new->data.sym1,
+				(char *)sym->data, sizeof(Elf64_Sym));
+		else
+			BUG();
+		list_add_tail(&_new->sibling, head);
+	}
+
+	return 0;
+}
+
+void elf_drop_syms(struct list_head *head)
+{
+	struct _elf_sym_full *tmp, *next;
+	list_for_each_entry_safe(tmp, next, head, sibling) {
+		list_del(&tmp->sibling);
+		free(tmp->name);
+		free(tmp);
+	}
 }
 
 /*
@@ -1208,9 +1263,9 @@ int elf_uselib(char *libname, unsigned long load_addr)
 	 *	call sys_uselib
 	 */
 	int err = 0;
-	elf_file *ef = elf_open(libname);
+	elf_file *ef = elf_parse(libname, O_RDWR);
 	if (!ef) {
-		err_dbg(0, err_fmt("elf_open err"));
+		err_dbg(0, err_fmt("elf_pars err"));
 		return -1;
 	}
 

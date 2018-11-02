@@ -130,3 +130,35 @@ void mt_print_progress(double cur, double total)
 	if (cur == total)
 		show_process_byte = 0;
 }
+
+/* count \t as 8 bytes */
+#define	TAB_BYTES	8
+void clib_pretty_fprint(FILE *s, int max, const char *fmt, ...)
+{
+	max = clib_round_up(max, TAB_BYTES);
+	char buf[max];
+	memset(buf, 0, max);
+
+	va_list ap;
+	va_start(ap, fmt);
+
+	int c = vsnprintf(buf, max, fmt, ap);
+	int tabs = 0;
+	if (c >= max) {
+		buf[max-1] = '\0';
+		buf[max-2] = '.';
+		buf[max-3] = '.';
+		buf[max-4] = '.';
+		tabs = 1;
+	} else {
+		tabs = (max / 8) - (c / 8);
+	}
+	fprintf(s, "%s", buf);
+	for (int i = 0; i < tabs; i++) {
+		fprintf(s, "\t");
+	}
+	fflush(s);
+
+	va_end(ap);
+	return;
+}
