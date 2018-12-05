@@ -27,6 +27,9 @@ extern int list_comm_new_append(list_comm *head, void *new_node, size_t size);
 extern void list_comm_make_empty(list_comm *head,
 				 list_comm_clean_func *callback);
 
+#define	LIST_COMM_DATA(type,name,lc_var) \
+type name = (type)(lc_var->data)
+
 DECL_END
 
 #endif /* end of include guard: LIST_H_S6RUVRAS */

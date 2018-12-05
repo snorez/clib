@@ -81,6 +81,7 @@ int mt_add_timer(int timeout, sigact_func func, void *arg)
 		timeout_less = timeout;
 	write_unlock(&timer_head_lock);
 
+#define SIG_ACT_IMM
 #ifdef SIG_ACT_IMM
 	t->sig_action(SIGALRM, NULL, t->arg);
 #endif

@@ -218,7 +218,7 @@ void time_acct_end(void)
 	if (tv1.tv_usec < tv0.tv_usec) {
 		fprintf(stdout, "process take %ld seconds, %ld microsec\n",
 				tv1.tv_sec-1-tv0.tv_sec,
-				tv1.tv_usec+1000-tv0.tv_usec);
+				tv1.tv_usec+1000000-tv0.tv_usec);
 	} else {
 		fprintf(stdout, "process take %ld seconds, %ld microsec\n",
 				tv1.tv_sec - tv0.tv_sec,

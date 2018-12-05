@@ -13,6 +13,7 @@ void mt_print_init(void)
 	clear();
 	refresh();
 	use_std = 0;
+	atexit(mt_print_fini);
 	mutex_unlock(&print_head_lock);
 }
 
@@ -113,6 +114,8 @@ void mt_print(pthread_t id, const char *fmt, ...)
 
 void mt_print_fini(void)
 {
+	if (use_std)
+		return;
 	mutex_lock(&print_head_lock);
 	endwin();
 	use_std = 1;

@@ -610,7 +610,7 @@ void clib_plugin_print()
 	int i = 0;
 	mutex_lock(&plugin_head_lock);
 	list_for_each_entry(tmp, head, sibling) {
-		fprintf(stdout, "%d\t%ld\t%s\t\t%s\n\t%s\t\n",
+		fprintf(stdout, "%d\t%ld\t%s\t\t%s\n>>>> %s\t\n",
 				i++,
 				tmp->refcount,
 				get_state_string(tmp->state),
@@ -725,14 +725,17 @@ long clib_plugin_call_func(const char *plugin_name, const char *func_name,
 	}
 	case 9:
 	{
-		long (*func_addr)(long,long,long,long,long,long,long,long);
+		long (*func_addr)(long,long,long,long,long,long,long,long,long);
 		func_addr = addr;
 		err = func_addr(arg[0], arg[1], arg[2], arg[3],
-				arg[4], arg[5], arg[6], arg[7]);
+				arg[4], arg[5], arg[6], arg[7], arg[8]);
 		break;
 	}
 	default:
-		BUG();
+	{
+		err = -1;
+		break;
+	}
 	}
 
 	va_end(va);
