@@ -225,3 +225,106 @@ void time_acct_end(void)
 				tv1.tv_usec-tv0.tv_usec);
 	}
 }
+
+#define	IO_BYTES	(512*1024*1024)
+int clib_open(const char *pathname, int flags, ...)
+{
+	int fd;
+	flags |= O_DSYNC;
+
+	if (flags & O_CREAT) {
+		mode_t mode;
+		va_list ap;
+		va_start(ap, flags);
+		mode = va_arg(ap, mode_t);
+		va_end(ap);
+		fd = open(pathname, flags, mode);
+	} else
+		fd = open(pathname, flags);
+
+	return fd;
+}
+
+ssize_t clib_read(int fd, void *buf, size_t count)
+{
+	size_t read_bytes = 0;
+	size_t bytes_to_read = IO_BYTES;
+	int err;
+	while (1) {
+		if (read_bytes >= count)
+			break;
+
+		bytes_to_read = count - read_bytes;
+		if (bytes_to_read > IO_BYTES)
+			bytes_to_read = IO_BYTES;
+		err = read(fd, buf+read_bytes, bytes_to_read);
+		if (err != bytes_to_read) {
+			err_dbg(1, err_fmt("read err"));
+			return -1;
+		}
+
+		read_bytes += bytes_to_read;
+	}
+
+	return count;
+}
+
+ssize_t clib_write(int fd, void *buf, size_t count)
+{
+	size_t write_bytes = 0;
+	size_t bytes_to_write = IO_BYTES;
+	int err;
+
+	while (1) {
+		if (write_bytes >= count)
+			break;
+
+		bytes_to_write = count - write_bytes;
+		if (bytes_to_write > IO_BYTES)
+			bytes_to_write = IO_BYTES;
+
+		err = write(fd, buf+write_bytes, bytes_to_write);
+		if (err != bytes_to_write) {
+			err_dbg(1, err_fmt("write err"));
+			return -1;
+		}
+
+		write_bytes += bytes_to_write;
+	}
+
+	return count;
+}
+
+char *clib_ap_start(const char *fmt, ...)
+{
+	int size = 0;
+	char *p = NULL;
+	va_list ap;
+
+	va_start(ap, fmt);
+	size = vsnprintf(p, size, fmt, ap);
+	va_end(ap);
+
+	if (size < 0)
+		return NULL;
+
+	size++;
+	p = malloc(size);
+	if (p == NULL)
+		return NULL;
+
+	va_start(ap, fmt);
+	size = vsprintf(p, fmt, ap);
+	if (size < 0) {
+		free(p);
+		return NULL;
+	}
+	va_end(ap);
+
+	return p;
+}
+
+void clib_ap_end(char *p)
+{
+	free(p);
+}

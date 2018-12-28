@@ -269,8 +269,7 @@ static void dump_bus(int code)
 }
 
 static struct sigaction new_act, old_act;
-static sigact_func callback;
-static int registered = 0;
+static LIST_HEAD(eh_head);
 static void self_sigact(int signo, siginfo_t *si, void *arg)
 {
 	switch (signo) {
@@ -315,19 +314,26 @@ static void self_sigact(int signo, siginfo_t *si, void *arg)
 	fprintf(stderr, "\nCall Stack:\n");
 	print_bt_info((ucontext_t *)arg);
 	fprintf(stderr, "\n");
-	if (callback)
-		callback(signo, si, arg);
-	old_act.sa_handler(signo);
+
+	struct eh_list *tmp;
+	list_for_each_entry(tmp, &eh_head, sibling) {
+		if (tmp->cb)
+			tmp->cb(signo, si, arg);
+	}
+
+	if (old_act.sa_handler)
+		old_act.sa_handler(signo);
 }
 
-void set_eh(sigact_func func)
+void set_eh(struct eh_list *new_eh)
 {
-	if (registered)
+	if (!list_empty(&eh_head)) {
+		list_add_tail(&new_eh->sibling, &eh_head);
 		return;
-	registered = 1;
+	}
+
 	memset((char *)&new_act, 0, sizeof(struct sigaction));
 	memset((char *)&old_act, 0, sizeof(struct sigaction));
-	callback = NULL;
 
 	new_act.sa_flags = SA_SIGINFO | SA_INTERRUPT;
 	sigemptyset(&new_act.sa_mask);
@@ -342,7 +348,7 @@ void set_eh(sigact_func func)
 	sigaction(SIGSEGV, &new_act, &old_act);
 	sigaction(SIGBUS, &new_act, &old_act);
 
-	callback = func;
+	list_add_tail(&new_eh->sibling, &eh_head);
 }
 
 void show_bt(void)

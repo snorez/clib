@@ -56,11 +56,8 @@ unlock:
 	mutex_unlock(&print_head_lock);
 }
 
-void mt_print(pthread_t id, const char *fmt, ...)
+void mt_print0(pthread_t id, char *buf)
 {
-	va_list ap;
-	va_start(ap, fmt);
-
 	int found = 0;
 
 	mutex_lock(&print_head_lock);
@@ -74,9 +71,10 @@ void mt_print(pthread_t id, const char *fmt, ...)
 	list_for_each_entry(t, &print_head, sibling) {
 		if (pthread_equal(t->threadid, id)) {
 			found = 1;
-			memset(t->data, 0, sizeof(t->data));
-			vsnprintf(t->data+strlen(t->data),
-				 sizeof(t->data)-strlen(t->data)-2, fmt, ap);
+			int buflen = strlen(buf) + 1;
+			if (buflen > CLIB_MT_PRINT_LINE_LEN)
+				buflen = CLIB_MT_PRINT_LINE_LEN;
+			memcpy(t->data, buf, buflen);
 
 			if (use_std) {
 				fprintf(stdout, "%s", t->data);
@@ -103,12 +101,68 @@ void mt_print(pthread_t id, const char *fmt, ...)
 	}
 
 	if ((!found) && use_std) {
-		vfprintf(stdout, fmt, ap);
+		fprintf(stdout, "%s", buf);
 		fflush(stdout);
 	}
 
 	mutex_unlock(&print_head_lock);
-	va_end(ap);
+	return;
+}
+
+void mt_print1(pthread_t id, const char *fmt, ...)
+{
+	va_list ap;
+	int found = 0;
+
+	mutex_lock(&print_head_lock);
+	struct clib_print *t;
+
+	if (!use_std) {
+		clear();
+		move(0, 0);
+	}
+
+	list_for_each_entry(t, &print_head, sibling) {
+		if (pthread_equal(t->threadid, id)) {
+			found = 1;
+
+			memset(t->data, 0, CLIB_MT_PRINT_LINE_LEN);
+			va_start(ap, fmt);
+			vsnprintf(t->data, CLIB_MT_PRINT_LINE_LEN-8, fmt, ap);
+			va_end(ap);
+
+			if (use_std) {
+				fprintf(stdout, "%s", t->data);
+				fflush(stdout);
+				break;
+			}
+		}
+		if (!use_std) {
+			addstr(t->data);
+			refresh();
+			int line, col;
+			getyx(curscr, line, col);
+			if (line >= (LINES-1)) {
+				move(LINES-1, 0);
+				for (int i = 0; i < col; i++)
+					addch('.');
+				refresh();
+				break;
+			}
+			/* do not assume output contain a \n at last */
+			if (col)
+				move(line+1, 0);
+		}
+	}
+
+	if ((!found) && use_std) {
+		va_start(ap, fmt);
+		vfprintf(stdout, fmt, ap);
+		va_end(ap);
+		fflush(stdout);
+	}
+
+	mutex_unlock(&print_head_lock);
 	return;
 }
 
