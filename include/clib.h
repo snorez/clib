@@ -13,13 +13,15 @@
 #include "../include/clib_file.h"
 #include "../include/clib_logfile.h"
 #include "../include/clib_net.h"
-#include "../include/clib_signal.h"
+#include "../include/clib_timer.h"
 #include "../include/clib_plugin.h"
 #include "../include/clib_elf.h"
 #include "../include/clib_pe.h"
 #include "../include/clib_cmd.h"
 #include "../include/clib_mm.h"
 #include "../include/clib_print.h"
+#include "../include/clib_rwpool.h"
+#include "../include/clib_threadpool.h"
 
 DECL_BEGIN
 

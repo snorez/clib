@@ -7,32 +7,33 @@
 #ifndef __USE_GNU
 #define __USE_GNU
 #endif
-#include "../include/clib_utils.h"
-#include "../include/clib_error.h"
-#include "../include/clib_list.h"
 #include <ucontext.h>
 #include <link.h>
 #include <dlfcn.h>
 #include <execinfo.h>
 #include <signal.h>
 #include <setjmp.h>
+#include "../include/clib_utils.h"
+#include "../include/clib_error.h"
+#include "../include/clib_list.h"
 
 DECL_BEGIN
 
-#ifndef sigact_func
-typedef void (*sigact_func)(int, siginfo_t *, void *);
+#ifndef CLIB_TIMER_FUNC
+#define	CLIB_TIMER_FUNC
+typedef void (*clib_timer_func)(int, siginfo_t *, void *, int);
 #endif
 
-struct clib_timer_signal {
+struct clib_timer {
 	struct list_head	sibling;
-	void			(*sig_action)(int signo, siginfo_t *si, void *arg0);
+	clib_timer_func		sig_action;
 	void			*arg;
 	struct timeval		tv;
 	pthread_t		threadid;
 	int			timeout;	/* in second */
 };
 
-extern int mt_add_timer(int timeout, sigact_func func, void *arg);
+extern int mt_add_timer(int timeout, clib_timer_func func, void *arg);
 extern void mt_del_timer(void);
 
 DECL_END

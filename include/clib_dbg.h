@@ -1,16 +1,32 @@
 #ifndef DBG_H_VSLA5ZHT
 #define DBG_H_VSLA5ZHT
 
-#include "../include/clib_utils.h"
-#include "../include/clib_atomic.h"
-#include "../include/clib_disas.h"
-#include "../include/clib_signal.h"
-#include "../include/clib_elf.h"
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+#ifndef __USE_GNU
+#define __USE_GNU
+#endif
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <ucontext.h>
+#include <link.h>
+#include <dlfcn.h>
+#include <execinfo.h>
+#include <signal.h>
+#include <setjmp.h>
+#include "../include/clib_utils.h"
+#include "../include/clib_atomic.h"
+#include "../include/clib_disas.h"
+#include "../include/clib_elf.h"
 
 DECL_BEGIN
+
+#ifndef SIGACT_FUNC
+#define	SIGACT_FUNC
+typedef void (*sigact_func)(int, siginfo_t *, void *);
+#endif
 
 struct eh_list {
 	struct list_head	sibling;
