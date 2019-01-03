@@ -41,6 +41,8 @@ void clib_mt_pool_put(struct clib_mt_pool *pool)
 void clib_mt_pool_wait_all(struct clib_mt_pool *pool, int thread_cnt)
 {
 	for (int i = 0; i < thread_cnt; i++) {
+		if (pool[i].tid)
+			pthread_join(pool[i].tid, NULL);
 		long in_use = atomic_read(&pool[i].in_use);
 		if (!in_use) {
 			continue;

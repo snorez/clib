@@ -80,6 +80,7 @@ static void **clib_rw_pool_read_find(struct clib_rw_pool *pool)
 	return NULL;
 }
 
+#define	USLEEP_TIME	3000
 void clib_rw_pool_push(struct clib_rw_pool *pool, void *obj)
 {
 	void **addr;
@@ -93,17 +94,18 @@ void clib_rw_pool_push(struct clib_rw_pool *pool, void *obj)
 		}
 
 		mutex_unlock(&pool->lock);
-		usleep(1000);
+		usleep(USLEEP_TIME);
 		mutex_lock(&pool->lock);
 	}
 	mutex_unlock(&pool->lock);
 }
 
+#define	LOOP_MORE_TIMES	0x1
 void *clib_rw_pool_pop(struct clib_rw_pool *pool)
 {
 	void **addr;
 	void *ret = NULL;
-	int one_more = 0;
+	int loop_more = 0;
 
 	mutex_lock(&pool->lock);
 	while (1) {
@@ -115,15 +117,13 @@ void *clib_rw_pool_pop(struct clib_rw_pool *pool)
 		}
 
 		mutex_unlock(&pool->lock);
-		usleep(1000);
+		usleep(USLEEP_TIME);
 		mutex_lock(&pool->lock);
 		if (!atomic_read(&pool->writer)) {
-			if (!one_more) {
-				one_more = 1;
-				continue;
-			} else {
+			if (loop_more >= LOOP_MORE_TIMES)
 				break;
-			}
+			loop_more++;
+			continue;
 		}
 	}
 	mutex_unlock(&pool->lock);
@@ -204,7 +204,7 @@ int clib_rw_pool_job_run(struct clib_rw_pool_job *job)
 		return -1;
 	}
 	atomic_inc(&job->pool->writer);
-	usleep(3000);
+	usleep(USLEEP_TIME);
 
 	err = pthread_create(&tid_reader, NULL, reader_thread, (void *)job);
 	if (err) {

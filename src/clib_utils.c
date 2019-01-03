@@ -60,7 +60,26 @@ int no_aslr(int argc, char *argv[])
 {
 	int err = 0;
 	int fd = open("/proc/self/exe", O_RDONLY);
-	if (fd == 3) {
+	if (fd < 3) {
+		err_dbg(0, err_fmt("something goes wrong"));
+		return -1;
+	}
+
+	struct stat f_prev, f_cur;
+	err = fstat(fd-1, &f_prev);
+	if (err == -1) {
+		err_dbg(1, err_fmt("fstat err"));
+		close(fd);
+		return -1;
+	}
+	err = fstat(fd, &f_cur);
+	if (err == -1) {
+		err_dbg(1, err_fmt("fstat err"));
+		close(fd);
+		return -1;
+	}
+
+	if (memcmp(&f_prev, &f_cur, sizeof(f_prev))) {
 		err = personality(ADDR_NO_RANDOMIZE);
 		if (err == -1) {
 			err_dbg(1, err_fmt("personality err"));
@@ -69,35 +88,9 @@ int no_aslr(int argc, char *argv[])
 		extern char **environ;
 		execve(argv[0], argv, environ);
 		return 0;
-	} else if (fd != 4) {
-		BUG();
-		err_dbg(0, err_fmt("fd not right, must equal 3 or 4"));
-		return -1;
 	} else {
-		struct stat f3, f4;
-		err = fstat(3, &f3);
-		if (err == -1) {
-			err_dbg(1, err_fmt("fstat err"));
-			close(4);
-			close(3);
-			return -1;
-		}
-		err = fstat(4, &f4);
-		if (err == -1) {
-			err_dbg(1, err_fmt("fstat err"));
-			close(4);
-			close(3);
-			return -1;
-		}
-
-		if (memcmp(&f3, &f4, sizeof(f3))) {
-			err_dbg(0, err_fmt("fd[3] and fd[4] seem not to be same"));
-			close(4);
-			close(3);
-			return -1;
-		}
-		close(4);
-		close(3);
+		close(fd);
+		close(fd-1);
 		return 0;
 	}
 }
