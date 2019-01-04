@@ -1,10 +1,20 @@
-#ifndef LINUX_LIST_H_MVRX6QSF
-#define LINUX_LIST_H_MVRX6QSF
+/*
+ * this file comes from linux kernel, with a little modified
+ * Copyright (C) 2018  zerons
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
-#include "../include/clib_utils.h"
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
 
-DECL_BEGIN
-
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 /*
  * Simple doubly linked list implementation.
  *
@@ -15,9 +25,13 @@ DECL_BEGIN
  * using the generic single-entry routines.
  */
 
-/*
- * this file comes from linux kernel, with a little modified
- */
+#ifndef LINUX_LIST_H_MVRX6QSF
+#define LINUX_LIST_H_MVRX6QSF
+
+#include "../include/clib_utils.h"
+
+DECL_BEGIN
+
 struct list_head {
 	struct list_head *next, *prev;
 };
