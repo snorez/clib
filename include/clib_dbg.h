@@ -56,10 +56,15 @@ extern void clib_dladdr_end(void);
 extern void set_eh(struct eh_list *new_eh);
 extern void show_bt(void);
 
+#ifndef xmalloc
+#define	xmalloc malloc
+#endif
+
 static inline struct eh_list *eh_list_new(sigact_func func)
 {
 	struct eh_list *_new;
-	_new = (struct eh_list *)malloc_s(sizeof(*_new));
+	_new = (struct eh_list *)xmalloc(sizeof(*_new));
+	memset(_new, 0, sizeof(*_new));
 
 	_new->cb = func;
 	return _new;

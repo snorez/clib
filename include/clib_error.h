@@ -53,11 +53,11 @@ static inline int IS_ERR_OR_NULL(const void *ptr)
 	return unlikely(!ptr) || IS_ERR_VALUE((unsigned long)ptr);
 }
 
-extern void mt_print_fini(void);
+extern void mt_print_fini_ncurse(void);
 /* for BUG BUG_ON WARN WARN_ON */
 #define	BUG()	\
 	do {\
-	mt_print_fini();\
+	mt_print_fini_ncurse();\
 	fprintf(stderr,"***BUG***: %s|%s|%d\n",__FILE__,__FUNCTION__,__LINE__);\
 	show_bt();\
 	exit(-1);\
@@ -69,7 +69,7 @@ extern void mt_print_fini(void);
 	} while (0)
 #define	WARN()	\
 	do {\
-	mt_print_fini();\
+	mt_print_fini_ncurse();\
 	fprintf(stderr,"***WARN***: %s|%s|%d\n",__FILE__,__FUNCTION__,__LINE__);\
 	show_bt();\
 	} while (0)
@@ -86,35 +86,35 @@ extern void mt_print_fini(void);
 #ifndef err_fmt
 #ifdef __cplusplus
 /* in case it is c++11 */
-#define err_fmt(a) "%s|%s|%d: " a, __FILE__, __FUNCTION__, __LINE__
+#define err_fmt(a) "[%s:%s:%d] " a, __FILE__, __FUNCTION__, __LINE__
 #else
-#define err_fmt(a) "%s|%s|%d: "a, __FILE__, __FUNCTION__, __LINE__
+#define err_fmt(a) "[%s:%s:%d] "a, __FILE__, __FUNCTION__, __LINE__
 #endif
 #endif
 
-extern void err_msg(const char *fmt, ...);
-extern void err_sys(const char *fmt, ...);
-extern void err_dbg(int has_errno, const char *fmt, ...);
-extern void err_dbg1(int errval, const char *fmt, ...);
-extern void err_dump(const char *fmt, ...);
-extern void err_exit(int has_errno, const char *fmt, ...);
-#define err_retval(has_errno, retval, fmt, ...) \
+extern void _err_msg(const char *fmt, ...);
+extern void _err_sys(const char *fmt, ...);
+extern void _err_dbg(int has_errno, const char *fmt, ...);
+extern void _err_dbg1(int errval, const char *fmt, ...);
+extern void _err_dump(const char *fmt, ...);
+extern void _err_exit(int has_errno, const char *fmt, ...);
+#define	err_msg(fmt, ...) _err_msg(err_fmt(fmt), ##__VA_ARGS__)
+#define	err_sys(fmt, ...) _err_sys(err_fmt(fmt), ##__VA_ARGS__)
+#define	err_dbg(has_errno, fmt, ...) _err_dbg(has_errno, err_fmt(fmt), ##__VA_ARGS__)
+#define	err_dbg1(errval, fmt, ...) _err_dbg1(errval, err_fmt(fmt), ##__VA_ARGS__)
+#define	err_dump(fmt, ...) _err_dump(err_fmt(fmt), ##__VA_ARGS__)
+#define	err_exit(has_errno, fmt, ...) _err_exit(has_errno, err_fmt(fmt), ##__VA_ARGS__)
+#define err_val_ret(has_errno, retval, fmt, ...) \
 do {\
 	err_dbg(has_errno, fmt, ##__VA_ARGS__);\
 	return retval;\
 } while(0);
-#define err_ret(has_errno, retval, fmt, ...) \
-do {\
-	err_dbg(has_errno, fmt, ##__VA_ARGS__);\
-	errno = (retval < 0) ? -retval : retval;\
-	return -1;\
-} while(0);
 #define err_ptr_ret(has_errno, retval, fmt, ...) \
 do {\
 	err_dbg(has_errno, fmt, ##__VA_ARGS__);\
-	errno = (retval < 0) ? -retval : retval;\
-	return NULL;\
+	return ERR_PTR(retval);\
 } while(0);
+
 extern void set_dbg_mode(int dbg_mode_on);
 extern int get_dbg_mode(void);
 extern void err_color_on(void);

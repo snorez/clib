@@ -208,12 +208,12 @@ typedef _Bool	bool;
 #endif
 typedef unsigned long size_t;
 
-static inline bool test_and_set_bit(long nr, volatile unsigned long *addr)
+static inline bool test_and_set_bit(long nr, volatile long *addr)
 {
 	GEN_BINARY_RMWcc(LOCK_PREFIX "bts", *addr, "Ir", nr, "%0", c);
 }
 
-static inline bool test_and_clear_bit(long nr, volatile unsigned long *addr)
+static inline bool test_and_clear_bit(long nr, volatile long *addr)
 {
 	GEN_BINARY_RMWcc(LOCK_PREFIX "btr", *addr, "Ir", nr, "%0", c);
 }
@@ -347,7 +347,7 @@ static inline void do_nop(size_t times)
 
 static inline bool mutex_lock_bit(lock_t *v, size_t bit)
 {
-	while (test_and_set_bit(bit, (volatile unsigned long *)&v->counter))
+	while (test_and_set_bit(bit, &v->counter))
 		do_nop(0x10);
 	return true;
 }
@@ -359,7 +359,7 @@ static inline bool mutex_lock(lock_t *v)
 
 static inline void mutex_unlock_bit(lock_t *v, size_t bit)
 {
-	test_and_clear_bit(bit, (volatile unsigned long *)&v->counter);
+	test_and_clear_bit(bit, &v->counter);
 }
 
 static inline void mutex_unlock(lock_t *v)
@@ -374,7 +374,7 @@ static inline bool mutex_lock_timeout(lock_t *v, size_t times)
 		return mutex_lock(v);
 
 	times = clib_round_up(times, 0x10);
-	while (test_and_set_bit(0, (volatile unsigned long *)&v->counter)) {
+	while (test_and_set_bit(0, &v->counter)) {
 		do_nop(0x10);
 		times -= 0x10;
 		if (!times)
@@ -387,7 +387,7 @@ static inline bool mutex_lock_timeout(lock_t *v, size_t times)
 
 static inline bool mutex_try_lock(lock_t *v)
 {
-	if (test_and_set_bit(0, (volatile unsigned long *)&v->counter))
+	if (test_and_set_bit(0, &v->counter))
 		return false;
 	return true;
 }
@@ -398,8 +398,8 @@ static inline bool read_lock(lock_t *v)
 		mutex_lock_bit(v, 1);
 		unsigned long val = (atomic_read(v) >> 2) & 0x3;
 		if (!val) {
-			test_and_set_bit(2, (volatile unsigned long *)&v->counter);
-			test_and_clear_bit(3, (volatile unsigned long *)&v->counter);
+			test_and_set_bit(2, &v->counter);
+			test_and_clear_bit(3, &v->counter);
 			atomic_add(1<<4, v);
 			mutex_unlock_bit(v, 1);
 			return true;
@@ -419,8 +419,8 @@ static inline bool read_try_lock(lock_t *v)
 	mutex_lock_bit(v, 1);
 	unsigned long val = (atomic_read(v) >> 2) & 0x3;
 	if (!val) {
-		test_and_set_bit(2, (volatile unsigned long *)&v->counter);
-		test_and_clear_bit(3, (volatile unsigned long *)&v->counter);
+		test_and_set_bit(2, &v->counter);
+		test_and_clear_bit(3, &v->counter);
 		atomic_add(1<<4, v);
 		mutex_unlock_bit(v, 1);
 		return true;
@@ -440,8 +440,8 @@ static inline bool write_lock(lock_t *v)
 		mutex_lock_bit(v, 1);
 		unsigned long val = (atomic_read(v) >> 2) & 0x3;
 		if (!val) {
-			test_and_set_bit(2, (volatile unsigned long *)&v->counter);
-			test_and_set_bit(3, (volatile unsigned long *)&v->counter);
+			test_and_set_bit(2, &v->counter);
+			test_and_set_bit(3, &v->counter);
 			mutex_unlock_bit(v, 1);
 			return true;
 		} else {
@@ -456,8 +456,8 @@ static inline bool write_try_lock(lock_t *v)
 	mutex_lock_bit(v, 1);
 	unsigned long val = (atomic_read(v) >> 2) & 0x3;
 	if (!val) {
-		test_and_set_bit(2, (volatile unsigned long *)&v->counter);
-		test_and_set_bit(3, (volatile unsigned long *)&v->counter);
+		test_and_set_bit(2, &v->counter);
+		test_and_set_bit(3, &v->counter);
 		mutex_unlock_bit(v, 1);
 		return true;
 	} else {
@@ -472,15 +472,15 @@ static inline void read_unlock(lock_t *v)
 	unsigned long val = (atomic_read(v) >> 2) & 0x3;
 	if (val == 0x01) {
 		if (!(atomic_read(v) >> 4)) {
-			test_and_clear_bit(2, (volatile unsigned long *)&v->counter);
-			test_and_clear_bit(3, (volatile unsigned long *)&v->counter);
+			test_and_clear_bit(2, &v->counter);
+			test_and_clear_bit(3, &v->counter);
 			mutex_unlock_bit(v, 1);
 			return;
 		}
 		atomic_sub(1<<4, v);
 		if (!(atomic_read(v) >> 4)) {
-			test_and_clear_bit(2, (volatile unsigned long *)&v->counter);
-			test_and_clear_bit(3, (volatile unsigned long *)&v->counter);
+			test_and_clear_bit(2, &v->counter);
+			test_and_clear_bit(3, &v->counter);
 		}
 	}
 	mutex_unlock_bit(v, 1);
@@ -492,8 +492,8 @@ static inline void write_unlock(lock_t *v)
 	mutex_lock_bit(v, 1);
 	unsigned long val = (atomic_read(v) >> 2) & 0x3;
 	if (val == 0x3) {
-		test_and_clear_bit(2, (volatile unsigned long *)&v->counter);
-		test_and_clear_bit(3, (volatile unsigned long *)&v->counter);
+		test_and_clear_bit(2, &v->counter);
+		test_and_clear_bit(3, &v->counter);
 	}
 	mutex_unlock_bit(v, 1);
 	return;

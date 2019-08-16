@@ -33,6 +33,21 @@ char nr_en[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
 		'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R',
 		'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'};
 
+int buf_printable(char *b, size_t len)
+{
+	size_t i = 0;
+	for (i = 0; i < len; i++) {
+		if (!b[i]) {
+			for (; i < len; i++)
+				if (b[i])
+					return 0;
+			break;
+		}
+		if (!isprint(b[i]))
+			return 0;
+	}
+	return 1;
+}
 /*
  * random seed use current systime may not be safe, so
  * libsodium may be a good choice, use randombytes_buf/randombytes_uniform
@@ -42,94 +57,74 @@ long s_random(void)
 {
 	struct timeval tv;
 	if (gettimeofday(&tv, NULL) == -1) {
-		err_dbg(1, err_fmt("gettimeofday err"));
-		return -1;
+		err_dbg(1, "gettimeofday err");
+		srand(random());
+		return random();
 	}
 	srand(tv.tv_sec + tv.tv_usec);
 	return random();
 }
 
-char *random_str_nr_en_fau(size_t cnt)
+char *random_str_nr_en(size_t cnt)
 {
-	if ((cnt == 0) || (cnt == -1ULL)) {
-		err_dbg(0, err_fmt("lenth check error"));
-		errno = EINVAL;
+	if ((cnt == 0) || (cnt == (size_t)-1)) {
+		err_dbg(0, "length check error");
 		return NULL;
 	}
 
 	char *ret = (char *)malloc(cnt+1);
 	if (!ret) {
-		err_dbg(0, err_fmt("malloc error"));
-		errno = ENOMEM;
+		err_dbg(0, "malloc error");
 		return NULL;
 	}
 	memset(ret, 0, cnt+1);
 
 	size_t len = strlen(nr_en);
 	size_t i;
-	struct timeval tv;
-	if (gettimeofday(&tv, NULL) == -1) {
-		err_dbg(1, err_fmt("gettimeofday error"));
-		free(ret);
-		return NULL;
-	}
-	srand(tv.tv_sec + tv.tv_usec);
 	for (i = 0; i < cnt; i++)
-		ret[i] = nr_en[random()%len];
+		ret[i] = nr_en[s_random()%len];
 	ret[cnt] = '\0';
 	return ret;
 }
 
-char *random_str_fau(size_t cnt)
+char *random_str(size_t cnt)
 {
-	if ((cnt == 0) || (cnt == -1ULL)) {
-		err_dbg(0, err_fmt("lenth check error"));
-		errno = EINVAL;
+	if ((cnt == 0) || (cnt == (size_t)-1)) {
+		err_dbg(0, "length check error");
 		return NULL;
 	}
 
 	char *ret = (char *)malloc(cnt+1);
 	if (!ret) {
-		err_dbg(0, err_fmt("malloc error"));
-		errno = ENOMEM;
+		err_dbg(0, "malloc error");
 		return NULL;
 	}
 	memset(ret, 0, cnt+1);
 
 	size_t len = strlen(printable);
 	size_t i;
-	struct timeval tv;
-	if (gettimeofday(&tv, NULL) == -1) {
-		err_dbg(1, err_fmt("gettimeofday error"));
-		free(ret);
-		return NULL;
-	}
-	srand(tv.tv_sec + tv.tv_usec);
 	for (i = 0; i < cnt; i++)
-		ret[i] = printable[random()%len];
+		ret[i] = printable[s_random()%len];
 	ret[cnt] = '\0';
 	return ret;
 }
 
-char *mul_str_fau(const char *src, size_t cnt)
+char *mul_str(const char *src, size_t cnt)
 {
 	if (!src) {
-		err_dbg(0, err_fmt("arg check error"));
-		errno = EINVAL;
+		err_dbg(0, "arg check error");
 		return NULL;
 	}
 
 	size_t len = strlen(src);
-	if ((len*cnt/len != cnt) || (len*cnt == -1ULL)) {
-		err_dbg(0, err_fmt("lenth check error"));
-		errno = EINVAL;
+	if ((len*cnt/len != cnt) || (len*cnt == (size_t)-1)) {
+		err_dbg(0, "length check error");
 		return NULL;
 	}
 
 	char *ret = (char *)malloc(len*cnt+1);
 	if (!ret) {
-		err_dbg(0, err_fmt("malloc error"));
-		errno = ENOMEM;
+		err_dbg(0, "malloc error");
 		return NULL;
 	}
 	memset(ret, 0, len*cnt+1);
@@ -141,12 +136,11 @@ char *mul_str_fau(const char *src, size_t cnt)
 	return ret;
 }
 
-char *insert_str_fau(const char *src1, const char *src2,
+char *insert_str(const char *src1, const char *src2,
 		     size_t pos)
 {
 	if (!src1 || !src2) {
-		err_dbg(0, err_fmt("arg check error"));
-		errno = EINVAL;
+		err_dbg(0, "arg check error");
 		return NULL;
 	}
 
@@ -154,15 +148,13 @@ char *insert_str_fau(const char *src1, const char *src2,
 	size_t len2 = strlen(src2);
 	size_t new_len = len1 + len2 + 1;
 	if ((new_len < len1) || (new_len < len2)) {
-		err_dbg(0, err_fmt("lenth check error"));
-		errno = EINVAL;
+		err_dbg(0, "length check error");
 		return NULL;
 	}
 
 	char *ret = (char *)malloc(new_len);
 	if (!ret) {
-		err_dbg(0, err_fmt("malloc error"));
-		errno = ENOMEM;
+		err_dbg(0, "malloc error");
 		return NULL;
 	}
 	memset(ret, 0, new_len);
@@ -173,44 +165,39 @@ char *insert_str_fau(const char *src1, const char *src2,
 	return ret;
 }
 
-char *add_str_fau(const char *src1, const char *src2)
+char *add_str(const char *src1, const char *src2)
 {
 	if (!src1 || !src2) {
-		err_dbg(0, err_fmt("arg check error"));
-		errno = EINVAL;
+		err_dbg(0, "arg check error");
 		return NULL;
 	}
-	return insert_str_fau(src1, src2, strlen(src1));
+	return insert_str(src1, src2, strlen(src1));
 }
 
-char *del_str_once_fau(const char *longer, const char *shorter)
+char *del_str_once(const char *longer, const char *shorter)
 {
 	if (!longer || !shorter) {
-		err_dbg(0, err_fmt("arg check error"));
-		errno = EINVAL;
+		err_dbg(0, "arg check error");
 		return NULL;
 	}
 
 	size_t len1 = strlen(longer);
 	size_t len2 = strlen(shorter);
-	if (len1 < len2) {
-		err_dbg(0, err_fmt("lenth check error"));
-		errno = EINVAL;
+	if (len1 <= len2) {
+		err_dbg(0, "length check error");
 		return NULL;
 	}
 
 	char *pos = strstr(longer, shorter);
 	if (!pos) {
-		err_dbg(0, err_fmt("shorter not in longer"));
-		errno = EINVAL;
+		err_dbg(0, "shorter not in longer");
 		return NULL;
 	}
 
 	size_t new_len = len1 - len2 + 1;
 	char *ret = (char *)malloc(new_len);
 	if (!ret) {
-		err_dbg(0, err_fmt("malloc error"));
-		errno = ENOMEM;
+		err_dbg(0, "malloc error");
 		return NULL;
 	}
 	memset(ret, 0, new_len);
@@ -220,34 +207,30 @@ char *del_str_once_fau(const char *longer, const char *shorter)
 	return ret;
 }
 
-char *del_str_all_fau(const char *longer, const char *shorter)
+char *del_str_all(const char *longer, const char *shorter)
 {
 	if (!longer || !shorter) {
-		err_dbg(0, err_fmt("arg check error"));
-		errno = EINVAL;
+		err_dbg(0, "arg check error");
 		return NULL;
 	}
 
 	size_t len1 = strlen(longer);
 	size_t len2 = strlen(shorter);
-	if (len1 < len2) {
-		err_dbg(0, err_fmt("lenth check error"));
-		errno = EINVAL;
+	if (len1 <= len2) {
+		err_dbg(0, "length check error");
 		return NULL;
 	}
 
 	char *pos = strstr(longer, shorter);
 	if (!pos) {
-		err_dbg(0, err_fmt("shorter not in longer"));
-		errno = EINVAL;
+		err_dbg(0, "shorter not in longer");
 		return NULL;
 	}
 
 	size_t new_len = len1 - len2 + 1;
 	char *ret = (char *)malloc(new_len);
 	if (!ret) {
-		err_dbg(0, err_fmt("malloc error"));
-		errno = ENOMEM;
+		err_dbg(0, "malloc error");
 		return NULL;
 	}
 	memset(ret, 0, new_len);
@@ -263,42 +246,37 @@ char *del_str_all_fau(const char *longer, const char *shorter)
 	return ret;
 }
 
-char *replace_str_once_fau(const char *src, const char *old_sub,
+char *replace_str_once(const char *src, const char *old_sub,
 			   const char *new_sub)
 {
 	if (!src || !old_sub || !new_sub) {
-		err_dbg(0, err_fmt("arg check error"));
-		errno = EINVAL;
+		err_dbg(0, "arg check error");
 		return NULL;
 	}
 
 	size_t len1 = strlen(src);
 	size_t len2 = strlen(old_sub);
 	size_t len3 = strlen(new_sub);
-	if (len1 < len2) {
-		err_dbg(0, err_fmt("lenth check error"));
-		errno = EINVAL;
+	if (len1 <= len2) {
+		err_dbg(0, "length check error");
 		return NULL;
 	}
 
 	char *pos = strstr(src, old_sub);
 	if (!pos) {
-		err_dbg(0, err_fmt("substr not in src"));
-		errno = EINVAL;
+		err_dbg(0, "substr not in src");
 		return NULL;
 	}
 
 	size_t new_len = len1 - len2 + len3 + 1;
 	if ((len3 >= len2) && ((new_len < (len1-len2)) || (new_len < len3))) {
-		err_dbg(0, err_fmt("new lenth check err"));
-		errno = EINVAL;
+		err_dbg(0, "new length check err");
 		return NULL;
 	}
 
 	char *ret = (char *)malloc(new_len);
 	if (!ret) {
-		err_dbg(0, err_fmt("malloc error"));
-		errno = ENOMEM;
+		err_dbg(0, "malloc error");
 		return NULL;
 	}
 	memset(ret, 0, new_len);
@@ -309,21 +287,19 @@ char *replace_str_once_fau(const char *src, const char *old_sub,
 	return ret;
 }
 
-char *replace_str_all_fau(const char *src, const char *old_sub,
+char *replace_str_all(const char *src, const char *old_sub,
 			  const char *new_sub)
 {
 	if (!src || !old_sub || !new_sub) {
-		err_dbg(0, err_fmt("arg check error"));
-		errno = EINVAL;
+		err_dbg(0, "arg check error");
 		return NULL;
 	}
 
 	size_t len1 = strlen(src);
 	size_t len2 = strlen(old_sub);
 	size_t len3 = strlen(new_sub);
-	if (len1 < len2) {
-		err_dbg(0, err_fmt("lenth check err"));
-		errno = EINVAL;
+	if (len1 <= len2) {
+		err_dbg(0, "length check err");
 		return NULL;
 	}
 
@@ -334,23 +310,21 @@ char *replace_str_all_fau(const char *src, const char *old_sub,
 		pos = strstr(pos+len2, old_sub);
 	}
 	if (!cnt) {
-		err_dbg(0, err_fmt("substr not in src"));
-		errno = EINVAL;
+		err_dbg(0, "substr not in src");
 		return NULL;
 	}
 
 	size_t new_len = len1 + cnt * (ssize_t)(len3-len2) + 1;
 	if ((len3 >= len2) && ((new_len < len1) ||
-			       (new_len < cnt*(ssize_t)(len3-len2)))) {
-		err_dbg(0, err_fmt("new lenth check err"));
-		errno = EINVAL;
+				(cnt*(len3-len2)/cnt != (len3-len2)) ||
+				(new_len < cnt*(ssize_t)(len3-len2)))) {
+		err_dbg(0, "new length check err");
 		return NULL;
 	}
 
 	char *ret = (char *)malloc(new_len);
 	if (!ret) {
-		err_dbg(0, err_fmt("malloc error"));
-		errno = ENOMEM;
+		err_dbg(0, "malloc error");
 		return NULL;
 	}
 	memset(ret, 0, new_len);
@@ -370,8 +344,7 @@ char *replace_str_all_fau(const char *src, const char *old_sub,
 void dump_mem(const char *addr, size_t len)
 {
 	if (!addr) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
+		err_dbg(0, "arg check err");
 		return;
 	}
 
@@ -384,6 +357,7 @@ void dump_mem(const char *addr, size_t len)
 	}
 	if (((i-1) & 0x0f) != 0x0f)
 		fprintf(stdout, "\n");
+	fflush(stdout);
 }
 
 char *pattern_in_str(const char *str, const char *pattern,
@@ -396,8 +370,7 @@ char *pattern_in_str(const char *str, const char *pattern,
 void del_str_extra_space(char *str)
 {
 	if (!str) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
+		err_dbg(0, "arg check err");
 		return;
 	}
 
@@ -410,29 +383,27 @@ void del_str_extra_space(char *str)
 				poe++;
 				continue;
 			}
-			*pob = *poe;
+			*pob = ' ';
 			pob++;
 			poe++;
 			flag_space = 1;
-			continue;
 		} else {
-			if (flag_space) {
+			if (flag_space)
 				flag_space = 0;
-			}
 			*pob = *poe;
 			pob++;
 			poe++;
-			continue;
 		}
 	}
+	if (flag_space)
+		*(pob-1) = '\0';
 	memset(pob, 0, strlen(pob));
 }
 
 int is_empty_line(char *str)
 {
 	if (!str) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
+		err_dbg(0, "arg check err");
 		return -1;
 	}
 
@@ -448,8 +419,7 @@ int is_empty_line(char *str)
 static int is_word_sep(char *pos)
 {
 	if (!pos) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
+		err_dbg(0, "arg check err");
 		return -1;
 	}
 
@@ -488,25 +458,22 @@ static int is_word_sep(char *pos)
  * UPDATE: a word contains a newline char
  * actually, get_next_word could use get_next_word_until
  */
-int get_next_word(char **pos, uint32_t *len)
+void get_next_word(char **pos, size_t *len)
 {
+	*len = 0;
+
 	if (!pos || !len || !*pos) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
-		return -1;
+		err_dbg(0, "arg check err");
+		return;
 	}
 
 	char *res = *pos;
 	int in_word = 0;
-	int done = 0;
-	*len = 0;
 
-	while (!done) {
+	while (1) {
 		int c = *res;
-		if (c == '\0') {
-			done = 1;
+		if (c == '\0')
 			break;
-		}
 
 		if (in_word) {
 			*pos = res;
@@ -517,7 +484,7 @@ int get_next_word(char **pos, uint32_t *len)
 				c = *res;
 				*len += 1;
 			}
-			done = 1;
+			break;
 		} else {
 			if (isspace(c)) {
 				if (c == '\n') {
@@ -530,81 +497,95 @@ int get_next_word(char **pos, uint32_t *len)
 				in_word = 1;
 				int ret = is_word_sep(res);
 				if (ret > 0) {
-					done = 1;
 					*pos = res;
 					*len = ret;
+					break;
 				}
 			}
 		}
 	}
-	return 0;
 }
 
 /*
- * get next word until the `ch` show up, the blank space is sep
+ * get next word until the `ch` show up
  */
-int get_next_word_until(char **str, uint32_t *len, char *chs)
+void get_next_word_until(char **str, size_t *len, char *chs)
 {
+	*len = 0;
+
 	if (!str || !len || !chs || !*str) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
-		return -1;
+		err_dbg(0, "arg check err");
+		return;
 	}
 
 	char *pos = *str;
-	*len = 0;
-	int flag = 0;
+	while (isspace(*pos))
+		pos++;
+	*str = pos;
 
 	while (1) {
-		if (flag && (strchr(chs, *pos)))
+		if (strchr(chs, *pos))
 			break;
-		if (isspace(*pos)) {
-			if (flag)
-				break;
-			pos++;
+		char *pos_e;
+		if ((*pos == '\'') || (*pos == '"')) {
+			pos_e = get_matched_pair(pos);
+			if (!pos_e) {
+				err_dbg(0, "get_matched_pair err");
+				*str = NULL;
+				*len = 0;
+				return;
+			}
+			*len += pos_e + 1 - pos;
+			pos = pos_e + 1;
 			continue;
 		}
-		if (!flag)
-			*str = pos;
-		flag = 1;
 		*len += 1;
 		pos++;
 	}
-	return 0;
 }
 
-#if 0
-char *def_seps[] = {
-	"<<=", ">>=",
-	"...",
-
-	"->", "++", "--", ">>", "<<", "<=", ">=", "==", "!=", "&&", "||", "+=",
-	"-=", "*=", "/=", "&=", "^=", "|=", "##", "%=",
-
-	"(", ")", "[", "]", "{", "}", ".", "!", "~", "+", "-", "*", "&", "/",
-	"%", "<", ">", "|", "^", "?", ":", "=", ",", ";", "#", "\"", "'",
-};
-int def_seps_cnt = sizeof(def_seps) / sizeof(char *);
-static char *check_tokens_in_seps(char *start, char **seps, int seps_cnt)
+static char *get_matched_quote(char *pos)
 {
-	int i = 0;
-
-	for (i = 0; i < seps_cnt; i++) {
-		size_t str_len = strlen(seps[i]);
-		if (!strncmp(start, seps[i], str_len))
-			return seps[i];
+	int ch = *pos;
+	if (unlikely((ch != '\'') && (ch != '"'))) {
+		err_dbg(0, "arg check err");
+		return NULL;
 	}
+
+	pos++;
+	int flag = 0;
+	while (*pos) {
+		if ((*pos == '\\') && (*(pos+1) == '\\')) {
+			pos += 2;
+			flag = 1;
+			continue;
+		} else if (*pos == '\\')
+			flag = 0;
+
+		if ((*pos == ch) && (*(pos-1) == '\\') && (!flag)) {
+			pos++;
+			continue;
+		}
+
+		if (*pos == ch)
+			return pos;
+		pos++;
+	}
+
 	return NULL;
 }
+
 static char *get_close_paren(char *start)
 {
 	unsigned long counter = 0;
 	char *pos = start;
 
-	while (1) {
-		if (!*pos)
-			return NULL;
+	if (unlikely(*pos != '(')) {
+		err_dbg(0, "arg check err");
+		return NULL;
+	}
 
+	while (*pos) {
 		if ((*pos == '\'') || (*pos == '"')) {
 			pos = get_matched_quote(pos);
 			if (!pos)
@@ -616,10 +597,11 @@ static char *get_close_paren(char *start)
 		}
 
 		if (!counter)
-			break;
+			return pos;
 		pos++;
 	}
-	return pos;
+
+	return NULL;
 }
 
 static char *get_close_braket(char *start)
@@ -627,10 +609,12 @@ static char *get_close_braket(char *start)
 	unsigned long counter = 0;
 	char *pos = start;
 
-	while (1) {
-		if (!*pos)
-			return NULL;
+	if (unlikely(*pos != '[')) {
+		err_dbg(0, "arg check err");
+		return NULL;
+	}
 
+	while (*pos) {
 		if ((*pos == '\'') || (*pos == '"')) {
 			pos = get_matched_quote(pos);
 			if (!pos)
@@ -642,10 +626,11 @@ static char *get_close_braket(char *start)
 		}
 
 		if (!counter)
-			break;
+			return pos;
 		pos++;
 	}
-	return pos;
+
+	return NULL;
 }
 
 static char *get_close_brace(char *start)
@@ -653,10 +638,12 @@ static char *get_close_brace(char *start)
 	unsigned long counter = 0;
 	char *pos = start;
 
-	while (1) {
-		if (!*pos)
-			return NULL;
+	if (unlikely(*pos != '{')) {
+		err_dbg(0, "arg check err");
+		return NULL;
+	}
 
+	while (*pos) {
 		if ((*pos == '\'') || (*pos == '"')) {
 			pos = get_matched_quote(pos);
 			if (!pos)
@@ -668,17 +655,18 @@ static char *get_close_brace(char *start)
 		}
 
 		if (!counter)
-			break;
+			return pos;
 		pos++;
 	}
-	return pos;
+
+	return NULL;
 }
 
 /*
  * get_matched_pair: get the position of the paired char
  * return NULL if something goes wrong, return start if not a paired char,
  */
-static char *get_matched_pair(char *start)
+char *get_matched_pair(char *start)
 {
 	char c = *start;
 	char *ret = start;
@@ -703,6 +691,7 @@ static char *get_matched_pair(char *start)
 	return ret;
 }
 
+#if 0
 /*
  * get_next_word: get next word start at @start
  * a word not start with seps
@@ -813,206 +802,225 @@ int get_next_token(char **start, size_t *len, char **use_seps, int sep_cnt)
 #endif
 
 /* get_context_in get the value in `ch` . `ch`, the first char *MUST* be ch */
-int get_context_in_quote(char **str, uint32_t *len)
+void get_context_in_quote(char **str, size_t *len)
 {
+	if (len)
+		*len = 0;
+
 	if (!str || !len || !*str) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
-		return -1;
+		err_dbg(0, "arg check err");
+		return;
 	}
 
 	char *pos = *str;
-	*len = 0;
 	char ch = *pos;
 	if ((ch != '\'') && (ch != '"')) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
-		return -1;
+		err_dbg(0, "arg check err");
+		return;
 	}
+
 	*str = pos+1;
-	pos++;
-
-	while (*pos != '\0') {
-		if ((*pos == ch) && (*(pos-1) == '\\')) {
-			pos++;
-			continue;
-		}
-		if (*pos == ch) {
-			*len = pos - *str;
-			return 0;
-		}
-		pos++;
-	}
-	return -1;
+	pos = get_matched_quote(pos);
+	if (pos)
+		*len = pos - *str;
 }
 
-/*
- * XXX: all string that malloc terminate with '\0', and the
- * str_len is the argument `malloc` gets, means the real lenth(exclude '\0')
- * list_comm_str_struct_new `len` is the `str` lenth, exclude the '\0'
- */
-int list_comm_str_struct_new(list_comm *head, char *str, uint32_t len)
+buf_struct *buf_struct_alloc(void)
 {
-	if (!head || !str || (len == (uint32_t)-1)) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
+	buf_struct *_new;
+	_new = (buf_struct *)malloc(sizeof(*_new));
+	if (!_new) {
+		err_dbg(0, "malloc err");
+		return NULL;
+	}
+
+	return _new;
+}
+
+void buf_struct_free(buf_struct *bs)
+{
+	free(bs->buf);
+	free(bs);
+}
+
+int buf_struct_init(buf_struct *_new, char *buf, size_t len)
+{
+	if ((!_new) || (len == (size_t)-1) || (!len)) {
+		err_dbg(0, "arg check err");
 		return -1;
 	}
 
-	list_comm *new = (list_comm *)malloc(sizeof(list_comm) +
-						 sizeof(str_struct));
-	if (!new) {
-		err_dbg(0, err_fmt("malloc err"));
-		errno = ENOMEM;
+	memset(_new, 0, sizeof(*_new));
+
+	_new->buf = (char *)malloc(len+1);
+	if (!_new->buf) {
+		err_dbg(0, "malloc err");
 		return -1;
 	}
-	memset(new, 0, sizeof(list_comm)+sizeof(str_struct));
+	memcpy(_new->buf, buf, len);
 
-	str_struct *data = (str_struct *)new->data;
-	data->str = (char *)malloc(len+1);
-	if (!data->str) {
-		err_dbg(0, err_fmt("malloc err"));
-		free(new);
-		errno = ENOMEM;
-		return -1;
-	}
-	memset(data->str, 0, len+1);
-	memcpy(data->str, str, len);
-	data->str_len = len;
+	_new->buf[len] = 0;
+	_new->buf_len = len+1;
 
-	list_comm_append(head, new);
 	return 0;
 }
 
-void list_comm_str_struct_make_empty(list_comm *head)
+int buf_struct_new_append(struct list_head *head, char *buf, size_t len)
 {
-	list_comm *node, *next;
-	list_for_each_entry_safe(node, next, &head->list_head, list_head) {
-		str_struct *tmp = (str_struct *)node->data;
-		list_del(&node->list_head);
-		free(tmp->str);
-		free(node);
+	if (!head || !buf || (len == (size_t)-1)) {
+		err_dbg(0, "arg check err");
+		return -1;
 	}
-	list_comm_init(head);
+
+	buf_struct bs;
+	if (buf_struct_init(&bs, buf, len)) {
+		err_dbg(0, "buf_struct_init err");
+		return -1;
+	}
+
+	return list_comm_new_append(head, &bs, sizeof(bs));
 }
 
-int list_comm_str_struct_merge(list_comm *b, list_comm *e)
+static int buf_struct_cleanup(void *data)
 {
-	str_struct *b_data = (str_struct *)b->data;
-	str_struct *e_data = (str_struct *)e->data;
-	char *tmp = add_str_fau(b_data->str, e_data->str);
-	if (!tmp)
-		return -1;
-	list_del(&e->list_head);
-	free(b_data->str);
-	free(e_data->str);
-	b_data->str = tmp;
-	b_data->str_len = strlen(tmp);
-	free(e);
+	buf_struct *bs = data;
+	if (!bs)
+		return 0;
+	free(bs->buf);
+	bs->buf = NULL;
 	return 0;
 }
 
-void list_comm_str_struct_print(list_comm *head)
+void buf_struct_list_cleanup(struct list_head *head)
 {
-	list_comm *tmp;
-	list_for_each_entry(tmp, &head->list_head, list_head) {
-		str_struct *tmp_str = (str_struct *)tmp->data;
-		fprintf(stdout, "%s\n", tmp_str->str);
+	list_comm_cleanup(head, buf_struct_cleanup);
+}
+
+int buf_struct_merge(buf_struct *bbs, buf_struct *ebs)
+{
+	if ((!bbs) || (!ebs)) {
+		err_dbg(0, "arg check err");
+		return -1;
 	}
+
+	size_t len = (bbs->buf_len-1) + ebs->buf_len;
+	if ((len <= (bbs->buf_len-1)) || (len <= ebs->buf_len)) {
+		err_dbg(0, "length check err");
+		return -1;
+	}
+
+	char *tmp = malloc(len);
+	if (!tmp) {
+		err_dbg(0, "malloc err");
+		return -1;
+	}
+	memcpy(tmp, bbs->buf, bbs->buf_len-1);
+	memcpy(tmp+bbs->buf_len-1, ebs->buf, ebs->buf_len);
+
+	free(bbs->buf);
+	bbs->buf = tmp;
+	bbs->buf_len = len;
+
+	free(ebs->buf);
+	ebs->buf = NULL;
+	ebs->buf_len = 0;
+	return 0;
+}
+
+int buf_struct_print(void *data)
+{
+	buf_struct *bs = data;
+	if (buf_printable(bs->buf, bs->buf_len))
+		fprintf(stdout, "%s\n", bs->buf);
+	else
+		dump_mem(bs->buf, bs->buf_len-1);
+	fflush(stdout);
+	return 0;
 }
 
 /*
  * dict key name, valid char exclude '' "" : , { }
  */
-static int get_dict_key(char **str, uint32_t *len, char *sep)
+static void get_dict_key(char **str, size_t *len, char *sep)
 {
+	*len = 0;
+
 	if (!str || !len || !sep || !*str) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
-		return -1;
+		err_dbg(0, "arg check err");
+		return;
 	}
 
 	char *pos = *str;
-	*len = 0;
 
-	while (*pos != *sep) {
-		if (isspace(*pos)) {
-			pos++;
-			continue;
-		}
+	while ((*pos != *sep) && isspace(*pos))
+		pos++;
 
-		if ((*pos == '\'') || (*pos == '"')) {
-			get_context_in_quote(&pos, len);
-			*str = pos;
-			return 0;
-		} else {
-			get_next_word_until(&pos, len, sep);
-			*str = pos;
-			return 0;
-		}
+	if ((*pos == '\'') || (*pos == '"')) {
+		get_context_in_quote(&pos, len);
+		*str = pos;
+		return;
+	} else {
+		get_next_word_until(&pos, len, sep);
+		*str = pos;
+		return;
 	}
-	return 0;
 }
 
 /*
  * the first char *MUST* be the sep `:`
  */
-static int get_dict_value(char **str, uint32_t *len, char *sep)
+static void get_dict_value(char **str, size_t *len, char *sep)
 {
+	*len = 0;
+
 	if (!str || !len || !sep || !*str) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
-		return -1;
+		err_dbg(0, "arg check err");
+		return;
 	}
 
 	char *pos = *str;
-	*len = 0;
-	if (*pos != *sep)
-		return -1;
+	if (!strchr(sep, *pos))
+		return;
 	pos++;
 
-	while (1) {
-		if (isspace(*pos)) {
-			pos++;
-			continue;
-		}
+	while (isspace(*pos))
+		pos++;
 
-		if ((*pos == '\'') || (*pos == '"')) {
-			get_context_in_quote(&pos, len);
-			*str = pos;
-			return 0;
-		} else {
-			get_next_word_until(&pos, len, ",}");
-			*str = pos;
-			return 0;
-		}
+	if ((*pos == '\'') || (*pos == '"')) {
+		get_context_in_quote(&pos, len);
+		*str = pos;
+		return;
+	} else {
+		get_next_word_until(&pos, len, "\n,}");
+		*str = pos;
+		return;
 	}
-	return 0;
 }
 
 /*
  * the input `str` should like this:
  * {"vhost": "1.1.1.1", "host": "2.2.22.2"}
- * every key=value is split by ':', each pair end with ',' or last '}'
+ * or
+ * {
+ *	xxx: yyy
+ *	aaa: bbb
+ * }
  * the whole dict is around a pair of '{' '}'
  * the returned value is a list_dt structure,
  * it's like head<->key<->value<->key<->value<->...<->key<->value<->head
- * XXX: this function is not common use, XXX:should check the head iempty
  * `sep` means the charactor between KEY and VALUE, like `:` `=`
  */
-int get_dict_key_value(list_comm *head, char *str, char *sep)
+int get_dict_key_value(struct list_head *head, char *str, char *sep)
 {
 	if (!head || !str || !sep) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
+		err_dbg(0, "arg check err");
 		return -1;
 	}
 
 	char *pos = str;
-	uint32_t len = 0;
+	size_t len = 0;
 	int cnt_dicts = 0;
 	int err;
-	list_comm *new_head = head;
 
 	/* that is the beginning of the dict */
 	int flag_value = 0;
@@ -1021,6 +1029,7 @@ int get_dict_key_value(list_comm *head, char *str, char *sep)
 			pos++;
 			continue;
 		}
+
 		if (*pos == '}')
 			cnt_dicts--;
 		if ((*pos == '}') && (!cnt_dicts))
@@ -1029,13 +1038,13 @@ int get_dict_key_value(list_comm *head, char *str, char *sep)
 			pos++;
 			continue;
 		}
-		if (*pos == '\n')
-			break;
+
 		if (*pos == '{') {
 			cnt_dicts++;
 			pos++;
 			continue;
 		}
+
 		if (*pos == *sep) {
 			flag_value = 1;
 			get_dict_value(&pos, &len, sep);
@@ -1043,46 +1052,50 @@ int get_dict_key_value(list_comm *head, char *str, char *sep)
 			flag_value = 0;
 			get_dict_key(&pos, &len, sep);
 		}
-		err = list_comm_str_struct_new(new_head, pos, len);
+
+		if (!len) {
+			err_dbg(0, "key/value parse error");
+			break;
+		}
+
+		err = buf_struct_new_append(head, pos, len);
 		if (err == -1) {
-			err_dbg(1,
-				  err_fmt("list_comm_str_struct_new err"));
-			list_comm_str_struct_make_empty(new_head);
+			err_dbg(0, "buf_struct_new_append err");
+			buf_struct_list_cleanup(head);
 			return -1;
 		}
 		pos += len;
 		char *potmp = pos;
 		if (flag_value) {
-			potmp = strstr(pos, ",");
+			potmp = strchr(pos, ',');
 			if (!potmp)
-				potmp = strstr(pos, "}");
+				potmp = strchr(pos, '\n');
+			if (!potmp)
+				potmp = strchr(pos, '}');
 		} else {
 			potmp = strstr(pos, sep);
 		}
 		if (!potmp)
 			break;
-		if (*potmp == ',')
+		if (strchr("\n,}", *potmp))
 			potmp++;
 		pos = potmp;
 	}
 	return 0;
 }
 
-int str_split(list_comm *head, const char *src, const char *key)
+int str_split(struct list_head *head, const char *src, const char *key)
 {
 	if (!head || !src || !key || (strlen(src) == (size_t)-1)) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
+		err_dbg(0, "arg check err");
 		return -1;
 	}
 
-	list_comm *tmp_head = head;
-	list_comm_init(tmp_head);
+	INIT_LIST_HEAD(head);
 	size_t len = strlen(src) + 1;
 	char *src_tmp = (char *)malloc(len);
 	if (!src_tmp) {
-		err_dbg(0, err_fmt("malloc err"));
-		errno = ENOMEM;
+		err_dbg(0, "malloc err");
 		return -1;
 	}
 	memset(src_tmp, 0, len);
@@ -1093,11 +1106,10 @@ int str_split(list_comm *head, const char *src, const char *key)
 	poe = strstr(pob, key);
 	while (poe) {
 		*poe = '\0';
-		err = list_comm_str_struct_new(tmp_head,pob,strlen(pob));
+		err = buf_struct_new_append(head,pob,strlen(pob));
 		if (err) {
-			err_dbg(0,
-				  err_fmt("list_comm_str_struct_new err"));
-			list_comm_str_struct_make_empty(tmp_head);
+			err_dbg(0, "buf_struct_new_append err");
+			buf_struct_list_cleanup(head);
 			free(src_tmp);
 			return -1;
 		}
@@ -1108,10 +1120,10 @@ int str_split(list_comm *head, const char *src, const char *key)
 	/* the last one */
 	err = 0;
 	if (*pob != '\0')
-		err = list_comm_str_struct_new(tmp_head,pob,strlen(pob));
+		err = buf_struct_new_append(head,pob,strlen(pob));
 	if (err) {
-		err_dbg(0, err_fmt("list_comm_str_struct_new err"));
-		list_comm_str_struct_make_empty(tmp_head);
+		err_dbg(0, "buf_struct_new_append err");
+		buf_struct_list_cleanup(head);
 		free(src_tmp);
 		return -1;
 	}

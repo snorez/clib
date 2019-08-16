@@ -23,20 +23,20 @@ static struct clib_rw_pool *clib_rw_pool_new(size_t obj_cnt)
 	struct clib_rw_pool *_new = NULL;
 
 	if (unlikely(obj_cnt > OBJPOOL_MAX)) {
-		err_dbg(0, err_fmt("size check err"));
+		err_dbg(0, "size check err");
 		return NULL;
 	}
 
 	addr = malloc(obj_cnt * sizeof(void *));
 	if (unlikely(!addr)) {
-		err_dbg(0, err_fmt("malloc err"));
+		err_dbg(0, "malloc err");
 		return NULL;
 	}
 	memset(addr, 0, obj_cnt * sizeof(void *));
 
 	_new = (struct clib_rw_pool *)malloc(sizeof(*_new));
 	if (unlikely(!_new)) {
-		err_dbg(0, err_fmt("malloc err"));
+		err_dbg(0, "malloc err");
 		free(addr);
 		return NULL;
 	}
@@ -181,14 +181,14 @@ struct clib_rw_pool_job *clib_rw_pool_job_new(size_t obj_cnt,
 	struct clib_rw_pool_job *_new;
 	_new = (struct clib_rw_pool_job *)malloc(sizeof(*_new));
 	if (!_new) {
-		err_dbg(0, err_fmt("malloc err"));
+		err_dbg(0, "malloc err");
 		return NULL;
 	}
 	memset(_new, 0, sizeof(*_new));
 
 	_new->pool = clib_rw_pool_new(obj_cnt);
 	if (!_new->pool) {
-		err_dbg(0, err_fmt("clib_rw_pool_new err"));
+		err_dbg(0, "clib_rw_pool_new err");
 		free(_new);
 		return NULL;
 	}
@@ -217,7 +217,7 @@ int clib_rw_pool_job_run(struct clib_rw_pool_job *job)
 	/* setup threads */
 	err = pthread_create(&tid_writer, NULL, writer_thread, (void *)job);
 	if (err) {
-		err_dbg(0, err_fmt("pthread_create err"));
+		err_dbg(0, "pthread_create err");
 		return -1;
 	}
 	atomic_inc(&job->pool->writer);
@@ -225,7 +225,7 @@ int clib_rw_pool_job_run(struct clib_rw_pool_job *job)
 
 	err = pthread_create(&tid_reader, NULL, reader_thread, (void *)job);
 	if (err) {
-		err_dbg(0, err_fmt("pthread_create err, kill writer thread"));
+		err_dbg(0, "pthread_create err, kill writer thread");
 		BUG();
 		return -1;
 	}

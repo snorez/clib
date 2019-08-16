@@ -44,7 +44,7 @@ static int clib_mm_init(struct clib_mm *t, int fd, unsigned long start, size_t l
 				PROT_READ | PROT_WRITE | PROT_EXEC,
 				MAP_FIXED | MAP_SHARED, -1, 0);
 	if (addr == MAP_FAILED) {
-		err_dbg(1, err_fmt("mmap err"));
+		err_dbg(1, "mmap err");
 		return -1;
 	}
 
@@ -64,7 +64,7 @@ static int clib_mm_dump(struct clib_mm *t)
 		return 0;
 	int err = write(t->fd, (char *)t->mm_head, t->mm_cur - t->mm_head);
 	if (err == -1) {
-		err_dbg(1, err_fmt("write err"));
+		err_dbg(1, "write err");
 		return -1;
 	}
 
@@ -88,39 +88,39 @@ static int clib_mm_expand(struct clib_mm *t, size_t size_need)
 					PROT_READ | PROT_WRITE | PROT_EXEC,
 					MAP_FIXED | MAP_SHARED, -1, 0);
 		if (addr == MAP_FAILED) {
-			err_dbg(1, err_fmt("mmap err"));
+			err_dbg(1, "mmap err");
 			return -1;
 		}
 		t->mm_tail += mmap_len;
 		return 0;
 	} else {
 		if (!t->expandable) {
-			err_dbg(0, err_fmt("not expandable, no enough room"));
+			err_dbg(0, "not expandable, no enough room");
 			return -1;
 		}
 
 		/* INFO, need to munmap current area, remap the next area */
 		if (size_need > (t->mm_end - t->mm_start)) {
-			err_dbg(0, err_fmt("request size too large"));
+			err_dbg(0, "request size too large");
 			return -1;
 		}
 
 		err = clib_mm_dump(t);
 		if (err == -1) {
-			err_dbg(0, err_fmt("clib_mm_dump err"));
+			err_dbg(0, "clib_mm_dump err");
 			return -1;
 		}
 
 		err = munmap((void *)t->mm_start, t->mm_tail - t->mm_start);
 		if (err == -1) {
-			err_dbg(0, err_fmt("munmap err"));
+			err_dbg(0, "munmap err");
 			return -1;
 		}
 
 		err = clib_mm_init(t, t->fd, t->mm_end, t->mm_end-t->mm_start,
 					t->expandable);
 		if (err) {
-			err_dbg(0, err_fmt("clib_mm_init err"));
+			err_dbg(0, "clib_mm_init err");
 			list_del(&t->sibling);
 			memset(t, 0, sizeof(*t));
 			free(t);
@@ -129,7 +129,7 @@ static int clib_mm_expand(struct clib_mm *t, size_t size_need)
 
 		err = clib_mm_expand(t, size_need);
 		if (err) {
-			err_dbg(0, err_fmt("clib_mm_expand err"));
+			err_dbg(0, "clib_mm_expand err");
 			return -1;
 		}
 
@@ -148,11 +148,11 @@ static void clib_mm_put(struct clib_mm *t)
 int clib_mm_setup(char *desc, int fd, unsigned long start, size_t len, int expandable)
 {
 	if (unlikely(strlen(desc) >= CLIB_MM_DESC_LEN)) {
-		err_dbg(0, err_fmt("desc too long"));
+		err_dbg(0, "desc too long");
 		return -1;
 	}
 	if (unlikely((start + len) <= start)) {
-		err_dbg(0, err_fmt("len invalid"));
+		err_dbg(0, "len invalid");
 		return -1;
 	}
 
@@ -161,14 +161,14 @@ int clib_mm_setup(char *desc, int fd, unsigned long start, size_t len, int expan
 	struct clib_mm *t = clib_mm_find(desc);
 	if (t) {
 		clib_mm_put(t);
-		err_dbg(0, err_fmt("clib_mm desc exists"));
+		err_dbg(0, "clib_mm desc exists");
 		mutex_unlock(&mm_head_lock);
 		return -1;
 	}
 
 	t = (struct clib_mm *)malloc(sizeof(*t));
 	if (!t) {
-		err_dbg(0, err_fmt("malloc err"));
+		err_dbg(0, "malloc err");
 		mutex_unlock(&mm_head_lock);
 		return -1;
 	}
@@ -177,7 +177,7 @@ int clib_mm_setup(char *desc, int fd, unsigned long start, size_t len, int expan
 	memcpy(t->desc, desc, strlen(desc));
 	err = clib_mm_init(t, fd, start, len, expandable);
 	if (err) {
-		err_dbg(0, err_fmt("clib_mm_init err"));
+		err_dbg(0, "clib_mm_init err");
 		err = -1;
 		mutex_unlock(&mm_head_lock);
 		goto err_free;
@@ -198,21 +198,21 @@ int clib_mm_cleanup(char *desc)
 	mutex_lock(&mm_head_lock);
 	struct clib_mm *t = clib_mm_find(desc);
 	if (!t) {
-		err_dbg(0, err_fmt("clib_mm desc not found"));
+		err_dbg(0, "clib_mm desc not found");
 		mutex_unlock(&mm_head_lock);
 		return -1;
 	}
 
 	err = clib_mm_dump(t);
 	if (err == -1) {
-		err_dbg(0, err_fmt("clib_mm_dump err"));
+		err_dbg(0, "clib_mm_dump err");
 		mutex_unlock(&mm_head_lock);
 		return -1;
 	}
 
 	err = munmap((void *)t->mm_start, t->mm_tail - t->mm_start);
 	if (err == -1) {
-		err_dbg(1, err_fmt("munmap err"));
+		err_dbg(1, "munmap err");
 		mutex_unlock(&mm_head_lock);
 		return -1;
 	}
@@ -229,14 +229,14 @@ unsigned long clib_mm_get(char *desc, size_t len)
 	mutex_lock(&mm_head_lock);
 	struct clib_mm *t = clib_mm_find(desc);
 	if (!t) {
-		err_dbg(0, err_fmt("clib_mm desc not found"));
+		err_dbg(0, "clib_mm desc not found");
 		mutex_unlock(&mm_head_lock);
 		return 0;
 	}
 
 	err = clib_mm_expand(t, len);
 	if (err) {
-		err_dbg(0, err_fmt("clib_mm_expand err"));
+		err_dbg(0, "clib_mm_expand err");
 		clib_mm_put(t);
 		mutex_unlock(&mm_head_lock);
 		return 0;

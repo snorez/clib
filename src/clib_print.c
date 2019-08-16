@@ -1,5 +1,6 @@
 /*
- * TODO
+ * multi-thread pretty print
+ *
  * Copyright (C) 2018  zerons
  *
  * This program is free software: you can redistribute it and/or modify
@@ -21,7 +22,7 @@ static LIST_HEAD(print_head);
 static lock_t print_head_lock;
 static int use_std = 1;
 
-void mt_print_init(void)
+void mt_print_init_ncurse(void)
 {
 	mutex_lock(&print_head_lock);
 	if (!use_std)
@@ -30,7 +31,17 @@ void mt_print_init(void)
 	clear();
 	refresh();
 	use_std = 0;
-	atexit(mt_print_fini);
+	atexit(mt_print_fini_ncurse);
+	mutex_unlock(&print_head_lock);
+}
+
+void mt_print_fini_ncurse(void)
+{
+	if (use_std)
+		return;
+	mutex_lock(&print_head_lock);
+	endwin();
+	use_std = 1;
 	mutex_unlock(&print_head_lock);
 }
 
@@ -45,7 +56,7 @@ void mt_print_add(void)
 	}
 	t = malloc(sizeof(*t));
 	if (!t) {
-		err_dbg(0, err_fmt("malloc err"));
+		err_dbg(0, "malloc err");
 		goto unlock;
 	}
 	memset(t, 0, sizeof(*t));
@@ -181,16 +192,6 @@ void mt_print1(pthread_t id, const char *fmt, ...)
 
 	mutex_unlock(&print_head_lock);
 	return;
-}
-
-void mt_print_fini(void)
-{
-	if (use_std)
-		return;
-	mutex_lock(&print_head_lock);
-	endwin();
-	use_std = 1;
-	mutex_unlock(&print_head_lock);
 }
 
 static __thread int show_process_byte = 0;

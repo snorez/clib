@@ -17,42 +17,6 @@
  */
 #include "../include/clib.h"
 
-uint32_t min_32(uint32_t a, uint32_t b)
-{
-	return (a > b) ? b : a;
-}
-
-uint64_t min_64(uint64_t a, uint64_t b)
-{
-	return (a > b) ? b : a;
-}
-
-uint32_t max_32(uint32_t a, uint32_t b)
-{
-	return (a > b) ? a : b;
-}
-
-uint64_t max_64(uint64_t a, uint64_t b)
-{
-	return (a > b) ? a : b;
-}
-
-void *malloc_s(size_t size)
-{
-	char *ret = (char *)malloc(size);
-	if (ret)
-		memset(ret, 0, size);
-	return (void *)ret;
-}
-
-void free_s(void **addr)
-{
-	if (!addr || !(*addr))
-		return;
-	free(*addr);
-	*addr = NULL;
-}
-
 int hex2int(char *hex)
 {
 	int ret = 0;
@@ -76,20 +40,20 @@ int no_aslr(int argc, char *argv[])
 	int err = 0;
 	int fd = open("/proc/self/exe", O_RDONLY);
 	if (fd < 3) {
-		err_dbg(0, err_fmt("something goes wrong"));
+		err_dbg(0, "something goes wrong");
 		return -1;
 	}
 
 	struct stat f_prev, f_cur;
 	err = fstat(fd-1, &f_prev);
 	if (err == -1) {
-		err_dbg(1, err_fmt("fstat err"));
+		err_dbg(1, "fstat err");
 		close(fd);
 		return -1;
 	}
 	err = fstat(fd, &f_cur);
 	if (err == -1) {
-		err_dbg(1, err_fmt("fstat err"));
+		err_dbg(1, "fstat err");
 		close(fd);
 		return -1;
 	}
@@ -97,7 +61,7 @@ int no_aslr(int argc, char *argv[])
 	if (memcmp(&f_prev, &f_cur, sizeof(f_prev))) {
 		err = personality(ADDR_NO_RANDOMIZE);
 		if (err == -1) {
-			err_dbg(1, err_fmt("personality err"));
+			err_dbg(1, "personality err");
 			return -1;
 		}
 		extern char **environ;
@@ -117,21 +81,20 @@ int tmp_close_std(int close_fd)
 	int err = 0;
 	tmp_std_fd = dup(close_fd);
 	if (tmp_std_fd == -1) {
-		err_dbg(1, err_fmt("dup err"));
+		err_dbg(1, "dup err");
 		return -1;
 	}
 
-	int fd = open(tmp_std_file, O_RDWR | O_CREAT | O_TRUNC,
-					S_IRUSR | S_IWUSR);
+	int fd = open(tmp_std_file, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 	if (fd == -1) {
-		err_dbg(1, err_fmt("open err"));
+		err_dbg(1, "open err");
 		close(tmp_std_fd);
 		return -1;
 	}
 
 	err = dup2(fd, close_fd);
 	if (err != close_fd) {
-		err_dbg(1, err_fmt("dup2 err"));
+		err_dbg(1, "dup2 err");
 		close(fd);
 		close(tmp_std_fd);
 		return -1;
@@ -146,7 +109,7 @@ int restore_std(int closed_fd)
 	fflush(stderr);
 	int err = dup2(tmp_std_fd, closed_fd);
 	if (err != closed_fd) {
-		err_dbg(1, err_fmt("dup2 err, %d"), err);
+		err_dbg(1, "dup2(%d) err", err);
 		return -1;
 	}
 
@@ -162,7 +125,7 @@ int output_tmp_std(void)
 	snprintf(cmd, 64, "cat %s", tmp_std_file);
 	int err = system(cmd);
 	if (err) {
-		err_dbg(1, err_fmt("run %s err"), cmd);
+		err_dbg(1, "run %s err", cmd);
 		return -1;
 	}
 	return 0;
@@ -172,7 +135,7 @@ long get_memory_avail(void)
 {
 	int fd = open("/proc/meminfo", O_RDONLY);
 	if (fd == -1) {
-		err_dbg(1, err_fmt("open err"));
+		err_dbg(1, "open err");
 		return -1;
 	}
 
@@ -180,7 +143,7 @@ long get_memory_avail(void)
 	memset(buf, 0, 4096);
 	int err = read(fd, buf, 4096);
 	if (err == -1) {
-		err_dbg(1, err_fmt("read err"));
+		err_dbg(1, "read err");
 		close(fd);
 		return -1;
 	}
@@ -189,7 +152,7 @@ long get_memory_avail(void)
 	char *string = "MemAvailable:";
 	char *p = strstr(buf, string);
 	if (!p) {
-		err_dbg(0, err_fmt("MemAvailable not found"));
+		err_dbg(0, "MemAvailable not found");
 		return -1;
 	}
 
@@ -205,7 +168,7 @@ void time_acct_start(void)
 {
 	int err = gettimeofday(&tv0, NULL);
 	if (err == -1) {
-		err_dbg(1, err_fmt("gettimeofday err"));
+		err_dbg(1, "gettimeofday err");
 		memset(&tv0, 0, sizeof(tv0));
 		return;
 	}
@@ -218,7 +181,7 @@ void time_acct_end(void)
 
 	int err = gettimeofday(&tv1, NULL);
 	if (err == -1) {
-		err_dbg(1, err_fmt("gettimeofday err"));
+		err_dbg(1, "gettimeofday err");
 		memset(&tv0, 0, sizeof(tv0));
 		return;
 	}
@@ -234,76 +197,7 @@ void time_acct_end(void)
 	}
 }
 
-#define	IO_BYTES	(512*1024*1024)
-int clib_open(const char *pathname, int flags, ...)
-{
-	int fd;
-	flags |= O_DSYNC;
-
-	if (flags & O_CREAT) {
-		mode_t mode;
-		va_list ap;
-		va_start(ap, flags);
-		mode = va_arg(ap, mode_t);
-		va_end(ap);
-		fd = open(pathname, flags, mode);
-	} else
-		fd = open(pathname, flags);
-
-	return fd;
-}
-
-ssize_t clib_read(int fd, void *buf, size_t count)
-{
-	size_t read_bytes = 0;
-	size_t bytes_to_read = IO_BYTES;
-	int err;
-	while (1) {
-		if (read_bytes >= count)
-			break;
-
-		bytes_to_read = count - read_bytes;
-		if (bytes_to_read > IO_BYTES)
-			bytes_to_read = IO_BYTES;
-		err = read(fd, buf+read_bytes, bytes_to_read);
-		if (err != bytes_to_read) {
-			err_dbg(1, err_fmt("read err"));
-			return -1;
-		}
-
-		read_bytes += bytes_to_read;
-	}
-
-	return count;
-}
-
-ssize_t clib_write(int fd, void *buf, size_t count)
-{
-	size_t write_bytes = 0;
-	size_t bytes_to_write = IO_BYTES;
-	int err;
-
-	while (1) {
-		if (write_bytes >= count)
-			break;
-
-		bytes_to_write = count - write_bytes;
-		if (bytes_to_write > IO_BYTES)
-			bytes_to_write = IO_BYTES;
-
-		err = write(fd, buf+write_bytes, bytes_to_write);
-		if (err != bytes_to_write) {
-			err_dbg(1, err_fmt("write err"));
-			return -1;
-		}
-
-		write_bytes += bytes_to_write;
-	}
-
-	return count;
-}
-
-char *clib_ap_start(const char *fmt, ...)
+char *clib_ap_buffer(const char *fmt, ...)
 {
 	int size = 0;
 	char *p = NULL;
@@ -330,9 +224,4 @@ char *clib_ap_start(const char *fmt, ...)
 	va_end(ap);
 
 	return p;
-}
-
-void clib_ap_end(char *p)
-{
-	free(p);
 }

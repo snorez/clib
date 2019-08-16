@@ -20,7 +20,7 @@
 
 #include "../include/clib_utils.h"
 #include "../include/clib_error.h"
-#include "../include/clib_string.h"
+#include "../include/clib_buf.h"
 #include "../include/clib_list.h"
 #include <unistd.h>
 #include <fcntl.h>
@@ -37,48 +37,54 @@
 
 DECL_BEGIN
 
-struct file {
-	struct stat stat;
-	char *path;		/* file path or addr if has */
-	list_comm rdata;
-	list_comm wdata;
-
-	int fd;
-	int openflag;
+/* for reg file */
+enum regfile_types {
+	REGFILE_T_TXT,
+	REGFILE_T_BIN,
 };
 
-typedef struct file regfile;
+typedef struct {
+	struct stat		stat;
+	char			*path;		/* file path or addr if has */
+	int			fd;
+	int			openflag;
+	int			type;
 
-static inline buf_struct *regfile_get_rdata(regfile *file, list_comm *next_head)
-{
-	list_comm *head = &file->rdata, *next;
-	if (list_comm_is_empty(head))
-		return NULL;
-	if (!next_head)
-		return (buf_struct *)(((list_comm *)head->list_head.next)->data);
-	if (next_head->list_head.next == (void *)head)
-		return NULL;
-	if (!list_comm_is_empty(next_head))
-		head = next_head;
-	next = (list_comm *)head->list_head.next;
-	next_head->list_head = next->list_head;
-	return (buf_struct *)next->data;
-}
+	union {
+		struct {
+			struct list_head	rdata;
+			struct list_head	wdata;
+		} txtdata;
+		struct {
+			char			*rbuf;
+			char			*wbuf;
+		} bindata;
+	} data;
+} regfile;
+#define	txt_rdata(file) (&(((regfile *)file)->data.txtdata.rdata))
+#define	txt_wdata(file)	(&(((regfile *)file)->data.txtdata.wdata))
+#define	bin_rdata(file)	(((regfile *)file)->data.bindata.rbuf)
+#define	bin_wdata(file)	(((regfile *)file)->data.bindata.wbuf)
 
 extern int path_exists(const char *path);
-extern regfile *regfile_open(const char *path, int flag, ...);
+extern int clib_open(const char *pathname, int flags, ...);
+extern ssize_t clib_read(int fd, void *buf, size_t count);
+extern ssize_t clib_write(int fd, void *buf, size_t count);
+extern char *clib_loadfile(const char *path);
+
+extern regfile *regfile_open(int type, const char *path, int flag, ...);
 extern int regfile_close(regfile *);
+extern int regfile_readall(regfile *);
+
 extern void set_file_max_size(size_t file_max_size);
 extern size_t get_file_max_size(void);
-extern int regfile_readall(regfile *);
-extern int regfile_readlines(regfile *);
 extern void set_io_speed(uint32_t val);
 extern uint32_t get_io_speed(void);
-extern int regfile_readline(regfile *, uint32_t lines);
-extern int regfile_writelines(regfile *);
-extern ssize_t regfile_read(regfile *file, void *buf, size_t count);
-extern ssize_t regfile_write(regfile *file, void *buf, size_t count);
-extern off_t regfile_lseek(regfile *file, off_t offs, int where);
+
+extern int txtfile_readlines(regfile *);
+extern int txtfile_readline(regfile *, uint32_t lines);
+extern int txtfile_writelines(regfile *);
+extern int clib_copy_file(char *path, char *bkp, unsigned long bytes);
 
 DECL_END
 

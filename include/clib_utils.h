@@ -93,13 +93,15 @@ extern __typeof (name) aliasname __attribute__((weak,alias(#name)))
 #define clib_round_up(x, y)	((((x)-1)|clib__round_mask(x, y)) + 1)
 #define clib_round_down(x, y)	((x) & ~clib__round_mask(x, y))
 
-extern uint32_t min_32(uint32_t a, uint32_t b);
-extern uint64_t min_64(uint64_t a, uint64_t b);
-extern uint32_t max_32(uint32_t a, uint32_t b);
-extern uint64_t max_64(uint64_t a, uint64_t b);
+#define	min_t(type, x, y) ({			\
+		type __min1 = (x);		\
+		type __min2 = (y);		\
+		__min1 < __min2 ? __min1 : __min2; })
+#define	max_t(type, x, y) ({			\
+		type __max1 = (x);		\
+		type __max2 = (y);		\
+		__max1 > __max2 ? __max1 : __max2; })
 
-extern void *malloc_s(size_t size);
-extern void free_s(void **addr);
 extern int hex2int(char *hex);
 extern int no_aslr(int argc, char *argv[]);
 extern int tmp_close_std(int close_fd);
@@ -108,11 +110,7 @@ extern int output_tmp_std(void);
 extern long get_memory_avail(void);
 extern void time_acct_start(void);
 extern void time_acct_end(void);
-extern int clib_open(const char *pathname, int flags, ...);
-extern ssize_t clib_read(int fd, void *buf, size_t count);
-extern ssize_t clib_write(int fd, void *buf, size_t count);
-extern char *clib_ap_start(const char *fmt, ...);
-extern void clib_ap_end(char *p);
+extern char *clib_ap_buffer(const char *fmt, ...);
 
 static inline int get_online_cpus(void)
 {

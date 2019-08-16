@@ -30,12 +30,13 @@ struct clib_print {
 	char			data[CLIB_MT_PRINT_LINE_LEN];
 };
 
-extern void mt_print_init(void);
+extern void mt_print_init_ncurse(void);
+extern void mt_print_fini_ncurse(void);
 extern void mt_print_add(void);
 extern void mt_print_del(void);
 extern void mt_print0(pthread_t id, char *buf);
 extern void mt_print1(pthread_t id, const char *fmt, ...);
-extern void mt_print_fini(void);
+
 extern void mt_print_progress(double cur, double total);
 extern void clib_pretty_fprint(FILE *s, int max, const char *fmt, ...);
 

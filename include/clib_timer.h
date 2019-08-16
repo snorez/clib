@@ -38,7 +38,7 @@ DECL_BEGIN
 
 #ifndef CLIB_TIMER_FUNC
 #define	CLIB_TIMER_FUNC
-typedef void (*clib_timer_func)(int, siginfo_t *, void *, int);
+typedef void (*clib_timer_func)(int signo, siginfo_t *si, void *arg, int is_last);
 #endif
 
 struct clib_timer {
@@ -47,11 +47,13 @@ struct clib_timer {
 	void			*arg;
 	struct timeval		tv;
 	pthread_t		threadid;
+	int			timer_id;
 	int			timeout;	/* in second */
 };
 
-extern int mt_add_timer(int timeout, clib_timer_func func, void *arg);
-extern void mt_del_timer(void);
+extern int mt_add_timer(int timeout, clib_timer_func func, void *arg,
+			int timer_id, int imm);
+extern void mt_del_timer(int timer_id);
 
 DECL_END
 

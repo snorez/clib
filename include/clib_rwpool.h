@@ -45,8 +45,10 @@ struct clib_rw_pool_job {
 	void		*read_arg;
 };
 
+/* these two are for job_writer and job_reader */
 extern void clib_rw_pool_push(struct clib_rw_pool *pool, void *obj);
 extern void *clib_rw_pool_pop(struct clib_rw_pool *pool);
+
 extern struct clib_rw_pool_job *clib_rw_pool_job_new(size_t obj_cnt,
 					void (writer)(void *, struct clib_rw_pool *),
 					void *write_arg,

@@ -77,53 +77,49 @@ static void *get_sh_by_name(elf_file *file, const char *str)
 	}
 }
 
-static int add_symbol(list_comm *head, char *name, void *data)
+static int add_symbol(struct list_head *head, char *name, void *data)
 {
-	list_comm *n = malloc_s(sizeof(list_comm) + sizeof(struct _elf_sym));
-	if (!n)
-		err_ret(0, -ENOMEM, err_fmt("malloc_s err"));
-
-	struct _elf_sym *newsym = (void *)n->data;
-	newsym->name = name;
-	newsym->data = data;
-	list_comm_append(head, n);
-	return 0;
+	struct _elf_sym sym;
+	sym.name = name;
+	sym.data = data;
+	return list_comm_new_append(head, &sym, sizeof(sym));
 }
-static int add_symbols(elf_file *file, list_comm *head, void *shsym, char *str)
+
+static int add_symbols(elf_file *file, struct list_head *head, void *shsym, char *str)
 {
 	int err;
 	char *start;
 	size_t cnt;
-	buf_struct *d = regfile_get_rdata(file->file, NULL);
+	char *rdata = bin_rdata(file->file);
 	if (file->elf_bits == 32) {
 		Elf32_Shdr *s = shsym;
-		start = s->sh_offset + d->buf;
+		start = s->sh_offset + rdata;
 		cnt = s->sh_size / s->sh_entsize;
 		for (size_t i = 0; i < cnt; i++) {
 			Elf32_Sym *sym = (void *)(start + s->sh_entsize * i);
 			err = add_symbol(head, str + sym->st_name, sym);
 			if (err == -1) {
-				err_dbg(0, err_fmt("add_symbol err"));
+				err_dbg(0, "add_symbol err");
 				goto err_out;
 			}
 		}
 		return 0;
 	} else if (file->elf_bits == 64) {
 		Elf64_Shdr *s = shsym;
-		start = s->sh_offset + d->buf;
+		start = s->sh_offset + rdata;
 		cnt = s->sh_size / s->sh_entsize;
 		for (size_t i = 0; i < cnt; i++) {
 			Elf64_Sym *sym = (void *)(start + s->sh_entsize * i);
 			err = add_symbol(head, str + sym->st_name, sym);
 			if (err == -1) {
-				err_dbg(0, err_fmt("add_symbol err"));
+				err_dbg(0, "add_symbol err");
 				goto err_out;
 			}
 		}
 		return 0;
 	}
 err_out:
-	list_comm_make_empty(head, NULL);
+	list_comm_cleanup(head, NULL);
 	return -1;
 }
 
@@ -134,8 +130,10 @@ static int parse_elf32(elf_file *file, char *buf)
 
 	file->elf_hdr_size = sizeof(Elf32_Ehdr);
 	file->elf_hdr = (Elf32_Ehdr *)malloc(file->elf_hdr_size);
-	if (!file->elf_hdr)
-		err_ret(0, -EINVAL, err_fmt("malloc err"));
+	if (!file->elf_hdr) {
+		err_dbg(0, "malloc err");
+		return -1;
+	}
 	memset(file->elf_hdr, 0, file->elf_hdr_size);
 	memcpy(file->elf_hdr, buf, file->elf_hdr_size);
 
@@ -145,11 +143,11 @@ static int parse_elf32(elf_file *file, char *buf)
 
 	/* some test before getting the program header */
 	if (tmp->e_ehsize != sizeof(Elf32_Ehdr))
-		err_dbg(0, err_fmt("elf header size abnormal"));
+		err_dbg(0, "elf header size abnormal");
 	if (tmp->e_phoff != sizeof(Elf32_Ehdr))
-		err_dbg(0, err_fmt("program header offset abnormal"));
+		err_dbg(0, "program header offset abnormal");
 	if (tmp->e_phentsize != sizeof(Elf32_Phdr))
-		err_dbg(0, err_fmt("program header entsize abnormal"));
+		err_dbg(0, "program header entsize abnormal");
 
 	file->elf_phdr_size = tmp->e_phnum * tmp->e_phentsize;
 	if (!file->elf_phdr_size)
@@ -157,7 +155,7 @@ static int parse_elf32(elf_file *file, char *buf)
 	else {
 		file->elf_phdr = (Elf32_Phdr *)malloc(file->elf_phdr_size);
 		if (!file->elf_phdr) {
-			err_dbg(0, err_fmt("malloc err"));
+			err_dbg(0, "malloc err");
 			goto err_free0;
 		}
 		memset(file->elf_phdr, 0, file->elf_phdr_size);
@@ -165,21 +163,21 @@ static int parse_elf32(elf_file *file, char *buf)
 	}
 
 	if (tmp->e_shentsize != sizeof(Elf32_Shdr))
-		err_dbg(0, err_fmt("section header entsize abnormal"));
+		err_dbg(0, "section header entsize abnormal");
 	file->elf_shdr_size = tmp->e_shentsize * tmp->e_shnum;
 	if (!file->elf_shdr_size)
 		file->elf_shdr = NULL;
 	else {
 		file->elf_shdr = (Elf32_Shdr *)malloc(file->elf_shdr_size);
 		if (!file->elf_shdr) {
-			err_dbg(0, err_fmt("malloc err"));
+			err_dbg(0, "malloc err");
 			goto err_free1;
 		}
 		memset(file->elf_shdr, 0, file->elf_shdr_size);
 		memcpy(file->elf_shdr, buf+tmp->e_shoff, file->elf_shdr_size);
 	}
 
-	buf_struct *d = regfile_get_rdata(file->file, NULL);
+	char *bin_rdata = bin_rdata(file->file);
 	Elf32_Ehdr *e = file->elf_hdr;
 	Elf32_Shdr *shstr, *strtab, *symtab, *dynstr, *dynsym;
 
@@ -189,33 +187,33 @@ static int parse_elf32(elf_file *file, char *buf)
 	 *	SHN_LORESERVE
 	 */
 	if (e->e_shstrndx == SHN_UNDEF) {
-		err_dbg(0, err_fmt("elf has no section name string table"));
+		err_dbg(0, "elf has no section name string table");
 		goto err_free2;
 	}
 	shstr = get_sh_by_id(file, e->e_shstrndx);
-	file->shstrtab = shstr->sh_offset + d->buf;
+	file->shstrtab = shstr->sh_offset + bin_rdata;
 
 	/*
 	 * INFO, get strtab
 	 */
 	strtab = get_sh_by_name(file, ".strtab");
 	if (!strtab) {
-		err_dbg(0, err_fmt("elf has no .strtab?"));
+		err_dbg(0, "elf has no .strtab?");
 		goto err_free2;
 	}
-	file->strtab = strtab->sh_offset + d->buf;
+	file->strtab = strtab->sh_offset + bin_rdata;
 
 	/*
 	 * INFO, get symtab
 	 */
 	symtab = get_sh_by_name(file, ".symtab");
 	if (!symtab) {
-		err_dbg(0, err_fmt("elf has no .symtab?"));
+		err_dbg(0, "elf has no .symtab?");
 		goto err_free2;
 	}
 	err = add_symbols(file, &file->syms, symtab, file->strtab);
 	if (err == -1) {
-		err_dbg(0, err_fmt("add_symbols err"));
+		err_dbg(0, "add_symbols err");
 		goto err_free2;
 	}
 
@@ -224,22 +222,22 @@ static int parse_elf32(elf_file *file, char *buf)
 	 */
 	dynstr = get_sh_by_name(file, ".dynstr");
 	if (!dynstr) {
-		err_dbg(0, err_fmt("elf has no .dynstr?"));
+		err_dbg(0, "elf has no .dynstr?");
 		goto do_syms;
 	}
-	file->dynstr = dynstr->sh_offset + d->buf;
+	file->dynstr = dynstr->sh_offset + bin_rdata;
 
 	/*
 	 * INFO: get dynsym
 	 */
 	dynsym = get_sh_by_name(file, ".dynsym");
 	if (!dynsym) {
-		err_dbg(0, err_fmt("elf has no .dynsym"));
+		err_dbg(0, "elf has no .dynsym");
 		goto err_free3;
 	}
 	err = add_symbols(file, &file->dynsyms, dynsym, file->dynstr);
 	if (err == -1) {
-		err_dbg(0, err_fmt("add_symbols err"));
+		err_dbg(0, "add_symbols err");
 		goto err_free3;
 	}
 
@@ -248,7 +246,7 @@ do_syms:
 	return 0;
 
 err_free3:
-	list_comm_make_empty(&file->syms, NULL);
+	list_comm_cleanup(&file->syms, NULL);
 err_free2:
 	free(file->elf_shdr);
 err_free1:
@@ -265,8 +263,10 @@ static int parse_elf64(elf_file *file, char *buf)
 
 	file->elf_hdr_size = sizeof(Elf64_Ehdr);
 	file->elf_hdr = (Elf64_Ehdr *)malloc(file->elf_hdr_size);
-	if (!file->elf_hdr)
-		err_ret(0, -EINVAL, err_fmt("malloc err"));
+	if (!file->elf_hdr) {
+		err_dbg(0, "malloc err");
+		return -1;
+	}
 	memset(file->elf_hdr, 0, file->elf_hdr_size);
 	memcpy(file->elf_hdr, buf, file->elf_hdr_size);
 
@@ -276,11 +276,11 @@ static int parse_elf64(elf_file *file, char *buf)
 
 	/* some test before getting the program header */
 	if (tmp->e_ehsize != sizeof(Elf64_Ehdr))
-		err_dbg(0, err_fmt("elf header size abnormal"));
+		err_dbg(0, "elf header size abnormal");
 	if (tmp->e_phoff != sizeof(Elf64_Ehdr))
-		err_dbg(0, err_fmt("program header offset abnormal"));
+		err_dbg(0, "program header offset abnormal");
 	if (tmp->e_phentsize != sizeof(Elf64_Phdr))
-		err_dbg(0, err_fmt("program header entsize abnormal"));
+		err_dbg(0, "program header entsize abnormal");
 
 	file->elf_phdr_size = tmp->e_phnum * tmp->e_phentsize;
 	if (!file->elf_phdr_size)
@@ -288,7 +288,7 @@ static int parse_elf64(elf_file *file, char *buf)
 	else {
 		file->elf_phdr = (Elf64_Phdr *)malloc(file->elf_phdr_size);
 		if (!file->elf_phdr) {
-			err_dbg(0, err_fmt("malloc err"));
+			err_dbg(0, "malloc err");
 			goto err_free0;
 		}
 		memset(file->elf_phdr, 0, file->elf_phdr_size);
@@ -296,21 +296,21 @@ static int parse_elf64(elf_file *file, char *buf)
 	}
 
 	if (tmp->e_shentsize != sizeof(Elf64_Shdr))
-		err_dbg(0, err_fmt("section header entsize abnormal"));
+		err_dbg(0, "section header entsize abnormal");
 	file->elf_shdr_size = tmp->e_shentsize * tmp->e_shnum;
 	if (!file->elf_shdr_size)
 		file->elf_shdr = NULL;
 	else {
 		file->elf_shdr = (Elf64_Shdr *)malloc(file->elf_shdr_size);
 		if (!file->elf_shdr) {
-			err_dbg(0, err_fmt("malloc err"));
+			err_dbg(0, "malloc err");
 			goto err_free1;
 		}
 		memset(file->elf_shdr, 0, file->elf_shdr_size);
 		memcpy(file->elf_shdr, buf+tmp->e_shoff, file->elf_shdr_size);
 	}
 
-	buf_struct *d = regfile_get_rdata(file->file, NULL);
+	char *bin_rdata = bin_rdata(file->file);
 	Elf64_Ehdr *e = file->elf_hdr;
 	Elf64_Shdr *shstr, *strtab, *symtab, *dynstr, *dynsym;
 
@@ -320,33 +320,33 @@ static int parse_elf64(elf_file *file, char *buf)
 	 *	SHN_LORESERVE
 	 */
 	if (e->e_shstrndx == SHN_UNDEF) {
-		err_dbg(0, err_fmt("elf has no section name string table"));
+		err_dbg(0, "elf has no section name string table");
 		goto err_free2;
 	}
 	shstr = get_sh_by_id(file, e->e_shstrndx);
-	file->shstrtab = shstr->sh_offset + d->buf;
+	file->shstrtab = shstr->sh_offset + bin_rdata;
 
 	/*
 	 * INFO, get strtab
 	 */
 	strtab = get_sh_by_name(file, ".strtab");
 	if (!strtab) {
-		err_dbg(0, err_fmt("elf has no .strtab?"));
+		err_dbg(0, "elf has no .strtab?");
 		goto err_free2;
 	}
-	file->strtab = strtab->sh_offset + d->buf;
+	file->strtab = strtab->sh_offset + bin_rdata;
 
 	/*
 	 * INFO, get symtab
 	 */
 	symtab = get_sh_by_name(file, ".symtab");
 	if (!symtab) {
-		err_dbg(0, err_fmt("elf has no .symtab?"));
+		err_dbg(0, "elf has no .symtab?");
 		goto err_free2;
 	}
 	err = add_symbols(file, &file->syms, symtab, file->strtab);
 	if (err == -1) {
-		err_dbg(0, err_fmt("add_symbols err"));
+		err_dbg(0, "add_symbols err");
 		goto err_free2;
 	}
 
@@ -355,22 +355,22 @@ static int parse_elf64(elf_file *file, char *buf)
 	 */
 	dynstr = get_sh_by_name(file, ".dynstr");
 	if (!dynstr) {
-		err_dbg(0, err_fmt("elf has no .dynstr?"));
+		err_dbg(0, "elf has no .dynstr?");
 		goto do_syms;
 	}
-	file->dynstr = dynstr->sh_offset + d->buf;
+	file->dynstr = dynstr->sh_offset + bin_rdata;
 
 	/*
 	 * INFO: get dynsym
 	 */
 	dynsym = get_sh_by_name(file, ".dynsym");
 	if (!dynsym) {
-		err_dbg(0, err_fmt("elf has no .dynsym"));
+		err_dbg(0, "elf has no .dynsym");
 		goto err_free3;
 	}
 	err = add_symbols(file, &file->dynsyms, dynsym, file->dynstr);
 	if (err == -1) {
-		err_dbg(0, err_fmt("add_symbols err"));
+		err_dbg(0, "add_symbols err");
 		goto err_free3;
 	}
 
@@ -379,7 +379,7 @@ do_syms:
 	return 0;
 
 err_free3:
-	list_comm_make_empty(&file->syms, NULL);
+	list_comm_cleanup(&file->syms, NULL);
 err_free2:
 	free(file->elf_shdr);
 err_free1:
@@ -395,40 +395,37 @@ elf_file *elf_parse(char *path, int flag)
 	elf_file *ef = (elf_file *)malloc(sizeof(elf_file));
 	if (!ef) {
 		err = -1;
-		err_dbg(0, err_fmt("malloc err"));
+		err_dbg(0, "malloc err");
 		goto ret;
 	}
 	memset(ef, 0, sizeof(elf_file));
-	list_comm_init(&ef->syms);
-	list_comm_init(&ef->dynsyms);
+	INIT_LIST_HEAD(&ef->syms);
+	INIT_LIST_HEAD(&ef->dynsyms);
 
-	ef->file = regfile_open(path, flag);
+	ef->file = regfile_open(REGFILE_T_BIN, path, flag);
 	if (!ef->file) {
-		err_dbg(1, err_fmt("regfile_open err"));
+		err_dbg(1, "regfile_open err");
 		err = -1;
 		goto free_ret;
 	}
 
 	err = regfile_readall(ef->file);
 	if (err == -1) {
-		err_dbg(1, err_fmt("regfile_readall err"));
+		err_dbg(1, "regfile_readall err");
 		err = -1;
 		goto free_ret2;
 	}
 
-	list_comm *rhead = (list_comm *)&ef->file->rdata;
-	list_comm *tmp = (list_comm *)(rhead->list_head.next);
-	buf_struct *tmp_buf = (buf_struct *)tmp->data;
-	char *buf = tmp_buf->buf;
+	char *buf = bin_rdata(ef->file);
 	if (!buf) {
-		err_dbg(0, err_fmt("file data err"));
+		err_dbg(0, "file data err");
 		err = -1;
 		goto free_ret2;
 	}
 
 	err = id_elf(buf);
 	if (err == -1) {
-		err_dbg(0, err_fmt("file format err"));
+		err_dbg(0, "file format err");
 		err = -1;
 		goto free_ret2;
 	}
@@ -458,8 +455,8 @@ int elf_cleanup(elf_file *file)
 	free(file->elf_hdr);
 	free(file->elf_phdr);
 	free(file->elf_shdr);
-	list_comm_make_empty(&file->syms, NULL);
-	list_comm_make_empty(&file->dynsyms, NULL);
+	list_comm_cleanup(&file->syms, NULL);
+	list_comm_cleanup(&file->dynsyms, NULL);
 	free(file);
 	return 0;
 }
@@ -471,7 +468,7 @@ int elf_get_syms(char *path, struct list_head *head, uint8_t *bits)
 {
 	elf_file *ef = elf_parse(path, O_RDONLY);
 	if (!ef) {
-		err_dbg(0, err_fmt("elf_parse err"));
+		err_dbg(0, "elf_parse err");
 		return -1;
 	}
 
@@ -479,9 +476,9 @@ int elf_get_syms(char *path, struct list_head *head, uint8_t *bits)
 	*bits = ef->elf_bits;
 	list_comm *tmp;
 	struct _elf_sym_full *_new;
-	list_for_each_entry(tmp, &ef->syms.list_head, list_head) {
+	list_for_each_entry(tmp, &ef->syms, list_head) {
 		struct _elf_sym *sym = (struct _elf_sym *)tmp->data;
-		_new = (struct _elf_sym_full *)malloc_s(sizeof(*_new));
+		_new = (struct _elf_sym_full *)malloc(sizeof(*_new));
 		_new->name = malloc(strlen(sym->name)+1);
 		memcpy(_new->name, sym->name, strlen(sym->name)+1);
 		if (*bits == 32)
@@ -495,9 +492,9 @@ int elf_get_syms(char *path, struct list_head *head, uint8_t *bits)
 		list_add_tail(&_new->sibling, head);
 	}
 
-	list_for_each_entry(tmp, &ef->dynsyms.list_head, list_head) {
+	list_for_each_entry(tmp, &ef->dynsyms, list_head) {
 		struct _elf_sym *sym = (struct _elf_sym *)tmp->data;
-		_new = (struct _elf_sym_full *)malloc_s(sizeof(*_new));
+		_new = (struct _elf_sym_full *)malloc(sizeof(*_new));
 		_new->name = malloc(strlen(sym->name)+1);
 		memcpy(_new->name, sym->name, strlen(sym->name)+1);
 		if (*bits == 32)
@@ -1227,7 +1224,7 @@ void dump_elf_sym(elf_file *file)
 {
 	struct _elf_sym *es;
 	list_comm *n;
-	list_for_each_entry(n, &file->syms.list_head, list_head) {
+	list_for_each_entry(n, &file->syms, list_head) {
 		es = (void *)n->data;
 		if (file->elf_bits == 32) {
 			Elf32_Sym *sym = es->data;
@@ -1246,7 +1243,7 @@ void dump_elf_dynsym(elf_file *file)
 {
 	struct _elf_sym *es;
 	list_comm *n;
-	list_for_each_entry(n, &file->dynsyms.list_head, list_head) {
+	list_for_each_entry(n, &file->dynsyms, list_head) {
 		es = (void *)n->data;
 		if (file->elf_bits == 32) {
 			Elf32_Sym *sym = es->data;
@@ -1280,7 +1277,7 @@ int elf_uselib(char *libname, unsigned long load_addr)
 	int err = 0;
 	elf_file *ef = elf_parse(libname, O_RDWR);
 	if (!ef) {
-		err_dbg(0, err_fmt("elf_pars err"));
+		err_dbg(0, "elf_pars err");
 		return -1;
 	}
 
@@ -1288,7 +1285,7 @@ int elf_uselib(char *libname, unsigned long load_addr)
 #ifdef __x86_64__
 	Elf64_Ehdr *eh = ef->elf_hdr;
 	if (!eh->e_phnum) {
-		err_dbg(0, err_fmt("%s has no program headers"));
+		err_dbg(0, "%s has no program headers");
 		elf_cleanup(ef);
 		return -1;
 	}
@@ -1305,15 +1302,15 @@ next_loop:
 		p = (Elf64_Phdr *)((void *)p + eh->e_phentsize);
 	}
 
-	err = regfile_lseek(ef->file, eh->e_phoff, SEEK_SET);
+	err = lseek(ef->file->fd, eh->e_phoff, SEEK_SET);
 	if (err < 0) {
-		err_dbg(0, err_fmt("regfile_lseek err"));
+		err_dbg(1, "lseek err");
 		elf_cleanup(ef);
 		return -1;
 	}
 	err = write(ef->file->fd, ef->elf_phdr, ef->elf_phdr_size);
 	if (err < 0) {
-		err_dbg(0, err_fmt("write err"));
+		err_dbg(0, "write err");
 		elf_cleanup(ef);
 		return -1;
 	}
@@ -1321,7 +1318,7 @@ next_loop:
 #elif defined(__i386__)
 	Elf32_Ehdr *eh = ef->elf_hdr;
 	if (!eh->e_phnum) {
-		err_dbg(0, err_fmt("%s has no program headers"));
+		err_dbg(0, "%s has no program headers");
 		elf_cleanup(ef);
 		return -1;
 	}
@@ -1338,27 +1335,27 @@ next_loop:
 		p = (Elf32_Phdr *)((void *)p + eh->e_phentsize);
 	}
 
-	err = regfile_lseek(ef->file, eh->e_phoff, SEEK_SET);
+	err = lseek(ef->file->fd, eh->e_phoff, SEEK_SET);
 	if (err < 0) {
-		err_dbg(0, err_fmt("regfile_lseek err"));
+		err_dbg(0, "lseek err");
 		elf_cleanup(ef);
 		return -1;
 	}
 	err = write(ef->file->fd, ef->elf_phdr, ef->elf_phdr_size);
 	if (err < 0) {
-		err_dbg(0, err_fmt("write err"));
+		err_dbg(0, "write err");
 		elf_cleanup(ef);
 		return -1;
 	}
 	elf_cleanup(ef);
 #else
-	err_msg(err_fmt("file format not recognized"));
+	err_msg("file format not recognized");
 	return -1;
 #endif
 
 	err = syscall(__NR_uselib, libname);
 	if (err == -1) {
-		err_dbg(1, err_fmt("uselib err"));
+		err_dbg(1, "uselib err");
 		return -1;
 	}
 	return 0;

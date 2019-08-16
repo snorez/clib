@@ -19,9 +19,9 @@
 
 sock *sock_open(int family, int socktype, int protocol)
 {
-	sock *ret = (sock *)malloc_s(sizeof(sock));
+	sock *ret = (sock *)malloc(sizeof(sock));
 	if (!ret) {
-		err_dbg(0, err_fmt("malloc err"));
+		err_dbg(0, "malloc err");
 		return NULL;
 	}
 
@@ -31,7 +31,7 @@ sock *sock_open(int family, int socktype, int protocol)
 
 	ret->sockfd = socket(family, socktype, protocol);
 	if (ret->sockfd == -1) {
-		err_dbg(1, err_fmt("socket err"));
+		err_dbg(1, "socket err");
 		goto free_ret;
 	}
 
@@ -46,8 +46,7 @@ free_ret:
 int sock_close(sock *file)
 {
 	if (!file) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
+		err_dbg(0, "arg check err");
 		return -1;
 	}
 
@@ -69,8 +68,7 @@ int sock_close(sock *file)
 int set_ailist_nr(sock *file)
 {
 	if (!file) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
+		err_dbg(0, "arg check err");
 		return -1;
 	}
 
@@ -81,8 +79,7 @@ int set_ailist_nr(sock *file)
 int get_ailist_nr(sock *file)
 {
 	if (!file) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
+		err_dbg(0, "arg check err");
 		return -1;
 	}
 
@@ -92,8 +89,7 @@ int get_ailist_nr(sock *file)
 int unset_ailist_nr(sock *file)
 {
 	if (!file) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
+		err_dbg(0, "arg check err");
 		return -1;
 	}
 
@@ -104,18 +100,17 @@ int unset_ailist_nr(sock *file)
 int s_getaddrinfo(sock *file, char *host, char *port, int flag)
 {
 	if (!file || !host|| !port) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
+		err_dbg(0, "arg check err");
 		return -1;
 	}
 
 	int which = get_ailist_nr(file);	/* should never be -1 */
 	if (!which && file->ailist) {
-		err_dbg(0, err_fmt("NOTICE: change target addrinfo"));
+		err_dbg(0, "NOTICE: change target addrinfo");
 		s_putaddrinfo(file);
 	}
 	if (which && file->bkp_ailist) {
-		err_dbg(0, err_fmt("NOTICE: change this addrinfo"));
+		err_dbg(0, "NOTICE: change this addrinfo");
 		s_putaddrinfo(file);
 	}
 
@@ -132,19 +127,19 @@ int s_getaddrinfo(sock *file, char *host, char *port, int flag)
 	else
 		err = getaddrinfo(host, port, &hint, &file->bkp_ailist);
 	if (err != 0) {
-		err_dbg(0, err_fmt("getaddrinfo err: %s"), gai_strerror(err));
+		err_dbg(0, "getaddrinfo err: %s", gai_strerror(err));
 		err = -1;
 		goto unlock;
 	}
 
-	char *host_tmp = (char *)malloc_s(strlen(host)+1);
+	char *host_tmp = (char *)malloc(strlen(host)+1);
 	if (!host_tmp) {
 		err = -1;
 		goto putaddrinfo;
 	}
 	memcpy(host_tmp, host, strlen(host));
 
-	char *port_tmp = (char *)malloc_s(strlen(port)+1);
+	char *port_tmp = (char *)malloc(strlen(port)+1);
 	if (!port_tmp) {
 		err = -1;
 		goto free;
@@ -172,7 +167,7 @@ unlock:
 void s_putaddrinfo(sock *file)
 {
 	if (!file || !file->ailist) {
-		err_dbg(0, err_fmt("arg check err"));
+		err_dbg(0, "arg check err");
 		return;
 	}
 
@@ -180,21 +175,20 @@ void s_putaddrinfo(sock *file)
 	if (!which) {
 		freeaddrinfo(file->ailist);
 		file->ailist = NULL;
-		free_s((void **)&file->host);
-		free_s((void **)&file->port);
+		free((void **)&file->host);
+		free((void **)&file->port);
 	} else {
 		freeaddrinfo(file->bkp_ailist);
 		file->bkp_ailist = NULL;
-		free_s((void **)&file->bkp_host);
-		free_s((void **)&file->bkp_port);
+		free((void **)&file->bkp_host);
+		free((void **)&file->bkp_port);
 	}
 }
 
 int sock_bind(sock *file)
 {
 	if (!file || !file->ailist) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
+		err_dbg(0, "arg check err");
 		return -1;
 	}
 
@@ -210,8 +204,7 @@ int sock_bind(sock *file)
 int sock_connect(sock *file)
 {
 	if (!file || !file->ailist) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
+		err_dbg(0, "arg check err");
 		return -1;
 	}
 	int err = connect(file->sockfd, file->ailist->ai_addr,
@@ -224,8 +217,7 @@ int sock_connect(sock *file)
 int sock_listen(sock *file, int how_many)
 {
 	if (!file) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
+		err_dbg(0, "arg check err");
 		return -1;
 	}
 	int err = listen(file->sockfd, how_many);
@@ -237,15 +229,13 @@ int sock_listen(sock *file, int how_many)
 cli_info *alloc_cli_info(sock *file)
 {
 	if (!file) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
+		err_dbg(0, "arg check err");
 		return NULL;
 	}
 
-	cli_info *ret = (cli_info *)malloc_s(sizeof(cli_info));
+	cli_info *ret = (cli_info *)malloc(sizeof(cli_info));
 	if (!ret) {
-		err_dbg(0, err_fmt("malloc err"));
-		errno = ENOMEM;
+		err_dbg(0, "malloc err");
 		return NULL;
 	}
 
@@ -254,8 +244,7 @@ cli_info *alloc_cli_info(sock *file)
 	else if (file->family == AF_INET6)
 		ret->len = INET6_ADDRSTRLEN;
 	if (!ret->len) {
-		err_dbg(0, err_fmt("sock family not support"));
-		errno = EINVAL;
+		err_dbg(0, "sock family not support");
 		free(ret);
 		return NULL;
 	}
@@ -265,7 +254,7 @@ cli_info *alloc_cli_info(sock *file)
 void free_cli_info(cli_info *client)
 {
 	if (!client) {
-		err_dbg(0, err_fmt("arg check err"));
+		err_dbg(0, "arg check err");
 		return;
 	}
 	free(client);
@@ -274,8 +263,7 @@ void free_cli_info(cli_info *client)
 sock *sock_accept(sock *file, cli_info *client)
 {
 	if (!file) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
+		err_dbg(0, "arg check err");
 		return NULL;
 	}
 
@@ -286,13 +274,13 @@ sock *sock_accept(sock *file, cli_info *client)
 	else
 		fd = accept(file->sockfd, &client->addr, &client->len);
 	if (fd == -1) {
-		err_dbg(1, err_fmt("accept err"));
+		err_dbg(1, "accept err");
 		return NULL;
 	}
 
-	sock *ret = (sock *)malloc_s(sizeof(sock));
+	sock *ret = (sock *)malloc(sizeof(sock));
 	if (!ret) {
-		err_dbg(0, err_fmt("malloc_s err"));
+		err_dbg(0, "malloc err");
 		goto close_ret;
 	}
 
@@ -313,7 +301,7 @@ void cli_info_print(cli_info *client)
 		err = inet_ntop(AF_INET, &in->sin_addr, data,
 				INET_ADDRSTRLEN);
 		if (!err) {
-			err_dbg(1, err_fmt("inet_ntop err"));
+			err_dbg(1, "inet_ntop err");
 			return;
 		}
 		printf("client addr: %s\n", data);
@@ -324,7 +312,7 @@ void cli_info_print(cli_info *client)
 		err = inet_ntop(AF_INET6, &in->sin6_addr, data,
 				INET6_ADDRSTRLEN);
 		if (!err) {
-			err_dbg(1, err_fmt("inet_ntop err"));
+			err_dbg(1, "inet_ntop err");
 			return;
 		}
 		printf("client addr: %s\n", data);
@@ -336,8 +324,7 @@ void cli_info_print(cli_info *client)
 long fork_wget(char *url, char *file_w)
 {
 	if (!url || !file_w) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
+		err_dbg(0, "arg check err");
 		return -1;
 	}
 
@@ -346,14 +333,14 @@ long fork_wget(char *url, char *file_w)
 	int flag = 0;
 	if (strstr(url, "&amp;")) {
 		flag = 1;
-		url_correct = del_str_all_fau(url, "amp;");
+		url_correct = del_str_all(url, "amp;");
 	} else
 		url_correct = url;
 
 	int child_pid;
 	int err;
 	if ((child_pid = fork()) < 0)
-		err_sys(err_fmt("fork error"));
+		err_sys("fork error");
 	else if (child_pid == 0) {
 		close(0);
 		close(1);
@@ -361,14 +348,14 @@ long fork_wget(char *url, char *file_w)
 		err = execl("/usr/bin/wget", "/usr/bin/wget", url_correct,
 			    "-O", file_w, "-t", "3", "-T", "9", NULL);
 		if (err == -1)
-			err_exit(1, err_fmt("execl error"));
+			err_exit(1, "execl error");
 		exit(0);
 	} else {
 		err = waitid(P_PID, child_pid, NULL, WEXITED);
 		if (flag == 1)
 			free(url_correct);
 		if (err == -1) {
-			err_sys(err_fmt("waitid error"));
+			err_sys("waitid error");
 			return -1;
 		}
 		return 0;
@@ -379,8 +366,7 @@ long fork_wget(char *url, char *file_w)
 static int set_sock_buf_len(sock *file)
 {
 	if (!file) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
+		err_dbg(0, "arg check err");
 		return -1;
 	}
 
@@ -389,14 +375,14 @@ static int set_sock_buf_len(sock *file)
 	int err = setsockopt(file->sockfd, SOL_SOCKET, SO_SNDBUF,
 			     &file->sock_buf_len, sizeof(int));
 	if (err == -1) {
-		err_dbg(1, err_fmt("setsockopt SO_SNDBUF err"));
+		err_dbg(1, "setsockopt SO_SNDBUF err");
 		return -1;
 	}
 
 	err = setsockopt(file->sockfd, SOL_SOCKET, SO_RCVBUF,
 			 &file->sock_buf_len, sizeof(int));
 	if (err == -1) {
-		err_dbg(1, err_fmt("setsockopt SO_RCVBUF err"));
+		err_dbg(1, "setsockopt SO_RCVBUF err");
 		return -1;
 	}
 
@@ -406,8 +392,7 @@ static int set_sock_buf_len(sock *file)
 static int get_sock_buf_len(sock *file)
 {
 	if (!file) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
+		err_dbg(0, "arg check err");
 		return -1;
 	}
 
@@ -417,26 +402,25 @@ static int get_sock_buf_len(sock *file)
 	int err = getsockopt(file->sockfd, SOL_SOCKET, SO_SNDBUF,
 			     (void *)&buflen[0], (void *)&len);
 	if (err == -1) {
-		err_dbg(1, err_fmt("getsockopt SO_SNDBUF err"));
+		err_dbg(1, "getsockopt SO_SNDBUF err");
 		return -1;
 	}
 
 	err = getsockopt(file->sockfd, SOL_SOCKET, SO_RCVBUF,
 			 (void *)&buflen[1], (void *)&len);
 	if (err == -1) {
-		err_dbg(1, err_fmt("getsockopt SO_RCVBUF err"));
+		err_dbg(1, "getsockopt SO_RCVBUF err");
 		return -1;
 	}
 
-	file->sock_buf_len = min_32(buflen[0], buflen[1])/2;
+	file->sock_buf_len = min_t(int, buflen[0], buflen[1])/2;
 	return 0;
 }
 
 int xchg_sock_buf_len0(sock *file)
 {
 	if (!file) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
+		err_dbg(0, "arg check err");
 		return -1;
 	}
 
@@ -456,17 +440,17 @@ int xchg_sock_buf_len0(sock *file)
 
 	err = send(file->sockfd, buf, strlen(buf), 0);
 	if (err == -1) {
-		err_dbg(1, err_fmt("send err"));
+		err_dbg(1, "send err");
 		goto unlock;
 	}
 
 	memset(buf, 0, 16);
 	err = recv(file->sockfd, buf, 16, 0);
 	if (err == -1) {
-		err_dbg(1, err_fmt("recv err"));
+		err_dbg(1, "recv err");
 		goto unlock;
 	} else if (err == 0) {
-		err_dbg(0, err_fmt("offline"));
+		err_dbg(0, "offline");
 		err = -1;
 		goto unlock;
 	}
@@ -483,8 +467,7 @@ unlock:
 int xchg_sock_buf_len1(sock *file)
 {
 	if (!file) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
+		err_dbg(0, "arg check err");
 		return -1;
 	}
 
@@ -503,10 +486,10 @@ int xchg_sock_buf_len1(sock *file)
 
 	err = recv(file->sockfd, buf, 16, 0);
 	if (err == -1) {
-		err_dbg(1, err_fmt("recv err"));
+		err_dbg(1, "recv err");
 		goto unlock;
 	} else if (err == 0) {
-		err_dbg(0, err_fmt("offline"));
+		err_dbg(0, "offline");
 		err = -1;
 		goto unlock;
 	}
@@ -519,7 +502,7 @@ int xchg_sock_buf_len1(sock *file)
 
 	err = send(file->sockfd, buf, strlen(buf), 0);
 	if (err == -1) {
-		err_dbg(1, err_fmt("send err"));
+		err_dbg(1, "send err");
 		goto unlock;
 	}
 	err = 0;
@@ -537,29 +520,26 @@ static int check_sock_buflen(sock *file)
 int sock_send(sock *file, void *msg, size_t len, int flag)
 {
 	if (!file) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
+		err_dbg(0, "arg check err");
 		return -1;
 	}
 
 	int ret = 0;
 	if (file->offline) {
-		err_dbg(0, err_fmt("offline now"));
+		err_dbg(0, "offline now");
 		goto unlock;
 	}
 
 	if (!check_sock_buflen(file)) {
-		err_dbg(0, err_fmt("should check your sock_buf_len"));
-		errno = EINVAL;
+		err_dbg(0, "should check your sock_buf_len");
 		goto unlock;
 	}
 
 	int msg_per_len = file->sock_buf_len-sizeof(pkg_ctl);
 	int snd_cnt = len / msg_per_len + 1;
-	sock_pkg *pack = (sock_pkg *)malloc_s(file->sock_buf_len);
+	sock_pkg *pack = (sock_pkg *)malloc(file->sock_buf_len);
 	if (!pack) {
-		err_dbg(0, err_fmt("malloc err"));
-		errno = ENOMEM;
+		err_dbg(0, "malloc err");
 		goto unlock;
 	}
 	char *tmp_pos = (char *)pack;
@@ -567,7 +547,7 @@ int sock_send(sock *file, void *msg, size_t len, int flag)
 	struct timeval tv;
 	int err = gettimeofday(&tv, NULL);
 	if (err == -1) {
-		err_dbg(1, err_fmt("gettimeofday err"));
+		err_dbg(1, "gettimeofday err");
 		goto free_ret;
 	}
 	sprintf(tmp_pos+strlen(tmp_pos), "%016lx", tv.tv_sec+tv.tv_usec);
@@ -577,11 +557,11 @@ int sock_send(sock *file, void *msg, size_t len, int flag)
 		char *src_pos = msg+i*msg_per_len;
 		memset(tmp_pos+24, 0, file->sock_buf_len-24);
 		sprintf(tmp_pos+24, "%08x", i);
-		memcpy(tmp_pos+32,src_pos,min_32(strlen(src_pos),msg_per_len));
+		memcpy(tmp_pos+32,src_pos,min_t(size_t,strlen(src_pos),msg_per_len));
 resend:
 		err = send(file->sockfd, pack, file->sock_buf_len, 0);
 		if (err == -1) {
-			err_dbg(1, err_fmt("send err"));
+			err_dbg(1, "send err");
 			if ((errno == ECONNRESET))
 				file->offline = 1;
 			else if (errno == EINTR)
@@ -606,20 +586,18 @@ unlock:
 int sock_recv(sock *file, void *msg, size_t len, int flag)
 {
 	if (!file) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
+		err_dbg(0, "arg check err");
 		return -1;
 	}
 
 	int ret = 0;
 	if (file->offline) {
-		err_dbg(0, err_fmt("offline now"));
+		err_dbg(0, "offline now");
 		goto unlock;
 	}
 
 	if (!check_sock_buflen(file)) {
-		err_dbg(0, err_fmt("should check your sock_buf_len"));
-		errno = EINVAL;
+		err_dbg(0, "should check your sock_buf_len");
 		goto unlock;
 	}
 
@@ -629,10 +607,9 @@ int sock_recv(sock *file, void *msg, size_t len, int flag)
 	 * send already should be dropped
 	 */
 	int msg_per_len = file->sock_buf_len-sizeof(pkg_ctl);
-	sock_pkg *pack = (sock_pkg *)malloc_s(file->sock_buf_len);
+	sock_pkg *pack = (sock_pkg *)malloc(file->sock_buf_len);
 	if (!pack) {
-		err_dbg(0, err_fmt("malloc err"));
-		errno = ENOMEM;
+		err_dbg(0, "malloc err");
 		goto unlock;
 	}
 	char *tmp_pos = (char *)pack;
@@ -647,7 +624,7 @@ int sock_recv(sock *file, void *msg, size_t len, int flag)
 		err = recv(file->sockfd, tmp_pos, file->sock_buf_len,
 			   MSG_PEEK);
 		if ((err == -1) || (err == 0)) {
-			err_dbg(1, err_fmt("recv MSG_PEEK err"));
+			err_dbg(1, "recv MSG_PEEK err");
 			goto free_ret;
 		}
 		if (tag[0] == '\0')
@@ -661,7 +638,7 @@ int sock_recv(sock *file, void *msg, size_t len, int flag)
 rerecv:
 		err = recv(file->sockfd,tmp_pos,file->sock_buf_len,MSG_WAITALL);
 		if (err == -1) {
-			err_dbg(1, err_fmt("recv err"));
+			err_dbg(1, "recv err");
 			if (errno == EINTR)
 				goto rerecv;
 			goto free_ret;
@@ -675,13 +652,12 @@ rerecv:
 			recv_cnt = msg_size / msg_per_len + 1;
 		}
 		if (msg_size > len) {
-			err_dbg(0, err_fmt("msg space not enough"));
-			errno = EINVAL;
+			err_dbg(0, "msg space not enough");
 			goto free_ret;
 		}
 		memcpy((char *)msg+msg_per_len*hex2int(pack->control.index),
 		       tmp_pos+sizeof(pkg_ctl),
-		       min_32(msg_per_len, strlen(tmp_pos)));
+		       min_t(size_t, msg_per_len, strlen(tmp_pos)));
 		recv_cnt--;
 		if (!recv_cnt)
 			break;

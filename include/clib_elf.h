@@ -20,7 +20,7 @@
 
 #include "../include/clib_utils.h"
 #include "../include/clib_error.h"
-#include "../include/clib_string.h"
+#include "../include/clib_buf.h"
 #include "../include/clib_list.h"
 #include "../include/clib_file.h"
 #include <elf.h>
@@ -49,18 +49,22 @@ typedef struct _elf_file {
 	uint8_t		elf_bits;
 	uint16_t	elf_machine;
 	uint64_t	elf_text_entry;
+
 	void		*elf_hdr;
 	uint32_t	elf_hdr_size;
+
 	void		*elf_phdr;
 	uint32_t	elf_phdr_size;
+
 	void		*elf_shdr;
 	uint32_t	elf_shdr_size;
 
 	void		*shstrtab;
 	void		*strtab;		/* for strtab */
-	list_comm	syms;			/* struct _elf_sym nodes */
+
+	struct list_head syms;			/* struct _elf_sym nodes */
 	void		*dynstr;
-	list_comm	dynsyms;		/* struct _elf_sym nodes */
+	struct list_head dynsyms;		/* struct _elf_sym nodes */
 } elf_file;
 
 extern elf_file *elf_parse(char *path, int flag);

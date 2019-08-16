@@ -19,14 +19,15 @@
 
 logfile *logfile_open(char *path)
 {
-	return regfile_open(path, O_WRONLY|O_APPEND|O_CREAT, S_IRUSR|S_IWUSR);
+	return regfile_open(REGFILE_T_TXT, path,
+				O_WRONLY|O_APPEND|O_CREAT,
+				S_IRUSR|S_IWUSR);
 }
 
 int logfile_write(logfile *file, logfile_level level, char *fmt, ...)
 {
 	if (!file) {
-		err_dbg(0, err_fmt("arg check err"));
-		errno = EINVAL;
+		err_dbg(0, "arg check err");
 		return -1;
 	}
 

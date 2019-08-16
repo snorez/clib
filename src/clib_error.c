@@ -61,7 +61,7 @@ static void err_common(int has_errno, int error, const char *fmt,
 	fflush(NULL);
 }
 
-void err_msg(const char *fmt, ...)
+void _err_msg(const char *fmt, ...)
 {
 	va_list ap;
 
@@ -70,7 +70,7 @@ void err_msg(const char *fmt, ...)
 	va_end(ap);
 }
 
-void err_sys(const char *fmt, ...)
+void _err_sys(const char *fmt, ...)
 {
 	va_list ap;
 
@@ -79,7 +79,7 @@ void err_sys(const char *fmt, ...)
 	va_end(ap);
 }
 
-void err_dbg(int has_errno, const char *fmt, ...)
+void _err_dbg(int has_errno, const char *fmt, ...)
 {
 	if (dbg_mode) {
 		va_list ap;
@@ -92,7 +92,7 @@ void err_dbg(int has_errno, const char *fmt, ...)
 	}
 }
 
-void err_dbg1(int errval, const char *fmt, ...)
+void _err_dbg1(int errval, const char *fmt, ...)
 {
 	if (dbg_mode) {
 		va_list ap;
@@ -103,7 +103,7 @@ void err_dbg1(int errval, const char *fmt, ...)
 	}
 }
 
-void err_dump(const char *fmt, ...)
+void _err_dump(const char *fmt, ...)
 {
 	va_list ap;
 
@@ -115,7 +115,7 @@ void err_dump(const char *fmt, ...)
 	exit(1);
 }
 
-void err_exit(int flag_err, const char *fmt, ...)
+void _err_exit(int flag_err, const char *fmt, ...)
 {
 	va_list ap;
 
@@ -123,7 +123,7 @@ void err_exit(int flag_err, const char *fmt, ...)
 	err_common(flag_err, flag_err ? errno : 0, fmt, ap);
 	va_end(ap);
 
-	exit(0);
+	exit(flag_err ? 1 : 0);
 }
 
 void set_dbg_mode(int val)
@@ -133,7 +133,7 @@ void set_dbg_mode(int val)
 
 int get_dbg_mode(void)
 {
-	return !!dbg_mode;
+	return dbg_mode;
 }
 
 void err_color_on(void)

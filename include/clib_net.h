@@ -20,7 +20,7 @@
 
 #include "../include/clib_utils.h"
 #include "../include/clib_error.h"
-#include "../include/clib_string.h"
+#include "../include/clib_buf.h"
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>

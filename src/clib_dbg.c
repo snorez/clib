@@ -373,7 +373,7 @@ void show_bt(void)
 	ucontext_t uc;
 	int err = getcontext(&uc);
 	if (err == -1) {
-		err_dbg(1, err_fmt("getcontext err"));
+		err_dbg(1, "getcontext err");
 		return;
 	}
 
