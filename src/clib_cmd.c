@@ -66,18 +66,8 @@ static char *clib_generator(const char *text, int state)
 	return NULL;
 }
 
-static void test_func(void)
-{
-	int x;
-	if (x > 1) {
-		fprintf(stderr, "hello world\n");
-	}
-}
-
 static char **clib_completion(const char *text, int start, int end)
 {
-	if (!text)
-		test_func();
 	char **matches = (char **)NULL;
 
 	if (start == 0)
