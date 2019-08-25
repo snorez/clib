@@ -1106,12 +1106,14 @@ int str_split(struct list_head *head, const char *src, const char *key)
 	poe = strstr(pob, key);
 	while (poe) {
 		*poe = '\0';
-		err = buf_struct_new_append(head,pob,strlen(pob));
-		if (err) {
-			err_dbg(0, "buf_struct_new_append err");
-			buf_struct_list_cleanup(head);
-			free(src_tmp);
-			return -1;
+		if (poe > pob) {
+			err = buf_struct_new_append(head,pob,strlen(pob));
+			if (err) {
+				err_dbg(0, "buf_struct_new_append err");
+				buf_struct_list_cleanup(head);
+				free(src_tmp);
+				return -1;
+			}
 		}
 		pob = poe + strlen(key);
 		poe = strstr(pob, key);
