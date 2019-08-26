@@ -70,7 +70,7 @@ extern int path_exists(const char *path);
 extern int clib_open(const char *pathname, int flags, ...);
 extern ssize_t clib_read(int fd, void *buf, size_t count);
 extern ssize_t clib_write(int fd, void *buf, size_t count);
-extern char *clib_loadfile(const char *path);
+extern char *clib_loadfile(const char *path, size_t *len);
 
 extern regfile *regfile_open(int type, const char *path, int flag, ...);
 extern int regfile_close(regfile *);

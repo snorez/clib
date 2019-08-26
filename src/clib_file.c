@@ -105,7 +105,7 @@ ssize_t clib_write(int fd, void *buf, size_t count)
 	return count;
 }
 
-char *clib_loadfile(const char *path)
+char *clib_loadfile(const char *path, size_t *len)
 {
 	int fd = -1, err = 0;
 	struct stat st;
@@ -136,6 +136,8 @@ char *clib_loadfile(const char *path)
 	}
 
 	close(fd);
+	if (len)
+		*len = st.st_size;
 	return b;
 
 free_out:
