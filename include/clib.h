@@ -34,7 +34,7 @@
 #include "../include/clib_module.h"
 #include "../include/clib_elf.h"
 #include "../include/clib_pe.h"
-#include "../include/clib_cmd.h"
+#include "../include/clib_ui.h"
 #include "../include/clib_mm.h"
 #include "../include/clib_print.h"
 #include "../include/clib_rwpool.h"

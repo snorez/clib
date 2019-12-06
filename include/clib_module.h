@@ -20,7 +20,7 @@
 
 #include "../include/clib_utils.h"
 #include "../include/clib_list.h"
-#include "../include/clib_cmd.h"
+#include "../include/clib_ui.h"
 #include <sys/types.h>
 #include <dlfcn.h>
 #include <dirent.h>

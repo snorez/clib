@@ -1,5 +1,5 @@
 /*
- * for programs have a command line, command line autocomplete.
+ * for user interaction: command autocomplete and command execution
  * This should NOT use in multi-thread process
  *
  * Copyright (C) 2018  zerons
@@ -17,9 +17,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "../include/clib_cmd.h"
+#include "../include/clib_ui.h"
 
-static LIST_HEAD(ac_head);
+/* use [0] as the default ui_env */
+static struct clib_ui_env ui_env[CLIB_UI_MAX_DEPTH] = {
+	[0] = {LIST_HEAD_INIT(ui_env[0].cmd_head),
+		LIST_HEAD_INIT(ui_env[0].ac_head)},
+};
+static int ui_idx = 0;
 
 static char *xdupstr(char *str)
 {
@@ -51,7 +56,7 @@ static char *clib_generator(const char *text, int state)
 		len = strlen(text);
 	}
 
-	list_for_each_entry(node, &ac_head, list_head) {
+	list_for_each_entry(node, &ui_env[ui_idx].ac_head, list_head) {
 		if ((!skip_done) && (i < idx)) {
 			i++;
 			continue;
@@ -76,9 +81,25 @@ static char **clib_completion(const char *text, int start, int end)
 	return matches;
 }
 
-void clib_set_autocomplete(void)
+int clib_ui_begin(void)
 {
-	rl_attempted_completion_function = clib_completion;
+	ui_idx++;
+	if (ui_idx >= CLIB_UI_MAX_DEPTH) {
+		err_dbg(0, "ui_idx too many");
+		ui_idx--;
+		return -1;
+	}
+
+	INIT_LIST_HEAD(&ui_env[ui_idx].cmd_head);
+	INIT_LIST_HEAD(&ui_env[ui_idx].ac_head);
+	return 0;
+}
+
+void clib_ui_end(void)
+{
+	if (!ui_idx)
+		return;
+	ui_idx--;
 }
 
 static sigjmp_buf rl_jmp_env;
@@ -88,10 +109,11 @@ static void rl_sigint(int signo)
 	siglongjmp(rl_jmp_env, 1);
 }
 
-char *clib_readline_add_history(char *prompt)
+char *clib_readline(char *prompt)
 {
 	char *ret;
 	if (unlikely(!sigint_is_set)) {
+		rl_attempted_completion_function = clib_completion;
 		sigint_is_set = 1;
 		signal(SIGINT, rl_sigint);
 	}
@@ -113,47 +135,9 @@ redo:
 	return ret;
 }
 
-char *clib_readline(char *prompt)
-{
-	char *ret;
-	ret = readline(prompt);
-	return ret;
-}
-
-int clib_ac_add(char *buf)
-{
-	list_comm *node;
-	list_for_each_entry(node, &ac_head, list_head) {
-		buf_struct *s = (buf_struct *)node->data;
-		if (!strcmp(s->buf, buf))
-			return 0;
-	}
-
-	int err = buf_struct_new_append((void *)&ac_head, buf, strlen(buf));
-	return err;
-}
-
-void clib_ac_del(char *buf)
-{
-	list_comm *node, *next;
-	list_for_each_entry_safe(node, next, &ac_head, list_head) {
-		buf_struct *s = (buf_struct *)node->data;
-		if (strcmp(s->buf, buf))
-			continue;
-		list_del(&node->list_head);
-		free(s->buf);
-		free(node);
-		return;
-	}
-}
-
-void clib_ac_cleanup(void)
-{
-	buf_struct_list_cleanup((void *)&ac_head);
-}
-
-static LIST_HEAD(cmd_head);
-static struct clib_cmd *clib_cmd_new(char *name, clib_cmd_cb cb, clib_cmd_usage usage)
+static struct clib_cmd *clib_cmd_new(char *name,
+					clib_cmd_cb cb,
+					clib_cmd_usage usage)
 {
 	struct clib_cmd *_new;
 	_new = malloc(sizeof(*_new));
@@ -169,20 +153,11 @@ static struct clib_cmd *clib_cmd_new(char *name, clib_cmd_cb cb, clib_cmd_usage 
 		goto err_out0;
 	}
 	memcpy(_new->cmd, name, strlen(name)+1);
-
-	int err = clib_ac_add(_new->cmd);
-	if (err) {
-		err_dbg(0, "clib_ac_add err");
-		goto err_out1;
-	}
-
 	INIT_LIST_HEAD(&_new->sibling);
 	_new->cb = cb;
 	_new->usage = usage;
 	return _new;
 
-err_out1:
-	free(_new->cmd);
 err_out0:
 	free(_new);
 	return NULL;
@@ -190,7 +165,6 @@ err_out0:
 
 static void clib_cmd_free(struct clib_cmd *c)
 {
-	clib_ac_del(c->cmd);
 	free(c->cmd);
 	free(c);
 }
@@ -199,7 +173,7 @@ struct clib_cmd *clib_cmd_find(char *name)
 {
 	struct clib_cmd *tmp;
 
-	list_for_each_entry(tmp, &cmd_head, sibling) {
+	list_for_each_entry(tmp, &ui_env[ui_idx].cmd_head, sibling) {
 		if (!strcmp(name, tmp->cmd))
 			return tmp;
 	}
@@ -226,7 +200,7 @@ long clib_cmd_add(char *name, clib_cmd_cb cb, clib_cmd_usage usage)
 		return -1;
 	}
 
-	list_add_tail(&newcmd->sibling, &cmd_head);
+	list_add_tail(&newcmd->sibling, &ui_env[ui_idx].cmd_head);
 	fprintf(stdout, "NEW CMD: %s\n", newcmd->cmd);
 	if (newcmd->usage) {
 		fprintf(stdout, "USAGE:\n");
@@ -255,10 +229,11 @@ void clib_cmd_del(char *name)
 void clib_cmd_cleanup(void)
 {
 	struct clib_cmd *cur, *next;
-	list_for_each_entry_safe(cur, next, &cmd_head, sibling) {
+	list_for_each_entry_safe(cur, next, &ui_env[ui_idx].cmd_head, sibling) {
 		list_del_init(&cur->sibling);
 		clib_cmd_free(cur);
 	}
+	BUG_ON(!list_empty(&ui_env[ui_idx].cmd_head));
 }
 
 long clib_cmd_exec(char *cmd, int argc, char **argv)
@@ -289,7 +264,7 @@ void clib_cmd_usages(void)
 	struct clib_cmd *tmp;
 
 	fprintf(stdout, "================== USAGE INFO ==================\n");
-	list_for_each_entry(tmp, &cmd_head, sibling) {
+	list_for_each_entry(tmp, &ui_env[ui_idx].cmd_head, sibling) {
 		fprintf(stdout, "%s\n", tmp->cmd);
 		if (tmp->usage)
 			tmp->usage();
@@ -326,4 +301,71 @@ long clib_cmd_getarg(char *buf, size_t buflen, int *argc, char **argv, int argv_
 		pos++;
 	}
 	return 0;
+}
+
+int clib_ac_add(char *str)
+{
+	list_comm *node;
+	list_for_each_entry(node, &ui_env[ui_idx].ac_head, list_head) {
+		buf_struct *s = (buf_struct *)node->data;
+		if (!strcmp(s->buf, str))
+			return 0;
+	}
+
+	int err = buf_struct_new_append((void *)&ui_env[ui_idx].ac_head,
+					str, strlen(str));
+	return err;
+}
+
+void clib_ac_del(char *str)
+{
+	list_comm *node, *next;
+	list_for_each_entry_safe(node, next,
+				&ui_env[ui_idx].ac_head, list_head) {
+		buf_struct *s = (buf_struct *)node->data;
+		if (strcmp(s->buf, str))
+			continue;
+		list_del(&node->list_head);
+		free(s->buf);
+		free(node);
+		return;
+	}
+}
+
+void clib_ac_cleanup(void)
+{
+	buf_struct_list_cleanup((void *)&ui_env[ui_idx].ac_head);
+	BUG_ON(!list_empty(&ui_env[ui_idx].ac_head));
+}
+
+long clib_cmd_ac_add(char *name, clib_cmd_cb cb, clib_cmd_usage usage)
+{
+	long err;
+
+	err = clib_cmd_add(name, cb, usage);
+	if (err == -1) {
+		err_dbg(0, "clib_cmd_add err");
+		return -1;
+	}
+
+	err = clib_ac_add(name);
+	if (err == -1) {
+		err_dbg(0, "clib_ac_add err");
+		clib_cmd_del(name);
+		return -1;
+	}
+
+	return 0;
+}
+
+void clib_cmd_ac_del(char *name)
+{
+	clib_cmd_del(name);
+	clib_ac_del(name);
+}
+
+void clib_cmd_ac_cleanup(void)
+{
+	clib_cmd_cleanup();
+	clib_ac_cleanup();
 }

@@ -30,6 +30,21 @@
 
 DECL_BEGIN
 
+#define	CLIB_UI_MAX_DEPTH	2
+struct clib_ui_env {
+	struct list_head	cmd_head;
+	struct list_head	ac_head;
+};
+
+extern int clib_ui_begin(void);
+extern void clib_ui_end(void);
+extern char *clib_readline(char *prompt);
+
+/* ac: auto complete */
+extern int clib_ac_add(char *str);
+extern void clib_ac_del(char *str);
+extern void clib_ac_cleanup(void);
+
 typedef long (*clib_cmd_cb)(int argc, char **argv);
 typedef void (*clib_cmd_usage)(void);
 struct clib_cmd {
@@ -39,15 +54,6 @@ struct clib_cmd {
 	clib_cmd_usage		usage;
 };
 
-extern void clib_set_autocomplete(void);
-extern char *clib_readline_add_history(char *prompt);
-extern char *clib_readline(char *prompt);
-
-/* ac: auto complete */
-extern int clib_ac_add(char *buf);
-extern void clib_ac_del(char *buf);
-extern void clib_ac_cleanup(void);
-
 extern struct clib_cmd *clib_cmd_find(char *name);
 extern long clib_cmd_add(char *name, clib_cmd_cb cb, clib_cmd_usage usage);
 extern void clib_cmd_del(char *name);
@@ -56,6 +62,10 @@ extern long clib_cmd_exec(char *cmd, int argc, char **argv);
 extern void clib_cmd_usages(void);
 extern long clib_cmd_getarg(char *buf, size_t buflen,
 				int *argc, char **argv, int argv_cnt);
+
+extern long clib_cmd_ac_add(char *name, clib_cmd_cb cb, clib_cmd_usage usage);
+extern void clib_cmd_ac_del(char *name);
+extern void clib_cmd_ac_cleanup(void);
 
 DECL_END
 
