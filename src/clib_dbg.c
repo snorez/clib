@@ -353,27 +353,31 @@ static void self_sigact(int signo, siginfo_t *si, void *arg)
 void set_eh(struct eh_list *new_eh)
 {
 	if (!list_empty(&eh_head)) {
-		list_add_tail(&new_eh->sibling, &eh_head);
+		if (new_eh)
+			list_add_tail(&new_eh->sibling, &eh_head);
 		return;
 	}
 
-	memset((char *)&new_act, 0, sizeof(struct sigaction));
-	memset((char *)&old_act, 0, sizeof(struct sigaction));
+	if (new_act.sa_sigaction != self_sigact) {
+		memset((char *)&new_act, 0, sizeof(struct sigaction));
+		memset((char *)&old_act, 0, sizeof(struct sigaction));
 
-	new_act.sa_flags = SA_SIGINFO | SA_INTERRUPT;
-	sigemptyset(&new_act.sa_mask);
-	sigaddset(&new_act.sa_mask, SIGILL);
-	sigaddset(&new_act.sa_mask, SIGFPE);
-	sigaddset(&new_act.sa_mask, SIGSEGV);
-	sigaddset(&new_act.sa_mask, SIGBUS);
+		new_act.sa_flags = SA_SIGINFO | SA_INTERRUPT;
+		sigemptyset(&new_act.sa_mask);
+		sigaddset(&new_act.sa_mask, SIGILL);
+		sigaddset(&new_act.sa_mask, SIGFPE);
+		sigaddset(&new_act.sa_mask, SIGSEGV);
+		sigaddset(&new_act.sa_mask, SIGBUS);
 
-	new_act.sa_sigaction = self_sigact;
-	sigaction(SIGILL, &new_act, &old_act);
-	sigaction(SIGFPE, &new_act, &old_act);
-	sigaction(SIGSEGV, &new_act, &old_act);
-	sigaction(SIGBUS, &new_act, &old_act);
+		new_act.sa_sigaction = self_sigact;
+		sigaction(SIGILL, &new_act, &old_act);
+		sigaction(SIGFPE, &new_act, &old_act);
+		sigaction(SIGSEGV, &new_act, &old_act);
+		sigaction(SIGBUS, &new_act, &old_act);
+	}
 
-	list_add_tail(&new_eh->sibling, &eh_head);
+	if (new_eh)
+		list_add_tail(&new_eh->sibling, &eh_head);
 }
 
 void show_bt(void)
