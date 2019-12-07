@@ -201,11 +201,13 @@ long clib_cmd_add(char *name, clib_cmd_cb cb, clib_cmd_usage usage)
 	}
 
 	list_add_tail(&newcmd->sibling, &ui_env[ui_idx].cmd_head);
+#if 0
 	fprintf(stdout, "NEW CMD: %s\n", newcmd->cmd);
 	if (newcmd->usage) {
 		fprintf(stdout, "USAGE:\n");
 		newcmd->usage();
 	}
+#endif
 
 	return 0;
 }

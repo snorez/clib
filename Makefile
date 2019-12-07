@@ -24,7 +24,7 @@ vpath %.1 $(TMP)/
 
 CC_DBG=-g -O3
 CC = gcc
-EXTRA_CFLAGS=
+EXTRA_CFLAGS=-fno-omit-frame-pointer
 CC_FLAGS=-Wall -std=gnu11 -m$(ARCH) -D_FILE_OFFSET_BITS=64 $(CC_DBG) $(EXTRA_CFLAGS)
 CC_OPT_static = $(CC) $(CC_FLAGS) -rdynamic -DHAS_CAPSTONE
 CC_OPT_dynamic = $(CC) $(CC_FLAGS) -rdynamic -DHAS_CAPSTONE

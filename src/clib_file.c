@@ -518,42 +518,63 @@ unlock:
 
 #define	COPY_BLKSZ	(256*1024*1024)
 static char buf[COPY_BLKSZ];
-int clib_copy_file(char *path, char *bkp, unsigned long bytes)
+/*
+ * copy path[start:end] to bkp
+ * if !end, take end as the last of the path
+ */
+int clib_split_file(char *path, char *bkp,
+			unsigned long start, unsigned long end)
 {
 	char *infile = path;
 	char *outfile = bkp;
+	int fd0 = -1, fd1 = -1;
+	int err = -1;
+	unsigned long bytes = 0;
+	unsigned long total_bytes = 0;
+	unsigned long left = 0;
 
-	int fd0 = open(infile, O_RDONLY);
+	fd0 = open(infile, O_RDONLY);
 	if (fd0 == -1) {
 		err_dbg(1, "open err");
 		return -1;
 	}
 
-	int fd1 = open(outfile, O_WRONLY | O_CREAT | O_TRUNC | O_DSYNC,
+	fd1 = open(outfile, O_WRONLY | O_CREAT | O_TRUNC | O_DSYNC,
 			S_IRUSR | S_IWUSR);
 	if (fd1 == -1) {
 		err_dbg(1, "open err");
-		close(fd0);
-		return -1;
+		goto err0;
 	}
 
 	struct stat st;
-	int err = fstat(fd0, &st);
+	err = fstat(fd0, &st);
 	if (err == -1) {
 		err_dbg(1, "fstat err");
-		close(fd0);
-		close(fd1);
-		return -1;
+		goto err1;
+	}
+	total_bytes = st.st_size;
+
+	if (start > total_bytes)
+		start = total_bytes;
+	if ((!end) || (end > total_bytes))
+		end = total_bytes;
+	if (end <= start) {
+		err_dbg(0, "end must larger than start");
+		goto err1;
+	}
+	bytes = end - start;
+
+	err = lseek(fd0, start, SEEK_SET);
+	if (err == -1) {
+		err_dbg(1, "lseek err");
+		goto err1;
 	}
 
-	unsigned long total_bytes = st.st_size;
-	if (!bytes)
-		bytes = total_bytes;
-	fprintf(stdout, "%s: prepare copy %ld bytes of %ld\n",
-			__FUNCTION__, bytes, total_bytes);
+	fprintf(stdout, "%s: prepare copy %ld bytes from %s[%ld:%ld] to %s\n",
+			__FUNCTION__, bytes, infile, start, end, outfile);
 	fflush(stdout);
 
-	unsigned long left = bytes;
+	left = bytes;
 	while (1) {
 		fprintf(stdout, "\r%s: process %.3f%%", __FUNCTION__,
 				(double)(bytes-left) * 100 / bytes);
@@ -561,6 +582,7 @@ int clib_copy_file(char *path, char *bkp, unsigned long bytes)
 
 		if (!left)
 			break;
+
 		unsigned long this_copy = left;
 		if (this_copy > COPY_BLKSZ)
 			this_copy = COPY_BLKSZ;
@@ -568,23 +590,29 @@ int clib_copy_file(char *path, char *bkp, unsigned long bytes)
 		err = read(fd0, buf, this_copy);
 		if (err != this_copy) {
 			err_dbg(1, "read err");
-			close(fd0);
-			close(fd1);
-			return -1;
+			goto err1;
 		}
 
 		err = write(fd1, buf, this_copy);
 		if (err != this_copy) {
 			err_dbg(1, "write err");
-			close(fd0);
-			close(fd1);
-			return -1;
+			goto err1;
 		}
 
 		left -= this_copy;
 	}
 	fprintf(stdout, "\n");
 	fflush(stdout);
+	err = 0;
 
-	return 0;
+err1:
+	close(fd1);
+err0:
+	close(fd0);
+	return err;
+}
+
+int clib_copy_file(char *path, char *bkp, unsigned long bytes)
+{
+	return clib_split_file(path, bkp, 0, bytes);
 }

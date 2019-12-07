@@ -508,6 +508,8 @@ int elf_get_syms(char *path, struct list_head *head, uint8_t *bits)
 		list_add_tail(&_new->sibling, head);
 	}
 
+	elf_cleanup(ef);
+
 	return 0;
 }
 

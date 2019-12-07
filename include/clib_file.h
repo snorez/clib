@@ -84,6 +84,8 @@ extern uint32_t get_io_speed(void);
 extern int txtfile_readlines(regfile *);
 extern int txtfile_readline(regfile *, uint32_t lines);
 extern int txtfile_writelines(regfile *);
+extern int clib_split_file(char *path, char *bkp,
+				unsigned long start, unsigned long end);
 extern int clib_copy_file(char *path, char *bkp, unsigned long bytes);
 
 DECL_END

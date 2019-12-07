@@ -107,8 +107,10 @@ void clib_dladdr_end(void)
 	return;
 }
 
+#define BT_DEPTH	0x10
 static void print_bt_info(ucontext_t *uc)
 {
+	int i = 0;
 #ifdef __x86_64__
 	uint64_t current_rip, current_rbp;
 	current_rbp = uc->uc_mcontext.gregs[REG_RBP];
@@ -132,6 +134,9 @@ static void print_bt_info(ucontext_t *uc)
 			break;
 		current_rip = *((uint64_t *)current_rbp+1);
 		current_rbp = *((uint64_t *)current_rbp);
+		i++;
+		if (i == BT_DEPTH)
+			break;
 	}
 #endif
 #ifdef __i386__
@@ -149,6 +154,9 @@ static void print_bt_info(ucontext_t *uc)
 		clib_dladdr_end();
 		current_eip = *((uint32_t *)current_ebp+1);
 		current_ebp = *((uint32_t *)current_ebp);
+		i++;
+		if (i == BT_DEPTH)
+			break;
 	}
 #endif
 }
