@@ -26,8 +26,18 @@ DECL_BEGIN
  * each object is a pointer to a user-defined object
  * if this object is NULL, it is available
  */
+#ifndef CONFIG_OBJPOOL_MAX
 #define	OBJPOOL_MAX	0x100000
+#else
+#define	OBJPOOL_MAX	(CONFIG_OBJPOOL_MAX)
+#endif
+
+#ifndef CONFIG_OBJPOOL_DEF
 #define	OBJPOOL_DEF	0x10000
+#else
+#define	OBJPOOL_DEF	(CONFIG_OBJPOOL_DEF)
+#endif
+
 struct clib_rw_pool {
 	void		*pool_addr;
 	size_t		obj_cnt;

@@ -36,7 +36,12 @@ int path_exists(const char *path)
 		return 1;
 }
 
+#ifndef CONFIG_IO_BYTES
 #define	IO_BYTES	(512*1024*1024)
+#else
+#define	IO_BYTES	(CONFIG_IO_BYTES)
+#endif
+
 int clib_open(const char *pathname, int flags, ...)
 {
 	int fd;
@@ -204,6 +209,7 @@ regfile *regfile_open(int type, const char *path, int flag, ...)
 		err_dbg(0, "malloc err");
 		goto close_ret;
 	}
+	memset(ret, 0, sizeof(*ret));
 
 	ret->path = (char *)malloc(strlen(path)+1);
 	if (!ret->path) {
@@ -516,7 +522,12 @@ unlock:
 	return err;
 }
 
+#ifndef CONFIG_COPY_BLKSZ
 #define	COPY_BLKSZ	(256*1024*1024)
+#else
+#define	COPY_BLKSZ	(CONFIG_COPY_BLKSZ)
+#endif
+
 static char buf[COPY_BLKSZ];
 /*
  * copy path[start:end] to bkp

@@ -338,7 +338,7 @@ static inline bool atomic_add_negative(long i, atomic_t *v)
 	GEN_BINARY_RMWcc(LOCK_PREFIX "add", v->counter, "er", i, "%0", s);
 }
 
-#define nop() asm volatile ("nop")
+#define nop() do { asm volatile ("nop"); } while(0)
 static inline void do_nop(size_t times)
 {
 	while (times--)

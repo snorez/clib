@@ -191,7 +191,11 @@ extern sock *sock_accept(sock *, cli_info *);
 extern void cli_info_print(cli_info *client);
 extern long fork_wget(char *url, char *file2write);
 
-#define SOCK_BUF_LEN_ORIG (128*1024)
+#ifndef CONFIG_SOCK_BUF_LEN_ORIG
+#define SOCK_BUF_LEN_ORIG	(128*1024)
+#else
+#define	SOCK_BUF_LEN_ORIG	(CONFIG_SOCK_BUF_LEN_ORIG)
+#endif
 
 typedef struct _pkg_ctl {
 	char tag[16];

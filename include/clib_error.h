@@ -23,6 +23,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <assert.h>
 #include "../include/clib_utils.h"
 #include "../include/clib_dbg.h"
 
@@ -54,6 +55,9 @@ static inline int IS_ERR_OR_NULL(const void *ptr)
 }
 
 extern void mt_print_fini_ncurse(void);
+
+#define	BUILD_BUG_ON(cond,msg) static_assert(!(cond),msg)
+
 /* for BUG BUG_ON WARN WARN_ON */
 #define	BUG()	\
 	do {\

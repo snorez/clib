@@ -107,7 +107,12 @@ void clib_dladdr_end(void)
 	return;
 }
 
+#ifndef CONFIG_BT_DEPTH
 #define BT_DEPTH	0x10
+#else
+#define	BT_DEPTH	(CONFIG_BT_DEPTH)
+#endif
+
 static void print_bt_info(ucontext_t *uc)
 {
 	int i = 0;

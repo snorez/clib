@@ -23,7 +23,12 @@
 
 DECL_BEGIN
 
+#ifndef CONFIG_CLIB_MT_PRINT_LINE_LEN
 #define	CLIB_MT_PRINT_LINE_LEN	256
+#else
+#define	CLIB_MT_PRINT_LINE_LEN	(CONFIG_CLIB_MT_PRINT_LINE_LEN)
+#endif
+
 struct clib_print {
 	struct list_head	sibling;
 	pthread_t		threadid;

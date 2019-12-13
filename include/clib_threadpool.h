@@ -22,8 +22,18 @@
 
 DECL_BEGIN
 
+#ifndef CONFIG_CLIB_THREADPOOL_MAX
 #define	CLIB_THREADPOOL_MAX	0x30
+#else
+#define	CLIB_THREADPOOL_MAX	(CONFIG_CLIB_THREADPOOL_MAX)
+#endif
+
+#ifndef CONFIG_CLIB_THREAD_ARG_MAX
 #define	CLIB_THREAD_ARG_MAX	0x10
+#else
+#define	CLIB_THREAD_ARG_MAX	(CONFIG_CLIB_THREAD_ARG_MAX)
+#endif
+
 struct clib_mt_pool {
 	pthread_t	tid;
 	atomic_t	in_use;

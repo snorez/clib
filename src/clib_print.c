@@ -207,7 +207,12 @@ void mt_print_progress(double cur, double total)
 }
 
 /* count \t as 8 bytes */
+#ifndef CONFIG_TAB_BYTES
 #define	TAB_BYTES	8
+#else
+#define	TAB_BYTES	(CONFIG_TAB_BYTES)
+#endif
+
 void clib_pretty_fprint(FILE *s, int max, const char *fmt, ...)
 {
 	max = clib_round_up(max, TAB_BYTES);

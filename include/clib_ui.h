@@ -30,7 +30,12 @@
 
 DECL_BEGIN
 
+#ifndef CONFIG_CLIB_UI_MAX_DEPTH
 #define	CLIB_UI_MAX_DEPTH	2
+#else
+#define	CLIB_UI_MAX_DEPTH	(CONFIG_CLIB_UI_MAX_DEPTH)
+#endif
+
 struct clib_ui_env {
 	struct list_head	cmd_head;
 	struct list_head	ac_head;

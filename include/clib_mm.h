@@ -27,8 +27,18 @@
 
 DECL_BEGIN
 
+#ifndef CONFIG_CLIB_MM_DESC_LEN
 #define	CLIB_MM_DESC_LEN	8
+#else
+#define	CLIB_MM_DESC_LEN	(CONFIG_CLIB_MM_DESC_LEN)
+#endif
+
+#ifndef CONFIG_CLIB_MM_MMAP_BLKSZ
 #define	CLIB_MM_MMAP_BLKSZ	(64*1024*1024)
+#else
+#define	CLIB_MM_MMAP_BLKSZ	(CONFIG_CLIB_MM_MMAP_BLKSZ)
+#endif
+
 struct clib_mm {
 	struct list_head	sibling;
 	char			desc[8];	/* string, include nul byte */

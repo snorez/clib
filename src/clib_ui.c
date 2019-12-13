@@ -109,6 +109,7 @@ static void rl_sigint(int signo)
 	siglongjmp(rl_jmp_env, 1);
 }
 
+static char new_prompt[64];
 char *clib_readline(char *prompt)
 {
 	char *ret;
@@ -116,6 +117,20 @@ char *clib_readline(char *prompt)
 		rl_attempted_completion_function = clib_completion;
 		sigint_is_set = 1;
 		signal(SIGINT, rl_sigint);
+	}
+
+	if (ui_idx) {
+		int idx = ui_idx;
+		int i = 0;
+		while (idx) {
+			i++;
+			idx = idx / 10;
+		}
+		size_t newlen = strlen(prompt) + 1 + i + 2 + 1;
+		if (newlen <= 64) {
+			snprintf(new_prompt, newlen, "<%d> %s", ui_idx, prompt);
+			prompt = new_prompt;
+		}
 	}
 
 redo:

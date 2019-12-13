@@ -82,7 +82,12 @@ extern int clib_module_reload(int argc, char *argv[]);
 extern void clib_module_cleanup(void);
 extern void clib_module_print(void);
 extern struct list_head *clib_module_get_head(void);
+
+#ifndef CONFIG_CALL_FUNC_MAX_ARGS
 #define	CALL_FUNC_MAX_ARGS	9
+#else
+#define	CALL_FUNC_MAX_ARGS	(CONFIG_CALL_FUNC_MAX_ARGS)
+#endif
 extern long clib_module_call_func(const char *module_name,
 				  const char *func_name,
 				  int argc, ...);

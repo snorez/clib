@@ -97,7 +97,12 @@ static void **clib_rw_pool_read_find(struct clib_rw_pool *pool)
 	return NULL;
 }
 
+#ifndef CONFIG_USLEEP_TIME
 #define	USLEEP_TIME	3000
+#else
+#define	USLEEP_TIME	(CONFIG_USLEEP_TIME)
+#endif
+
 void clib_rw_pool_push(struct clib_rw_pool *pool, void *obj)
 {
 	void **addr;
@@ -117,7 +122,12 @@ void clib_rw_pool_push(struct clib_rw_pool *pool, void *obj)
 	mutex_unlock(&pool->lock);
 }
 
-#define	LOOP_MORE_TIMES	0x1
+#ifndef CONFIG_LOOP_MORE_TIMES
+#define	LOOP_MORE_TIMES		0x1
+#else
+#define	LOOP_MORE_TIMES		(CONFIG_LOOP_MORE_TIMES)
+#endif
+
 void *clib_rw_pool_pop(struct clib_rw_pool *pool)
 {
 	void **addr;
