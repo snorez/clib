@@ -32,7 +32,8 @@
  * Do Not have a regular start *push r(e)bp, mov r(e)bp, r(e)sp, leave, ret
  * *USE* '-rdynamic -ldl -lcapstone' options when compile and link
  *
- * TODO: if dli_sname is NULL, try to resolve the loadable file and find static funcs
+ * TODO: if dli_sname is NULL, try to resolve the loadable file and
+ * find static funcs
  */
 static uint8_t bits_def;
 static LIST_HEAD(elf_syms_def);
@@ -58,10 +59,10 @@ void clib_dladdr(void *addr, Dl_info *info)
 	struct _elf_sym_full *tmp;
 	list_for_each_entry(tmp, elf_syms, sibling) {
 		if ((*bits == 32) &&
-				(ELF32_ST_TYPE(tmp->data.sym0.st_info) != STT_FUNC))
+			(ELF32_ST_TYPE(tmp->data.sym0.st_info) != STT_FUNC))
 			continue;
 		if ((*bits == 64) &&
-				(ELF64_ST_TYPE(tmp->data.sym1.st_info) != STT_FUNC))
+			(ELF64_ST_TYPE(tmp->data.sym1.st_info) != STT_FUNC))
 			continue;
 		void *handle = dlopen(info->dli_fname, RTLD_NOW | RTLD_NOLOAD);
 		tmp->load_addr = dlsym(handle, tmp->name);
@@ -170,36 +171,64 @@ static void dump_regs(ucontext_t *uc)
 {
 	fprintf(stderr, "INFO REGISTERS:\n");
 #ifdef __x86_64__
-	fprintf(stderr, "RAX: 0x%016lx\t", (long)(uc->uc_mcontext.gregs[REG_RAX]));
-	fprintf(stderr, "RBX: 0x%016lx\t", (long)(uc->uc_mcontext.gregs[REG_RBX]));
-	fprintf(stderr, "RCX: 0x%016lx\n", (long)(uc->uc_mcontext.gregs[REG_RCX]));
-	fprintf(stderr, "RDX: 0x%016lx\t", (long)(uc->uc_mcontext.gregs[REG_RDX]));
-	fprintf(stderr, "RSI: 0x%016lx\t", (long)(uc->uc_mcontext.gregs[REG_RSI]));
-	fprintf(stderr, "RDI: 0x%016lx\n", (long)(uc->uc_mcontext.gregs[REG_RDI]));
-	fprintf(stderr, "RBP: 0x%016lx\t", (long)(uc->uc_mcontext.gregs[REG_RBP]));
-	fprintf(stderr, "RSP: 0x%016lx\t", (long)(uc->uc_mcontext.gregs[REG_RSP]));
-	fprintf(stderr, "R08: 0x%016lx\n", (long)(uc->uc_mcontext.gregs[REG_R8]));
-	fprintf(stderr, "R09: 0x%016lx\t", (long)(uc->uc_mcontext.gregs[REG_R9]));
-	fprintf(stderr, "R10: 0x%016lx\t", (long)(uc->uc_mcontext.gregs[REG_R10]));
-	fprintf(stderr, "R11: 0x%016lx\n", (long)(uc->uc_mcontext.gregs[REG_R11]));
-	fprintf(stderr, "R12: 0x%016lx\t", (long)(uc->uc_mcontext.gregs[REG_R12]));
-	fprintf(stderr, "R13: 0x%016lx\t", (long)(uc->uc_mcontext.gregs[REG_R13]));
-	fprintf(stderr, "R14: 0x%016lx\n", (long)(uc->uc_mcontext.gregs[REG_R14]));
-	fprintf(stderr, "R15: 0x%016lx\t", (long)(uc->uc_mcontext.gregs[REG_R15]));
-	fprintf(stderr, "RIP: 0x%016lx\t", (long)(uc->uc_mcontext.gregs[REG_RIP]));
-	fprintf(stderr, "FLG: 0x%016lx\n", (long)(uc->uc_mcontext.gregs[REG_EFL]));
+	fprintf(stderr, "RAX: 0x%016lx\t",
+			(long)(uc->uc_mcontext.gregs[REG_RAX]));
+	fprintf(stderr, "RBX: 0x%016lx\t",
+			(long)(uc->uc_mcontext.gregs[REG_RBX]));
+	fprintf(stderr, "RCX: 0x%016lx\n",
+			(long)(uc->uc_mcontext.gregs[REG_RCX]));
+	fprintf(stderr, "RDX: 0x%016lx\t",
+			(long)(uc->uc_mcontext.gregs[REG_RDX]));
+	fprintf(stderr, "RSI: 0x%016lx\t",
+			(long)(uc->uc_mcontext.gregs[REG_RSI]));
+	fprintf(stderr, "RDI: 0x%016lx\n",
+			(long)(uc->uc_mcontext.gregs[REG_RDI]));
+	fprintf(stderr, "RBP: 0x%016lx\t",
+			(long)(uc->uc_mcontext.gregs[REG_RBP]));
+	fprintf(stderr, "RSP: 0x%016lx\t",
+			(long)(uc->uc_mcontext.gregs[REG_RSP]));
+	fprintf(stderr, "R08: 0x%016lx\n",
+			(long)(uc->uc_mcontext.gregs[REG_R8]));
+	fprintf(stderr, "R09: 0x%016lx\t",
+			(long)(uc->uc_mcontext.gregs[REG_R9]));
+	fprintf(stderr, "R10: 0x%016lx\t",
+			(long)(uc->uc_mcontext.gregs[REG_R10]));
+	fprintf(stderr, "R11: 0x%016lx\n",
+			(long)(uc->uc_mcontext.gregs[REG_R11]));
+	fprintf(stderr, "R12: 0x%016lx\t",
+			(long)(uc->uc_mcontext.gregs[REG_R12]));
+	fprintf(stderr, "R13: 0x%016lx\t",
+			(long)(uc->uc_mcontext.gregs[REG_R13]));
+	fprintf(stderr, "R14: 0x%016lx\n",
+			(long)(uc->uc_mcontext.gregs[REG_R14]));
+	fprintf(stderr, "R15: 0x%016lx\t",
+			(long)(uc->uc_mcontext.gregs[REG_R15]));
+	fprintf(stderr, "RIP: 0x%016lx\t",
+			(long)(uc->uc_mcontext.gregs[REG_RIP]));
+	fprintf(stderr, "FLG: 0x%016lx\n",
+			(long)(uc->uc_mcontext.gregs[REG_EFL]));
 #endif
 #ifdef __i386__
-	fprintf(stderr, "EAX: 0x%08lx\t", (long)(uc->uc_mcontext.gregs[REG_EAX]));
-	fprintf(stderr, "EBX: 0x%08lx\t", (long)(uc->uc_mcontext.gregs[REG_EBX]));
-	fprintf(stderr, "ECX: 0x%08lx\n", (long)(uc->uc_mcontext.gregs[REG_ECX]));
-	fprintf(stderr, "EDX: 0x%08lx\t", (long)(uc->uc_mcontext.gregs[REG_EDX]));
-	fprintf(stderr, "ESI: 0x%08lx\t", (long)(uc->uc_mcontext.gregs[REG_ESI]));
-	fprintf(stderr, "EDI: 0x%08lx\n", (long)(uc->uc_mcontext.gregs[REG_EDI]));
-	fprintf(stderr, "EBP: 0x%08lx\t", (long)(uc->uc_mcontext.gregs[REG_EBP]));
-	fprintf(stderr, "ESP: 0x%08lx\t", (long)(uc->uc_mcontext.gregs[REG_ESP]));
-	fprintf(stderr, "EIP: 0x%08lx\n", (long)(uc->uc_mcontext.gregs[REG_EIP]));
-	fprintf(stderr, "FLG: 0x%08lx\n", (long)(uc->uc_mcontext.gregs[REG_EFL]));
+	fprintf(stderr, "EAX: 0x%08lx\t",
+			(long)(uc->uc_mcontext.gregs[REG_EAX]));
+	fprintf(stderr, "EBX: 0x%08lx\t",
+			(long)(uc->uc_mcontext.gregs[REG_EBX]));
+	fprintf(stderr, "ECX: 0x%08lx\n",
+			(long)(uc->uc_mcontext.gregs[REG_ECX]));
+	fprintf(stderr, "EDX: 0x%08lx\t",
+			(long)(uc->uc_mcontext.gregs[REG_EDX]));
+	fprintf(stderr, "ESI: 0x%08lx\t",
+			(long)(uc->uc_mcontext.gregs[REG_ESI]));
+	fprintf(stderr, "EDI: 0x%08lx\n",
+			(long)(uc->uc_mcontext.gregs[REG_EDI]));
+	fprintf(stderr, "EBP: 0x%08lx\t",
+			(long)(uc->uc_mcontext.gregs[REG_EBP]));
+	fprintf(stderr, "ESP: 0x%08lx\t",
+			(long)(uc->uc_mcontext.gregs[REG_ESP]));
+	fprintf(stderr, "EIP: 0x%08lx\n",
+			(long)(uc->uc_mcontext.gregs[REG_EIP]));
+	fprintf(stderr, "FLG: 0x%08lx\n",
+			(long)(uc->uc_mcontext.gregs[REG_EFL]));
 #endif
 }
 
@@ -298,10 +327,32 @@ static void dump_bus(int code)
 	}
 }
 
-static struct sigaction new_act, old_act;
+static struct sigaction new_act;
+static struct sigaction old_ill_act;
+static struct sigaction old_fpe_act;
+static struct sigaction old_segv_act;
+static struct sigaction old_bus_act;
 static LIST_HEAD(eh_head);
+static int clean_mode = 0;
 static void self_sigact(int signo, siginfo_t *si, void *arg)
 {
+	int retval = 0;
+	if (clean_mode) {
+		struct eh_list *tmp;
+		list_for_each_entry(tmp, &eh_head, sibling) {
+			if ((signo == tmp->signo) &&
+				(tmp->for_clean_mode) &&
+				(tmp->cb))
+				retval = tmp->cb(signo, si, arg);
+			if (retval)
+				break;
+			if (tmp->exclusive)
+				break;
+		}
+		if (!retval)
+			return;
+	}
+
 	switch (signo) {
 	case SIGILL:
 		fprintf(stderr, "receive SIGILL:\t");
@@ -345,27 +396,53 @@ static void self_sigact(int signo, siginfo_t *si, void *arg)
 	print_bt_info((ucontext_t *)arg);
 	fprintf(stderr, "\n");
 
-	struct eh_list *tmp;
-	list_for_each_entry(tmp, &eh_head, sibling) {
-		if (tmp->cb)
-			tmp->cb(signo, si, arg);
+	if (!retval) {
+		struct eh_list *tmp;
+		list_for_each_entry(tmp, &eh_head, sibling) {
+			if ((tmp->signo == signo) &&
+				(!tmp->for_clean_mode) &&
+				(tmp->cb))
+				retval = tmp->cb(signo, si, arg);
+			if (retval)
+				break;
+			if (tmp->exclusive)
+				break;
+		}
 	}
 
-	if (old_act.sa_handler)
-		old_act.sa_handler(signo);
+	if (signo == SIGILL)
+		old_ill_act.sa_handler(signo);
+	else if (signo == SIGFPE)
+		old_fpe_act.sa_handler(signo);
+	else if (signo == SIGSEGV)
+		old_segv_act.sa_handler(signo);
+	else if (signo == SIGBUS)
+		old_bus_act.sa_handler(signo);
+	else
+		WARN();
 }
 
+/*
+ * flag true mean that user want the new_eh to be the only one handle the signo
+ */
 void set_eh(struct eh_list *new_eh)
 {
 	if (!list_empty(&eh_head)) {
-		if (new_eh)
-			list_add_tail(&new_eh->sibling, &eh_head);
+		if (new_eh) {
+			if (!new_eh->exclusive)
+				list_add_tail(&new_eh->sibling, &eh_head);
+			else
+				list_add(&new_eh->sibling, &eh_head);
+		}
 		return;
 	}
 
 	if (new_act.sa_sigaction != self_sigact) {
 		memset((char *)&new_act, 0, sizeof(struct sigaction));
-		memset((char *)&old_act, 0, sizeof(struct sigaction));
+		memset((char *)&old_ill_act, 0, sizeof(struct sigaction));
+		memset((char *)&old_fpe_act, 0, sizeof(struct sigaction));
+		memset((char *)&old_segv_act, 0, sizeof(struct sigaction));
+		memset((char *)&old_bus_act, 0, sizeof(struct sigaction));
 
 		new_act.sa_flags = SA_SIGINFO | SA_INTERRUPT;
 		sigemptyset(&new_act.sa_mask);
@@ -375,14 +452,23 @@ void set_eh(struct eh_list *new_eh)
 		sigaddset(&new_act.sa_mask, SIGBUS);
 
 		new_act.sa_sigaction = self_sigact;
-		sigaction(SIGILL, &new_act, &old_act);
-		sigaction(SIGFPE, &new_act, &old_act);
-		sigaction(SIGSEGV, &new_act, &old_act);
-		sigaction(SIGBUS, &new_act, &old_act);
+		sigaction(SIGILL, &new_act, &old_ill_act);
+		sigaction(SIGFPE, &new_act, &old_fpe_act);
+		sigaction(SIGSEGV, &new_act, &old_segv_act);
+		sigaction(SIGBUS, &new_act, &old_bus_act);
 	}
 
-	if (new_eh)
-		list_add_tail(&new_eh->sibling, &eh_head);
+	if (new_eh) {
+		if (!new_eh->exclusive)
+			list_add_tail(&new_eh->sibling, &eh_head);
+		else
+			list_add(&new_eh->sibling, &eh_head);
+	}
+}
+
+void set_eh_mode(int mode)
+{
+	clean_mode = mode;
 }
 
 void show_bt(void)

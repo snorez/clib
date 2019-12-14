@@ -42,31 +42,39 @@ DECL_BEGIN
 
 #ifndef SIGACT_FUNC
 #define	SIGACT_FUNC
-typedef void (*sigact_func)(int, siginfo_t *, void *);
+typedef int (*clib_sigfunc)(int, siginfo_t *, void *);
 #endif
 
 struct eh_list {
 	struct list_head	sibling;
-	sigact_func		cb;
+	clib_sigfunc		cb;
+	int			signo;
+	int			for_clean_mode;
+	int			exclusive;
 };
 
 extern void clib_dladdr_start(struct list_head *head, uint8_t *bits);
 extern void clib_dladdr(void *addr, Dl_info *info);
 extern void clib_dladdr_end(void);
 extern void set_eh(struct eh_list *new_eh);
+extern void set_eh_mode(int mode);
 extern void show_bt(void);
 
 #ifndef xmalloc
 #define	xmalloc malloc
 #endif
 
-static inline struct eh_list *eh_list_new(sigact_func func)
+static inline struct eh_list *eh_list_new(clib_sigfunc func, int signo,
+					  int for_clean_mode, int exclusive)
 {
 	struct eh_list *_new;
 	_new = (struct eh_list *)xmalloc(sizeof(*_new));
 	memset(_new, 0, sizeof(*_new));
 
 	_new->cb = func;
+	_new->signo = signo;
+	_new->for_clean_mode = for_clean_mode;
+	_new->exclusive = exclusive;
 	return _new;
 }
 
