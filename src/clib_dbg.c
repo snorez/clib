@@ -334,6 +334,19 @@ static struct sigaction old_segv_act;
 static struct sigaction old_bus_act;
 static LIST_HEAD(eh_head);
 static int clean_mode = 0;
+static int dbg_mt_mode = 0;
+
+static void print_mt_bt_info(ucontext_t *uc);
+static inline void print_bt(ucontext_t *uc)
+{
+	fprintf(stderr, "Call Stack:\n");
+	if (!dbg_mt_mode)
+		print_bt_info(uc);
+	else
+		print_mt_bt_info(uc);
+	fprintf(stderr, "\n");
+}
+
 static void self_sigact(int signo, siginfo_t *si, void *arg)
 {
 	int retval = 0;
@@ -392,9 +405,8 @@ static void self_sigact(int signo, siginfo_t *si, void *arg)
 
 	dump_regs((ucontext_t *)arg);
 
-	fprintf(stderr, "\nCall Stack:\n");
-	print_bt_info((ucontext_t *)arg);
 	fprintf(stderr, "\n");
+	print_bt((ucontext_t *)arg);
 
 	if (!retval) {
 		struct eh_list *tmp;
@@ -480,7 +492,183 @@ void show_bt(void)
 		return;
 	}
 
-	fprintf(stderr, "Call Stack:\n");
-	print_bt_info(&uc);
-	fprintf(stderr, "\n");
+	print_bt(&uc);
+}
+
+/*
+ * for multi-thread backtrace
+ */
+static LIST_HEAD(clib_dbg_mt_head);
+static rwlock_t clib_dbg_mt_lock;
+
+static struct clib_dbg_mt *clib_dbg_mt_new(size_t count)
+{
+	struct clib_dbg_mt *_new;
+	_new = (struct clib_dbg_mt *)xmalloc(sizeof(*_new));
+	_new->bt = (char **)xmalloc(count * sizeof(char *));
+
+	_new->tid = pthread_self();
+	_new->bt_total = count;
+	_new->bt_idx = 0;
+
+	return _new;
+}
+
+static void clib_dbg_mt_free(struct clib_dbg_mt *n)
+{
+	free(n->bt);
+	free(n);
+}
+
+static void clib_dbg_mt_insert(struct clib_dbg_mt *n)
+{
+	write_lock(&clib_dbg_mt_lock);
+	list_add_tail(&n->sibling, &clib_dbg_mt_head);
+	write_unlock(&clib_dbg_mt_lock);
+}
+
+static void clib_dbg_mt_remove(struct clib_dbg_mt *n)
+{
+	write_lock(&clib_dbg_mt_lock);
+	list_del(&n->sibling);
+	write_unlock(&clib_dbg_mt_lock);
+}
+
+static struct clib_dbg_mt *clib_dbg_mt_find(void)
+{
+	struct clib_dbg_mt *tmp;
+	struct clib_dbg_mt *target = NULL;
+	pthread_t target_tid = pthread_self();
+
+	read_lock(&clib_dbg_mt_lock);
+	list_for_each_entry(tmp, &clib_dbg_mt_head, sibling) {
+		if (!pthread_equal(target_tid, tmp->tid))
+			continue;
+		target = tmp;
+		break;
+	}
+	read_unlock(&clib_dbg_mt_lock);
+
+	return target;
+}
+
+static void clib_dbg_mt_expand(struct clib_dbg_mt *t)
+{
+	size_t oldcnt, newcnt;
+
+	oldcnt = t->bt_total;
+	newcnt = oldcnt + DEFAULT_BT_COUNT;
+
+	char **newbt;
+	newbt = (char **)xmalloc(newcnt * sizeof(char *));
+	memcpy(newbt, t->bt, t->bt_idx * sizeof(char *));
+
+	free(t->bt);
+	t->bt = newbt;
+	t->bt_total = newcnt;
+}
+
+static void clib_dbg_mt_push(struct clib_dbg_mt *t, const char *name)
+{
+	if (t->bt_idx >= t->bt_total)
+		clib_dbg_mt_expand(t);
+
+	t->bt[t->bt_idx] = (char *)name;
+	t->bt_idx++;
+}
+
+static void clib_dbg_mt_pop(struct clib_dbg_mt *t, const char *name, int *flag)
+{
+	*flag = 0;
+
+	if (!t->bt_idx)
+		return;
+
+	size_t last_idx = t->bt_idx - 1;
+	if (t->bt[last_idx] == (char *)name) {
+		t->bt_idx = last_idx;
+	} else {
+		*flag = 1;
+	}
+}
+
+void clib_dbg_func_enter(const char *funcname)
+{
+	dbg_mt_mode = 1;
+
+	struct clib_dbg_mt *t;
+	t = clib_dbg_mt_find();
+	if (!t) {
+		t = clib_dbg_mt_new(DEFAULT_BT_COUNT);
+		clib_dbg_mt_insert(t);
+	}
+
+	clib_dbg_mt_push(t, funcname);
+}
+
+void clib_dbg_func_exit(const char *funcname)
+{
+	struct clib_dbg_mt *t;
+	t = clib_dbg_mt_find();
+	if (!t)
+		return;
+
+	int wrong;
+	clib_dbg_mt_pop(t, funcname, &wrong);
+
+	if (wrong || (!t->bt_idx)) {
+		clib_dbg_mt_remove(t);
+		clib_dbg_mt_free(t);
+	}
+
+	if (list_empty(&clib_dbg_mt_head))
+		dbg_mt_mode = 0;
+}
+
+static inline unsigned long uc_sp(ucontext_t *uc)
+{
+	unsigned long ret = 0;
+#ifdef __x86_64__
+	ret = uc->uc_mcontext.gregs[REG_RSP];
+#endif
+#ifdef __i386__
+	ret = uc->uc_mcontext.gregs[REG_ESP];
+#endif
+	return ret;
+}
+
+static void print_thread_bt_info(struct clib_dbg_mt *t)
+{
+	fprintf(stderr, "Thread 0x%lx\n", t->tid);
+	size_t idx = t->bt_idx;
+	while (idx) {
+		fprintf(stderr, "%ld: %s\n", idx, t->bt[idx-1]);
+		idx--;
+	}
+}
+
+/* ensure attr->stacksize is zero before call clib_pthread_stack */
+static pthread_attr_t attr;
+static void print_mt_bt_info(ucontext_t *uc)
+{
+	write_lock(&clib_dbg_mt_lock);
+
+	int found = 0;
+	unsigned long sp = uc_sp(uc);
+	void *top, *bot;
+	struct clib_dbg_mt *tmp;
+	list_for_each_entry(tmp, &clib_dbg_mt_head, sibling) {
+		clib_pthread_stack(&attr, tmp->tid, &top, &bot);
+		if (!clib_pthread_instack(top, bot, (void *)sp))
+			continue;
+		found = 1;
+		print_thread_bt_info(tmp);
+	}
+
+	if (!found) {
+		list_for_each_entry(tmp, &clib_dbg_mt_head, sibling)
+			print_thread_bt_info(tmp);
+	}
+
+	write_unlock(&clib_dbg_mt_lock);
 }

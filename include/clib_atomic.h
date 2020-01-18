@@ -196,6 +196,8 @@ typedef struct {
 
 typedef atomic_t lock_t;
 typedef atomic_t ref_t;
+typedef lock_t mutex_t;
+typedef lock_t rwlock_t;
 
 #ifndef __cplusplus
 typedef _Bool	bool;

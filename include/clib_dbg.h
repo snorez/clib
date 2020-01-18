@@ -33,6 +33,7 @@
 #include <execinfo.h>
 #include <signal.h>
 #include <setjmp.h>
+#include <pthread.h>
 #include "../include/clib_utils.h"
 #include "../include/clib_atomic.h"
 #include "../include/clib_disas.h"
@@ -77,6 +78,67 @@ static inline struct eh_list *eh_list_new(clib_sigfunc func, int signo,
 	_new->exclusive = exclusive;
 	return _new;
 }
+
+/*
+ * for multi-thread backtrace, we maintain a list for each pthread_id.
+ * Functions should call the given interfaces to push/pop the __FUNCTION__.
+ */
+static inline void clib_pthread_stack(pthread_attr_t *attr, pthread_t id,
+					void **top, void **bot)
+{
+	size_t sz;
+	*top = NULL;
+	*bot = NULL;
+
+	if (!pthread_attr_getstacksize(attr, &sz)) {
+		*top = (void *)id;
+		*bot = (void *)((size_t)*top - sz);
+	}
+
+	return;
+}
+
+static inline void clib_pthread_current_stack(pthread_attr_t *attr,
+						void **top, void **bot)
+{
+	clib_pthread_stack(attr, pthread_self(), top, bot);
+	return;
+}
+
+static inline int clib_pthread_instack(void *top, void *bot, void *addr)
+{
+	if (((addr > top) && (addr < bot)) ||
+		((addr < top) && (addr > bot)))
+		return 1;
+	else
+		return 0;
+}
+
+#define	DEFAULT_BT_COUNT	((size_t)1024)
+struct clib_dbg_mt {
+	struct list_head	sibling;
+	pthread_t		tid;
+	size_t			bt_total;
+	size_t			bt_idx;
+	char			**bt;
+};
+
+extern void clib_dbg_func_enter(const char *);
+extern void clib_dbg_func_exit(const char *);
+
+#ifdef HAVE_CLIB_DBG_FUNC
+#define	CLIB_DBG_FUNC_ENTER()	\
+	do {\
+		clib_dbg_func_enter(__FUNCTION__);\
+	} while (0);
+#define	CLIB_DBG_FUNC_EXIT()	\
+	do {\
+		clib_dbg_func_exit(__FUNCTION__);\
+	} while (0);
+#else	/* !HAVE_CLIB_DBG_FUNC */
+#define	CLIB_DBG_FUNC_ENTER()	((void)0)
+#define	CLIB_DBG_FUNC_EXIT()	((void)0)
+#endif
 
 DECL_END
 
