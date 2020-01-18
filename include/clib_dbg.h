@@ -123,21 +123,156 @@ struct clib_dbg_mt {
 	char			**bt;
 };
 
-extern void clib_dbg_func_enter(const char *);
-extern void clib_dbg_func_exit(const char *);
+extern int dbg_mt_mode;
+extern struct list_head clib_dbg_mt_head;
+extern rwlock_t clib_dbg_mt_lock;
+static inline struct clib_dbg_mt *clib_dbg_mt_new(size_t count)
+{
+	struct clib_dbg_mt *_new;
+	_new = (struct clib_dbg_mt *)xmalloc(sizeof(*_new));
+	_new->bt = (char **)xmalloc(count * sizeof(char *));
+
+	_new->tid = pthread_self();
+	_new->bt_total = count;
+	_new->bt_idx = 0;
+
+	return _new;
+}
+
+static inline void clib_dbg_mt_free(struct clib_dbg_mt *n)
+{
+	free(n->bt);
+	free(n);
+}
+
+static inline void clib_dbg_mt_insert(struct clib_dbg_mt *n)
+{
+	write_lock(&clib_dbg_mt_lock);
+	list_add_tail(&n->sibling, &clib_dbg_mt_head);
+	write_unlock(&clib_dbg_mt_lock);
+}
+
+static inline void clib_dbg_mt_remove(struct clib_dbg_mt *n)
+{
+	write_lock(&clib_dbg_mt_lock);
+	list_del(&n->sibling);
+	write_unlock(&clib_dbg_mt_lock);
+}
+
+static inline struct clib_dbg_mt *clib_dbg_mt_find(void)
+{
+	struct clib_dbg_mt *tmp;
+	struct clib_dbg_mt *target = NULL;
+	pthread_t target_tid = pthread_self();
+
+	read_lock(&clib_dbg_mt_lock);
+	list_for_each_entry(tmp, &clib_dbg_mt_head, sibling) {
+		if (!pthread_equal(target_tid, tmp->tid))
+			continue;
+		target = tmp;
+		break;
+	}
+	read_unlock(&clib_dbg_mt_lock);
+
+	return target;
+}
+
+static inline void clib_dbg_mt_expand(struct clib_dbg_mt *t)
+{
+	size_t oldcnt, newcnt;
+
+	oldcnt = t->bt_total;
+	newcnt = oldcnt + DEFAULT_BT_COUNT;
+
+	char **newbt;
+	newbt = (char **)xmalloc(newcnt * sizeof(char *));
+	memcpy(newbt, t->bt, t->bt_idx * sizeof(char *));
+
+	free(t->bt);
+	t->bt = newbt;
+	t->bt_total = newcnt;
+}
+
+static inline void clib_dbg_mt_push(struct clib_dbg_mt *t, const char *name)
+{
+	if (t->bt_idx >= t->bt_total)
+		clib_dbg_mt_expand(t);
+
+	t->bt[t->bt_idx] = (char *)name;
+	t->bt_idx++;
+}
+
+static inline void clib_dbg_mt_pop(struct clib_dbg_mt *t,
+					const char *name, int *flag)
+{
+	*flag = 0;
+
+	if (!t->bt_idx)
+		return;
+
+	size_t last_idx = t->bt_idx - 1;
+	if (t->bt[last_idx] == (char *)name) {
+		t->bt_idx = last_idx;
+	} else {
+		*flag = 1;
+	}
+}
+
+static inline void clib_dbg_func_enter(const char *funcname)
+{
+	dbg_mt_mode = 1;
+
+	struct clib_dbg_mt *t;
+	t = clib_dbg_mt_find();
+	if (!t) {
+		t = clib_dbg_mt_new(DEFAULT_BT_COUNT);
+		clib_dbg_mt_insert(t);
+	}
+
+	clib_dbg_mt_push(t, funcname);
+}
+
+static inline void clib_dbg_func_exit(const char *funcname)
+{
+	struct clib_dbg_mt *t;
+	t = clib_dbg_mt_find();
+	if (!t)
+		return;
+
+	int wrong;
+	clib_dbg_mt_pop(t, funcname, &wrong);
+
+	if (wrong || (!t->bt_idx)) {
+		clib_dbg_mt_remove(t);
+		clib_dbg_mt_free(t);
+	}
+
+	if (list_empty(&clib_dbg_mt_head))
+		dbg_mt_mode = 0;
+}
+
+static inline int clib_dbg_func_check(void)
+{
+	return !list_empty(&clib_dbg_mt_head);
+}
+
 
 #ifdef HAVE_CLIB_DBG_FUNC
 #define	CLIB_DBG_FUNC_ENTER()	\
 	do {\
 		clib_dbg_func_enter(__FUNCTION__);\
 	} while (0);
+
 #define	CLIB_DBG_FUNC_EXIT()	\
 	do {\
 		clib_dbg_func_exit(__FUNCTION__);\
 	} while (0);
+
 #else	/* !HAVE_CLIB_DBG_FUNC */
+
 #define	CLIB_DBG_FUNC_ENTER()	((void)0)
 #define	CLIB_DBG_FUNC_EXIT()	((void)0)
+
 #endif
 
 DECL_END
