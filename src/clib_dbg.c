@@ -516,10 +516,9 @@ static inline unsigned long uc_sp(ucontext_t *uc)
 static void print_thread_bt_info(struct clib_dbg_mt *t)
 {
 	fprintf(stderr, "Thread 0x%lx\n", t->tid);
-	size_t idx = t->bt_idx;
-	while (idx) {
-		fprintf(stderr, "%ld: %s\n", idx, t->bt[idx-1]);
-		idx--;
+	/* in case some calls too deep, we output the [0] first */
+	for (size_t idx = 0; idx < t->bt_idx; idx++) {
+		fprintf(stderr, "%ld: %s\n", idx, t->bt[idx]);
 	}
 }
 

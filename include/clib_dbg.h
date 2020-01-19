@@ -253,7 +253,7 @@ static inline void clib_dbg_func_exit(const char *funcname)
 
 static inline int clib_dbg_func_check(void)
 {
-	return !list_empty(&clib_dbg_mt_head);
+	return !!clib_dbg_mt_find();
 }
 
 
