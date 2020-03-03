@@ -32,8 +32,8 @@ static struct clib_mm *clib_mm_find(char *desc)
 	return NULL;
 }
 
-static int clib_mm_init(struct clib_mm *t, int fd, unsigned long start, size_t len,
-			int expandable)
+static int clib_mm_init(struct clib_mm *t, int fd, unsigned long start,
+			size_t len, int expandable)
 {
 	unsigned long mmap_addr = clib_round_down(start, PAGE_SIZE);
 	size_t real_len = clib_round_up(start+len, PAGE_SIZE) - mmap_addr;
@@ -145,7 +145,8 @@ static void clib_mm_put(struct clib_mm *t)
 	}
 }
 
-int clib_mm_setup(char *desc, int fd, unsigned long start, size_t len, int expandable)
+int clib_mm_setup(char *desc, int fd, unsigned long start,
+		  size_t len, int expandable)
 {
 	if (unlikely(strlen(desc) >= CLIB_MM_DESC_LEN)) {
 		err_dbg(0, "desc too long");

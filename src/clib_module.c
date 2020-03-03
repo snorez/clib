@@ -189,6 +189,10 @@ static int clib_module_open(struct clib_module *cp)
 	int flag = RTLD_NOW | RTLD_GLOBAL;
 	cp->handle = dlopen(cp->path, flag);
 	if (!cp->handle) {
+		flag = RTLD_LAZY | RTLD_GLOBAL;
+		cp->handle = dlopen(cp->path, flag);
+	}
+	if (!cp->handle) {
 		err_dbg(0, "dlopen err: %s. maybe needed issues", dlerror());
 		return -1;
 	}
