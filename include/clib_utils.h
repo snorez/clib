@@ -18,6 +18,7 @@
 #ifndef UTILS_H_NOWJRQGI
 #define UTILS_H_NOWJRQGI
 
+#define	_GNU_SOURCE
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -32,6 +33,10 @@
 #include <sys/stat.h>
 #include <sys/personality.h>
 #include <pthread.h>
+#include <sched.h>
+#include <syscall.h>
+#include <linux/capability.h>
+#include <linux/ioctl.h>
 
 #ifdef __cplusplus
 
@@ -111,6 +116,9 @@ extern long get_memory_avail(void);
 extern void time_acct_start(void);
 extern void time_acct_end(void);
 extern char *clib_ap_buffer(const char *fmt, ...);
+extern int bind_on_cpu(int num);
+extern void setup_ns(void);
+extern void show_cap(int pid);
 
 static inline int get_online_cpus(void)
 {

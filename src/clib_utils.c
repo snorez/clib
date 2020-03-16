@@ -225,3 +225,116 @@ char *clib_ap_buffer(const char *fmt, ...)
 
 	return p;
 }
+
+int bind_on_cpu(int num)
+{
+	cpu_set_t cpu;
+	CPU_ZERO(&cpu);
+	CPU_SET(num, &cpu);
+	if (sched_setaffinity(syscall(SYS_gettid), sizeof(cpu), &cpu) == -1) {
+		perror("sched_setaffinity");
+		return -1;
+	}
+
+	CPU_ZERO(&cpu);
+	if (sched_getaffinity(syscall(SYS_gettid), sizeof(cpu), &cpu) == -1) {
+		perror("sched_getaffinity");
+		return -1;
+	}
+
+	if (!CPU_ISSET(num, &cpu))
+		return -1;
+
+	return 0;
+}
+
+static int __write_file(const char* file, const char* what, ...)
+{
+	char buf[1024];
+	va_list args;
+	va_start(args, what);
+	vsnprintf(buf, sizeof(buf), what, args);
+	va_end(args);
+	buf[sizeof(buf) - 1] = 0;
+	int len = strlen(buf);
+
+	int fd = open(file, O_WRONLY | O_CLOEXEC);
+	if (fd == -1)
+		return 0;
+	if (write(fd, buf, len) != len) {
+		close(fd);
+		return 0;
+	}
+	close(fd);
+	return 1;
+}
+
+void setup_ns(void)
+{
+	int real_uid = getuid();
+	int real_gid = getgid();
+
+        if (unshare(CLONE_NEWUSER) != 0) {
+		perror("unshare(CLONE_NEWUSER)");
+		exit(EXIT_FAILURE);
+	}
+
+        if (unshare(CLONE_NEWNET) != 0) {
+		perror("unshare(CLONE_NEWUSER)");
+		exit(EXIT_FAILURE);
+	}
+
+	if (!__write_file("/proc/self/setgroups", "deny")) {
+		perror("__write_file(/proc/self/set_groups)");
+		exit(EXIT_FAILURE);
+	}
+	if (!__write_file("/proc/self/uid_map", "0 %d 1\n", real_uid)){
+		perror("__write_file(/proc/self/uid_map)");
+		exit(EXIT_FAILURE);
+	}
+	if (!__write_file("/proc/self/gid_map", "0 %d 1\n", real_gid)) {
+		perror("__write_file(/proc/self/gid_map)");
+		exit(EXIT_FAILURE);
+	}
+
+	cpu_set_t my_set;
+	CPU_ZERO(&my_set);
+	CPU_SET(0, &my_set);
+	if (sched_setaffinity(0, sizeof(my_set), &my_set) != 0) {
+		perror("sched_setaffinity()");
+		exit(EXIT_FAILURE);
+	}
+
+	if (system("/sbin/ifconfig lo up") != 0) {
+		perror("system(/sbin/ifconfig lo up)");
+		exit(EXIT_FAILURE);
+	}
+
+	printf("[+] namespace sandbox setup successfully\n");
+}
+
+void show_cap(int pid)
+{
+	struct __user_cap_header_struct cap_header_data;
+	cap_user_header_t cap_header = (void *)&cap_header_data;
+
+	struct __user_cap_data_struct cap_data_data[2] = {0};
+	cap_user_data_t cap_data = (void *)&cap_data_data;
+
+	cap_header->pid = pid;
+	cap_header->version = _LINUX_CAPABILITY_VERSION_3;
+
+	if (syscall(SYS_capget, cap_header, cap_data) < 0) {
+		perror("capget");
+		return;
+	}
+
+	fprintf(stdout, "Cap: %x, %x, %x, %x, %x, %x\n",
+			cap_data_data[0].effective,
+			cap_data_data[0].permitted,
+			cap_data_data[0].inheritable,
+			cap_data_data[1].effective,
+			cap_data_data[1].permitted,
+			cap_data_data[1].inheritable);
+	return;
+}
