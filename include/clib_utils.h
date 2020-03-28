@@ -18,7 +18,9 @@
 #ifndef UTILS_H_NOWJRQGI
 #define UTILS_H_NOWJRQGI
 
+#ifndef _GNU_SOURCE
 #define	_GNU_SOURCE
+#endif
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
