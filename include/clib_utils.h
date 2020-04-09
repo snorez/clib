@@ -150,8 +150,9 @@ static inline int is_same_path(const char *path0, const char *path1)
 	memset(resolved_path0, 0, PATH_MAX);
 	memset(resolved_path1, 0, PATH_MAX);
 
-	realpath(path0, resolved_path0);
-	realpath(path1, resolved_path1);
+	char *null = realpath(path0, resolved_path0);
+	null = realpath(path1, resolved_path1);
+	(void)null;
 
 	if (!strcmp(resolved_path0, resolved_path1))
 		return 1;
