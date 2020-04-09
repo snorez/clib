@@ -39,6 +39,7 @@
 #include <syscall.h>
 #include <linux/capability.h>
 #include <linux/ioctl.h>
+#include <limits.h>
 
 #ifdef __cplusplus
 
@@ -137,6 +138,29 @@ static inline char *get_arg(char *argv[], char *target)
 			return argv[i+1];
 	}
 	return NULL;
+}
+
+static inline int is_same_path(const char *path0, const char *path1)
+{
+	if (!strcmp(path0, path1))
+		return 1;
+
+	char resolved_path0[PATH_MAX];
+	char resolved_path1[PATH_MAX];
+	memset(resolved_path0, 0, PATH_MAX);
+	memset(resolved_path1, 0, PATH_MAX);
+
+	realpath(path0, resolved_path0);
+	realpath(path1, resolved_path1);
+
+	if (!strcmp(resolved_path0, resolved_path1))
+		return 1;
+	if (!strcmp(resolved_path0, path1))
+		return 1;
+	if (!strcmp(path0, resolved_path1))
+		return 1;
+
+	return 0;
 }
 
 DECL_END
