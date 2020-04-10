@@ -140,6 +140,89 @@ static inline char *get_arg(char *argv[], char *target)
 	return NULL;
 }
 
+static inline void clib_realpath(const char *path, char *resolved_path)
+{
+	/* XXX: path length should less than PATH_MAX */
+	char tmp_path0[PATH_MAX];
+	memset(tmp_path0, 0, PATH_MAX);
+
+	char *pb = (char *)path;
+	char *pe = (char *)path;
+	char *pt = tmp_path0+PATH_MAX-1;
+	while (*pe) {
+		if (*pe != '/') {
+			pe++;
+		} else if (pb != pe) {
+			size_t cnt;
+			cnt = pe - pb;
+			memcpy(pt-cnt, pb, cnt);
+			pt = pt-cnt-1;
+			pe++;
+			pb = pe;
+		} else {
+			pe++;
+			pb = pe;
+		}
+	}
+
+	if (pb != pe) {
+		size_t cnt;
+		cnt = pe - pb;
+		memcpy(pt-cnt, pb, cnt);
+	}
+
+	pt = tmp_path0;
+	int zero_next = 0;
+	size_t count = 0;
+	while (pt < (tmp_path0+PATH_MAX)) {
+		if (!*pt) {
+			pt++;
+			continue;
+		}
+
+		if (!strcmp("..", pt)) {
+			memset(pt, 0, 2);
+			pt += 2;
+			zero_next++;
+			continue;
+		}
+
+		if (!strcmp(".", pt)) {
+			memset(pt, 0, 1);
+			pt += 1;
+			continue;
+		}
+
+		if (zero_next) {
+			memset(pt, 0, strlen(pt));
+			pt += strlen(pt);
+			zero_next--;
+		}
+
+		count += strlen(pt) + 1; /* filename and '/' */
+		pt += strlen(pt);
+	}
+
+	pt = tmp_path0;
+	size_t left = count;
+	char *pr = resolved_path+left;
+	while (pt < (tmp_path0+PATH_MAX)) {
+		if (!*pt) {
+			pt++;
+			continue;
+		}
+
+		size_t cnt = strlen(pt);
+		memcpy(pr-cnt, pt, cnt);
+		pt += cnt;
+		pr = pr-cnt-1;
+		*pr = '/';
+		left -= (cnt + 1);
+		if (!left)
+			break;
+	}
+}
+
 static inline int is_same_path(const char *path0, const char *path1)
 {
 	if (!strcmp(path0, path1))
@@ -150,9 +233,8 @@ static inline int is_same_path(const char *path0, const char *path1)
 	memset(resolved_path0, 0, PATH_MAX);
 	memset(resolved_path1, 0, PATH_MAX);
 
-	char *null = realpath(path0, resolved_path0);
-	null = realpath(path1, resolved_path1);
-	(void)null;
+	clib_realpath(path0, resolved_path0);
+	clib_realpath(path1, resolved_path1);
 
 	if (!strcmp(resolved_path0, resolved_path1))
 		return 1;
