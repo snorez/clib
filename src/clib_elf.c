@@ -487,8 +487,10 @@ int elf_get_syms(char *path, struct list_head *head, uint8_t *bits)
 		else if (*bits == 64)
 			memcpy((char *)&_new->data.sym1,
 				(char *)sym->data, sizeof(Elf64_Sym));
-		else
-			BUG();
+		else {
+			err_dbg(0, "Not support: %d\n", *bits);
+			return -1;
+		}
 		list_add_tail(&_new->sibling, head);
 	}
 
@@ -503,8 +505,10 @@ int elf_get_syms(char *path, struct list_head *head, uint8_t *bits)
 		else if (*bits == 64)
 			memcpy((char *)&_new->data.sym1,
 				(char *)sym->data, sizeof(Elf64_Sym));
-		else
-			BUG();
+		else {
+			err_dbg(0, "Not support: %d\n", *bits);
+			return -1;
+		}
 		list_add_tail(&_new->sibling, head);
 	}
 

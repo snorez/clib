@@ -264,7 +264,7 @@ int regfile_close(regfile *file)
 		if (bin_wdata(file))
 			free(bin_wdata(file));
 	} else {
-		err_dbg(0, "BUG: this should not happen");
+		err_dbg(0, "this should not happen");
 	}
 
 	free(file);
@@ -323,7 +323,7 @@ int regfile_readall(regfile *file)
 		bin_rdata(file) = buf;
 		buf = NULL;
 	} else {
-		err_dbg(0, "BUG: this should not happen");
+		err_dbg(0, "this should not happen");
 	}
 
 free_ret:

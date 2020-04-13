@@ -29,7 +29,7 @@ static int ui_idx = 0;
 static char *xdupstr(char *str)
 {
 	if (!str) {
-		err_msg("BUG: NULL str");
+		err_msg("NULL str");
 		return NULL;
 	}
 
@@ -47,7 +47,7 @@ static char *clib_generator(const char *text, int state)
 	list_comm *node;
 
 	if (!text) {
-		err_msg("BUG: NULL text");
+		err_msg("NULL text");
 		return NULL;
 	}
 
@@ -250,7 +250,6 @@ void clib_cmd_cleanup(void)
 		list_del_init(&cur->sibling);
 		clib_cmd_free(cur);
 	}
-	BUG_ON(!list_empty(&ui_env[ui_idx].cmd_head));
 }
 
 long clib_cmd_exec(char *cmd, int argc, char **argv)
@@ -352,7 +351,6 @@ void clib_ac_del(char *str)
 void clib_ac_cleanup(void)
 {
 	buf_struct_list_cleanup((void *)&ui_env[ui_idx].ac_head);
-	BUG_ON(!list_empty(&ui_env[ui_idx].ac_head));
 }
 
 long clib_cmd_ac_add(char *name, clib_cmd_cb cb, clib_cmd_usage usage)

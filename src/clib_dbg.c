@@ -430,8 +430,9 @@ static void self_sigact(int signo, siginfo_t *si, void *arg)
 		old_segv_act.sa_handler(signo);
 	else if (signo == SIGBUS)
 		old_bus_act.sa_handler(signo);
-	else
-		WARN();
+	else {
+		fprintf(stderr, "Unknown signo: %d\n", signo);
+	}
 }
 
 /*

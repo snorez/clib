@@ -235,8 +235,7 @@ int clib_rw_pool_job_run(struct clib_rw_pool_job *job)
 
 	err = pthread_create(&tid_reader, NULL, reader_thread, (void *)job);
 	if (err) {
-		err_dbg(0, "pthread_create err, kill writer thread");
-		BUG();
+		err_dbg(0, "pthread_create err, should kill writer thread");
 		return -1;
 	}
 
