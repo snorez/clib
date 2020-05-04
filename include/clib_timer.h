@@ -31,7 +31,7 @@
 #include <signal.h>
 #include <setjmp.h>
 #include "../include/clib_utils.h"
-#include "../include/clib_error.h"
+#include "../include/clib_eh.h"
 #include "../include/clib_list.h"
 
 DECL_BEGIN

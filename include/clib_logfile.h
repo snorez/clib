@@ -19,7 +19,7 @@
 #define logfile_H_ZGYJL6O9
 
 #include "../include/clib_utils.h"
-#include "../include/clib_error.h"
+#include "../include/clib_eh.h"
 #include "../include/clib_buf.h"
 #include "../include/clib_list.h"
 #include "../include/clib_file.h"

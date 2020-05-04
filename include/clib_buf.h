@@ -19,7 +19,7 @@
 #define STRING_H_CMNRJ3FM
 
 #include "../include/clib_utils.h"
-#include "../include/clib_error.h"
+#include "../include/clib_eh.h"
 #include "../include/clib_list.h"
 #include <stdio.h>
 #include <string.h>

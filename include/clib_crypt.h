@@ -19,7 +19,7 @@
 #define CRYPT_H_MS9YVIBE
 
 #include "../include/clib_utils.h"
-#include "../include/clib_error.h"
+#include "../include/clib_eh.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>

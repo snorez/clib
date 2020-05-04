@@ -40,6 +40,8 @@
 #include <linux/capability.h>
 #include <linux/ioctl.h>
 #include <limits.h>
+#include <sys/mman.h>
+#include <linux/userfaultfd.h>
 
 #ifdef __cplusplus
 

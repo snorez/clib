@@ -1,5 +1,5 @@
 /*
- * TODO
+ * this file comes from `Advanced Unix programming`
  * Copyright (C) 2018  zerons
  *
  * This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,138 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "../include/clib_dbg.h"
+#include "../include/clib.h"
+
+int eh_mode;
+
+/*
+ * COLOR_B selections
+ *	00(normal) 01(bold) 02(normal-light) 03(Italic) 04(underline) 07 09(mid-line)
+ *	30-36 40-49
+ * XXX: DO NOT use these functions in different threads
+ */
+#define	COLOR_B		"\033[07;31m"
+#define COLOR_E		"\033[0m"
+#define	COLOR_OFF	"\0"
+static int color_p = 1;
+static char *last_color_b = COLOR_B;
+static char *last_color_e = COLOR_E;
+static char *color_prompt_b = COLOR_B;
+static char *color_prompt_e = COLOR_E;
+
+static void err_common(int has_errno, int error, const char *fmt,
+		       va_list ap)
+{
+	char buf[MAXLINE];
+	memset(buf, 0, MAXLINE);
+	memcpy(buf, color_prompt_b, strlen(color_prompt_b));
+	vsnprintf(buf+strlen(buf), MAXLINE-strlen(buf), fmt, ap);
+	if (has_errno)
+		snprintf(buf+strlen(buf), MAXLINE-strlen(buf), ": %s",
+			 strerror(errno));
+	size_t len = strlen(buf);
+	if (len >= MAXLINE-1-strlen(color_prompt_e)) {
+		buf[MAXLINE-strlen(color_prompt_e)-5] = '.';
+		buf[MAXLINE-strlen(color_prompt_e)-4] = '.';
+		buf[MAXLINE-strlen(color_prompt_e)-3] = '.';
+		memcpy(&buf[MAXLINE-strlen(color_prompt_e)-2], color_prompt_e,
+				strlen(color_prompt_e));
+		buf[MAXLINE-2] = '\n';
+		buf[MAXLINE-1] = '\0';
+	} else {
+		memcpy(buf+len, color_prompt_e, strlen(color_prompt_e));
+		buf[len+strlen(color_prompt_e)] = '\n';
+	}
+	fflush(stdout);
+	fputs(buf, stderr);
+	fflush(NULL);
+}
+
+void _err_msg(const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	err_common(0, 0, fmt, ap);
+	va_end(ap);
+}
+
+void _err_sys(const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	err_common(1, errno, fmt, ap);
+	va_end(ap);
+}
+
+void _err_dbg(int has_errno, const char *fmt, ...)
+{
+	if (eh_mode & EH_M_DBG) {
+		va_list ap;
+
+		va_start(ap, fmt);
+		if (has_errno)
+			err_common(1, errno, fmt, ap);
+		else
+			err_common(0, 0, fmt, ap);
+	}
+}
+
+void _err_dbg1(int errval, const char *fmt, ...)
+{
+	if (eh_mode & EH_M_DBG) {
+		va_list ap;
+
+		va_start(ap, fmt);
+		err_common(1, (errval < 0) ? -errval : errval, fmt, ap);
+		va_end(ap);
+	}
+}
+
+void _err_dump(const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	err_common(1, errno, fmt, ap);
+	va_end(ap);
+
+	abort();
+	exit(1);
+}
+
+void _err_exit(int flag_err, const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	err_common(flag_err, flag_err ? errno : 0, fmt, ap);
+	va_end(ap);
+
+	exit(flag_err ? 1 : 0);
+}
+
+void err_color_on(void)
+{
+	color_p = 1;
+	color_prompt_b = last_color_b;
+	color_prompt_e = last_color_e;
+}
+
+void err_color_off(void)
+{
+	color_p = 0;
+	color_prompt_b = COLOR_OFF;
+	color_prompt_e = COLOR_OFF;
+}
+
+void err_set_color(char *b, char *e)
+{
+	last_color_b = b;
+	last_color_e = e;
+	err_color_on();
+}
 
 /*
  * *NOTE* capstone used here
@@ -333,105 +464,124 @@ static struct sigaction old_fpe_act;
 static struct sigaction old_segv_act;
 static struct sigaction old_bus_act;
 static LIST_HEAD(eh_head);
-static int clean_mode = 0;
-int dbg_mt_mode = 0;
 
 static void print_mt_bt_info(ucontext_t *uc);
 static inline void print_bt(ucontext_t *uc)
 {
 	fprintf(stderr, "Call Stack:\n");
-	if (!dbg_mt_mode)
+	if (!(eh_mode & EH_M_MT))
 		print_bt_info(uc);
 	else
 		print_mt_bt_info(uc);
 	fprintf(stderr, "\n");
 }
 
+/*
+ * Main handler for SIGSEGV SIGBUS SIGILL SIGFPE.
+ * If in clean_mode, let for_clean_mode errhandler handle it.
+ *
+ * If one handler return non-zero, it means the exception is not handled, so
+ * we should try next handler.
+ */
 static void self_sigact(int signo, siginfo_t *si, void *arg)
 {
 	int retval = 0;
-	if (clean_mode) {
+	int handled = 0;	/* should we call the default handler? */
+
+	if (eh_mode & EH_M_CLEAN) {
 		struct eh_list *tmp;
 		list_for_each_entry(tmp, &eh_head, sibling) {
 			if ((signo == tmp->signo) &&
 				(tmp->for_clean_mode) &&
 				(tmp->cb))
 				retval = tmp->cb(signo, si, arg);
+			else
+				continue;
+
+			/* This one can not handle this exception, try next. */
 			if (retval)
-				break;
+				continue;
+
+			handled = 1;
 			if (tmp->exclusive)
 				break;
 		}
-		if (!retval)
-			return;
-	}
-
-	switch (signo) {
-	case SIGILL:
-		fprintf(stderr, "receive SIGILL:\t");
-		dump_ill(si->si_code);
-		fprintf(stderr, "instruction addr:");
-		break;
-	case SIGFPE:
-		fprintf(stderr, "receive SIGFPE:\t");
-		dump_fpe(si->si_code);
-		fprintf(stderr, "instruction addr:");
-		break;
-	case SIGSEGV:
-		fprintf(stderr, "receive SIGSEGV:\t");
-		dump_segv(si->si_code);
-		fprintf(stderr, "operation addr:");
-		break;
-	case SIGBUS:
-		fprintf(stderr, "receive SIGBUS:\t");
-		dump_bus(si->si_code);
-		fprintf(stderr, "\t\t");
-		break;
-	default:
-		fprintf(stderr, "receive %d\n", signo);
-	}
-	fprintf(stderr, "\t=> 0x%016lx:\t", (long)si->si_addr);
+	} else {
+		switch (signo) {
+		case SIGILL:
+			fprintf(stderr, "receive SIGILL:\t");
+			dump_ill(si->si_code);
+			fprintf(stderr, "instruction addr:");
+			break;
+		case SIGFPE:
+			fprintf(stderr, "receive SIGFPE:\t");
+			dump_fpe(si->si_code);
+			fprintf(stderr, "instruction addr:");
+			break;
+		case SIGSEGV:
+			fprintf(stderr, "receive SIGSEGV:\t");
+			dump_segv(si->si_code);
+			fprintf(stderr, "operation addr:");
+			break;
+		case SIGBUS:
+			fprintf(stderr, "receive SIGBUS:\t");
+			dump_bus(si->si_code);
+			fprintf(stderr, "\t\t");
+			break;
+		default:
+			fprintf(stderr, "receive %d\n", signo);
+		}
+		fprintf(stderr, "\t=> 0x%016lx:\t", (long)si->si_addr);
 #ifdef HAS_CAPSTONE
 #ifdef __x86_64__
-	disas_single(CS_ARCH_X86, CS_MODE_64,
-		(void *)(((ucontext_t *)arg)->uc_mcontext.gregs[REG_RIP]));
+		disas_single(CS_ARCH_X86, CS_MODE_64,
+			(void *)(((ucontext_t *)arg)->uc_mcontext.gregs[REG_RIP]));
 #endif
 #ifdef __i386__
-	disas_single(CS_ARCH_X86, CS_MODE_32,
-		(void *)(((ucontext_t *)arg)->uc_mcontext.gregs[REG_EIP]));
+		disas_single(CS_ARCH_X86, CS_MODE_32,
+			(void *)(((ucontext_t *)arg)->uc_mcontext.gregs[REG_EIP]));
 #endif
 #endif
-	fprintf(stderr, "errno: %s\n\n", strerror(si->si_errno));
+		fprintf(stderr, "errno: %s\n\n", strerror(si->si_errno));
 
-	dump_regs((ucontext_t *)arg);
+		dump_regs((ucontext_t *)arg);
 
-	fprintf(stderr, "\n");
-	print_bt((ucontext_t *)arg);
+		fprintf(stderr, "\n");
+		print_bt((ucontext_t *)arg);
+	}
 
-	if (!retval) {
+	if (!handled) {
+		/* give non-clean mode handler a chance */
 		struct eh_list *tmp;
 		list_for_each_entry(tmp, &eh_head, sibling) {
 			if ((tmp->signo == signo) &&
 				(!tmp->for_clean_mode) &&
 				(tmp->cb))
 				retval = tmp->cb(signo, si, arg);
+			else
+				continue;
+
 			if (retval)
-				break;
+				continue;
+
+			handled = 1;
 			if (tmp->exclusive)
 				break;
 		}
 	}
 
-	if (signo == SIGILL)
-		old_ill_act.sa_handler(signo);
-	else if (signo == SIGFPE)
-		old_fpe_act.sa_handler(signo);
-	else if (signo == SIGSEGV)
-		old_segv_act.sa_handler(signo);
-	else if (signo == SIGBUS)
-		old_bus_act.sa_handler(signo);
-	else {
-		fprintf(stderr, "Unknown signo: %d\n", signo);
+	if (!handled) {
+		if (signo == SIGILL)
+			old_ill_act.sa_handler(signo);
+		else if (signo == SIGFPE)
+			old_fpe_act.sa_handler(signo);
+		else if (signo == SIGSEGV)
+			old_segv_act.sa_handler(signo);
+		else if (signo == SIGBUS)
+			old_bus_act.sa_handler(signo);
+		else {
+			fprintf(stderr, "Unknown signo: %d\n", signo);
+		}
 	}
 }
 
@@ -477,11 +627,6 @@ void set_eh(struct eh_list *new_eh)
 		else
 			list_add(&new_eh->sibling, &eh_head);
 	}
-}
-
-void set_eh_mode(int mode)
-{
-	clean_mode = mode;
 }
 
 void show_bt(void)

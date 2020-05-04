@@ -19,7 +19,7 @@
 #define NET_H_QGVOLRSZ
 
 #include "../include/clib_utils.h"
-#include "../include/clib_error.h"
+#include "../include/clib_eh.h"
 #include "../include/clib_buf.h"
 #include <unistd.h>
 #include <sys/types.h>

@@ -19,7 +19,7 @@
 #define FILE_H_7JM8BHXT
 
 #include "../include/clib_utils.h"
-#include "../include/clib_error.h"
+#include "../include/clib_eh.h"
 #include "../include/clib_buf.h"
 #include "../include/clib_list.h"
 #include <unistd.h>
