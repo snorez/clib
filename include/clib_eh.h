@@ -154,7 +154,7 @@ enum eh_mode_shift {
 #define	EH_M_SILENT	(1<<EH_M_SILENT_SHIFT)
 #define	EH_M_MT		(1<<EH_M_MT_SHIFT)
 
-enum eh_status {
+enum clib_eh_status {
 	EH_STATUS_NOT_HANDLED = -1,
 	EH_STATUS_DONE = 0,
 	EH_STATUS_DEF,
