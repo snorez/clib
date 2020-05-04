@@ -146,19 +146,25 @@ typedef int (*clib_sigfunc)(int, siginfo_t *, void *);
 extern int eh_mode;
 enum eh_mode_shift {
 	EH_M_DBG_SHIFT = 0,
-	EH_M_CLEAN_SHIFT,
+	EH_M_SILENT_SHIFT,
 	EH_M_MT_SHIFT,
 };
 #define	EH_M_DEF	0
 #define	EH_M_DBG	(1<<EH_M_DBG_SHIFT)
-#define	EH_M_CLEAN	(1<<EH_M_CLEAN_SHIFT)
+#define	EH_M_SILENT	(1<<EH_M_SILENT_SHIFT)
 #define	EH_M_MT		(1<<EH_M_MT_SHIFT)
+
+enum eh_status {
+	EH_STATUS_NOT_HANDLED = -1,
+	EH_STATUS_DONE = 0,
+	EH_STATUS_DEF,
+};
 
 struct eh_list {
 	struct list_head	sibling;
 	clib_sigfunc		cb;
 	int			signo;
-	int			for_clean_mode;
+	int			for_silent_mode;
 	int			exclusive;
 };
 
@@ -193,14 +199,14 @@ static inline void disable_dbg_mode(void)
 	disable_eh_mode(EH_M_DBG_SHIFT);
 }
 
-static inline void enable_clean_mode(void)
+static inline void enable_silent_mode(void)
 {
-	enable_eh_mode(EH_M_CLEAN_SHIFT);
+	enable_eh_mode(EH_M_SILENT_SHIFT);
 }
 
-static inline void disable_clean_mode(void)
+static inline void disable_silent_mode(void)
 {
-	disable_eh_mode(EH_M_CLEAN_SHIFT);
+	disable_eh_mode(EH_M_SILENT_SHIFT);
 }
 
 static inline void enable_mt_mode(void)
@@ -214,7 +220,7 @@ static inline void disable_mt_mode(void)
 }
 
 static inline struct eh_list *eh_list_new(clib_sigfunc func, int signo,
-					  int for_clean_mode, int exclusive)
+					  int for_silent_mode, int exclusive)
 {
 	struct eh_list *_new;
 	_new = (struct eh_list *)xmalloc(sizeof(*_new));
@@ -222,7 +228,7 @@ static inline struct eh_list *eh_list_new(clib_sigfunc func, int signo,
 
 	_new->cb = func;
 	_new->signo = signo;
-	_new->for_clean_mode = for_clean_mode;
+	_new->for_silent_mode = for_silent_mode;
 	_new->exclusive = exclusive;
 	return _new;
 }

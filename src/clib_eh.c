@@ -478,7 +478,7 @@ static inline void print_bt(ucontext_t *uc)
 
 /*
  * Main handler for SIGSEGV SIGBUS SIGILL SIGFPE.
- * If in clean_mode, let for_clean_mode errhandler handle it.
+ * If in silent_mode, let for_silent_mode errhandler handle it.
  *
  * If one handler return non-zero, it means the exception is not handled, so
  * we should try next handler.
@@ -486,27 +486,33 @@ static inline void print_bt(ucontext_t *uc)
 static void self_sigact(int signo, siginfo_t *si, void *arg)
 {
 	int retval = 0;
-	int handled = 0;	/* should we call the default handler? */
+	int handled = 0;
+	int call_def = 0;	/* should we call the default handler? */
 
-	if (eh_mode & EH_M_CLEAN) {
+	if (eh_mode & EH_M_SILENT) {
 		struct eh_list *tmp;
 		list_for_each_entry(tmp, &eh_head, sibling) {
 			if ((signo == tmp->signo) &&
-				(tmp->for_clean_mode) &&
+				(tmp->for_silent_mode) &&
 				(tmp->cb))
 				retval = tmp->cb(signo, si, arg);
 			else
 				continue;
 
 			/* This one can not handle this exception, try next. */
-			if (retval)
+			if (retval == EH_STATUS_NOT_HANDLED)
 				continue;
+			else if (retval == EH_STATUS_DEF)
+				call_def = 1;
 
 			handled = 1;
 			if (tmp->exclusive)
 				break;
 		}
-	} else {
+	}
+
+	/* If silent_mode handlers can not handle this, run in non silent mode */
+	if ((!handled) && (!call_def)) {
 		switch (signo) {
 		case SIGILL:
 			fprintf(stderr, "receive SIGILL:\t");
@@ -548,21 +554,21 @@ static void self_sigact(int signo, siginfo_t *si, void *arg)
 
 		fprintf(stderr, "\n");
 		print_bt((ucontext_t *)arg);
-	}
 
-	if (!handled) {
-		/* give non-clean mode handler a chance */
+		/* give non-silent mode handler a chance */
 		struct eh_list *tmp;
 		list_for_each_entry(tmp, &eh_head, sibling) {
 			if ((tmp->signo == signo) &&
-				(!tmp->for_clean_mode) &&
+				(!tmp->for_silent_mode) &&
 				(tmp->cb))
 				retval = tmp->cb(signo, si, arg);
 			else
 				continue;
 
-			if (retval)
+			if (retval == EH_STATUS_NOT_HANDLED)
 				continue;
+			else if (retval == EH_STATUS_DEF)
+				call_def = 1;
 
 			handled = 1;
 			if (tmp->exclusive)
@@ -570,7 +576,7 @@ static void self_sigact(int signo, siginfo_t *si, void *arg)
 		}
 	}
 
-	if (!handled) {
+	if ((!handled) || (call_def)) {
 		if (signo == SIGILL)
 			old_ill_act.sa_handler(signo);
 		else if (signo == SIGFPE)
