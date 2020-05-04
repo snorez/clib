@@ -1,6 +1,8 @@
 2020-05-04
 	* clib_dbg: remove
 	* clib_eh: rename, rewrite self_sigact
+	* clib_eh: new logic for self_sigact
+	* clib_eh: remove obsolete interfaces
 
 Sat Jan 18 13:33:27 CST 2020
 	* clib_dbg.*: add backtrace for multithread

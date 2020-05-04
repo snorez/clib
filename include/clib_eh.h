@@ -172,7 +172,6 @@ extern void clib_dladdr_start(struct list_head *head, uint8_t *bits);
 extern void clib_dladdr(void *addr, Dl_info *info);
 extern void clib_dladdr_end(void);
 extern void set_eh(struct eh_list *new_eh);
-extern void set_eh_mode(int mode);
 extern void show_bt(void);
 
 #ifndef xmalloc
