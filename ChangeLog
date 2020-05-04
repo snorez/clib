@@ -3,6 +3,7 @@
 	* clib_eh: rename, rewrite self_sigact
 	* clib_eh: new logic for self_sigact
 	* clib_eh: remove obsolete interfaces
+	* clib_eh: add is_write_fault()
 
 Sat Jan 18 13:33:27 CST 2020
 	* clib_dbg.*: add backtrace for multithread

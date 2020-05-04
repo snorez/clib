@@ -427,6 +427,11 @@ static inline int clib_dbg_func_check(void)
 
 #endif
 
+static inline int is_write_fault(ucontext_t *ctx)
+{
+	return (ctx->uc_mcontext.gregs[REG_ERR] & 0x2);
+}
+
 DECL_END
 
 
