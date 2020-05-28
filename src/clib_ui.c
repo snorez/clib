@@ -103,7 +103,6 @@ void clib_ui_end(void)
 }
 
 static sigjmp_buf rl_jmp_env;
-static int sigint_is_set = 0;
 static void rl_sigint(int signo)
 {
 	siglongjmp(rl_jmp_env, 1);
@@ -113,11 +112,6 @@ static char new_prompt[64];
 char *clib_readline(char *prompt)
 {
 	char *ret;
-	if (unlikely(!sigint_is_set)) {
-		rl_attempted_completion_function = clib_completion;
-		sigint_is_set = 1;
-		signal(SIGINT, rl_sigint);
-	}
 
 	if (ui_idx) {
 		int idx = ui_idx;
@@ -133,6 +127,9 @@ char *clib_readline(char *prompt)
 		}
 	}
 
+	rl_completion_func_t *oldfunc = rl_attempted_completion_function;
+	rl_attempted_completion_function = clib_completion;
+	signal(SIGINT, rl_sigint);
 redo:
 	if (sigsetjmp(rl_jmp_env, 1)) {
 		fprintf(stdout, "\n");
@@ -143,10 +140,14 @@ redo:
 	ret = readline(prompt);
 	if (!ret) {
 		err_dbg(1, "readline err");
-		return NULL;
+		goto out;
 	} else if (!*ret)
 		goto redo;
 	add_history(ret);
+
+out:
+	rl_attempted_completion_function = oldfunc;
+	signal(SIGINT, SIG_DFL);
 	return ret;
 }
 
