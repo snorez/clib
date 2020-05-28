@@ -220,6 +220,18 @@ static inline bool test_and_clear_bit(long nr, volatile long *addr)
 	GEN_BINARY_RMWcc(LOCK_PREFIX "btr", *addr, "Ir", nr, "%0", c);
 }
 
+static inline bool test_bit(long nr, volatile long *addr)
+{
+	bool oldbit;
+
+	asm volatile("btq %2,%1"
+			CC_SET(c)
+			: CC_OUT(c) (oldbit)
+			: "m" (*(unsigned long *)addr), "Ir" (nr));
+
+	return oldbit;
+}
+
 static inline void atomic_set(atomic_t *v, long i)
 {
 	__atomic_store_8(&v->counter, i, __ATOMIC_SEQ_CST);
