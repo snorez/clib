@@ -1,5 +1,6 @@
 /*
- * TODO
+ * Maybe we should use libelf(elfutils) instead
+ *
  * Copyright (C) 2018  zerons
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,62 +20,79 @@
 
 static void dump_sechdr(elf_file *file, void *sechdr);
 
-static int id_elf(char *buf)
+static int elf_check_magic(char *buf)
 {
-	/*
-	 * e_ident[0-3] MAGIC
-	 * e_ident[4] class, 32bits or 64bits
-	 * e_ident[5] 1/2 little/big endian
-	 * e_ident[6] version
-	 * e_ident[7] EI_OSABI,
-	 * e_ident[8] EI_ABIVERSION, >linux 2.6, this is EI_PAD
-	 * e_ident[9-15] EI_PAD
-	 */
-	if (strncmp(buf, "\x7f\x45\x4c\x46", 4) != 0)
-		return -1;
-	return (buf[4]-1) ? 64 : 32;
+	if ((buf[EI_MAG0] == 0x7f) &&
+		(buf[EI_MAG1] == 0x45) &&
+		(buf[EI_MAG2] == 0x4c) &&
+		(buf[EI_MAG3] == 0x46))
+		return 1;
+	return 0;
 }
 
-static void *get_sh_by_id(elf_file *ef, int idx)
+static int elf_check_endian(char *buf)
 {
-	if (ef->elf_bits == 32) {
-		Elf32_Ehdr *e = ef->elf_hdr;
-		if (idx > e->e_shnum)
-			return NULL;
-		return ((char *)ef->elf_shdr + e->e_shentsize * idx);
-	} else if (ef->elf_bits == 64) {
-		Elf64_Ehdr *e = ef->elf_hdr;
-		if (idx > e->e_shnum)
-			return NULL;
-		return ((char *)ef->elf_shdr + e->e_shentsize * idx);
-	} else {
-		return NULL;
+	char c = buf[EI_DATA];
+	if (c == ELFDATA2LSB)
+		return 1;
+	err_dbg(0, "EI_DATA endian not implemented.");
+	return 0;
+}
+
+static int elf_check_osabi(char *buf)
+{
+	char c = buf[EI_OSABI];
+
+	switch (c) {
+	case ELFOSABI_LINUX:
+	case ELFOSABI_SYSV:
+	case ELFOSABI_NETBSD:
+	case ELFOSABI_SOLARIS:
+	case ELFOSABI_FREEBSD:
+		return 1;
+	default:
+		err_dbg(0, "EI_OSABI not implemented.");
+		return 0;
 	}
 }
 
-static void *get_sh_by_name(elf_file *file, const char *str)
+static int elf_check_machine(char *buf)
 {
-	if (file->elf_bits == 32) {
-		Elf32_Ehdr *e = file->elf_hdr;
-		Elf32_Shdr *s;
-		for (size_t i = 0; i < e->e_shnum; i++) {
-			s = file->elf_shdr + e->e_shentsize * i;
-			if (!memcmp(file->shstrtab+s->sh_name, str, strlen(str)+1))
-				return s;
-		}
-		return NULL;
-	} else if (file->elf_bits == 64) {
-		Elf64_Ehdr *e = file->elf_hdr;
-		Elf64_Shdr *s;
-		for (size_t i = 0; i < e->e_shnum; i++) {
-			s = file->elf_shdr + e->e_shentsize * i;
-			if (!memcmp(file->shstrtab+s->sh_name, str, strlen(str)+1))
-				return s;
-		}
-		return NULL;
-	} else {
-		return NULL;
+	int offset = 0x12;
+	uint16_t machine = *(uint16_t *)&buf[offset];
+
+	switch (machine) {
+	case EM_386:
+	case EM_860:
+	case EM_X86_64:
+		return 1;
+	default:
+		err_dbg(0, "e_machine not implemented.");
+		return 0;
 	}
+}
+
+static int elf_valid(char *buf)
+{
+	int rv = 0;
+
+	rv = elf_check_magic(buf);
+	if (!rv)
+		return rv;
+
+	rv = elf_check_endian(buf);
+	if (!rv)
+		return rv;
+
+	rv = elf_check_osabi(buf);
+	if (!rv)
+		return rv;
+
+	rv = elf_check_machine(buf);
+	if (!rv)
+		return rv;
+
+	return rv;
 }
 
 static int add_symbol(struct list_head *head, char *name, void *data)
@@ -85,13 +103,16 @@ static int add_symbol(struct list_head *head, char *name, void *data)
 	return list_comm_new_append(head, &sym, sizeof(sym));
 }
 
-static int add_symbols(elf_file *file, struct list_head *head, void *shsym, char *str)
+static int add_symbols(elf_file *ef, struct list_head *head,
+			void *shsym, char *str)
 {
 	int err;
 	char *start;
 	size_t cnt;
-	char *rdata = bin_rdata(file->file);
-	if (file->elf_bits == 32) {
+	char *rdata = bin_rdata(ef->file);
+	switch (ef->elf_bits) {
+	case 32:
+	{
 		Elf32_Shdr *s = shsym;
 		start = s->sh_offset + rdata;
 		cnt = s->sh_size / s->sh_entsize;
@@ -104,7 +125,9 @@ static int add_symbols(elf_file *file, struct list_head *head, void *shsym, char
 			}
 		}
 		return 0;
-	} else if (file->elf_bits == 64) {
+	}
+	case 64:
+	{
 		Elf64_Shdr *s = shsym;
 		start = s->sh_offset + rdata;
 		cnt = s->sh_size / s->sh_entsize;
@@ -118,67 +141,37 @@ static int add_symbols(elf_file *file, struct list_head *head, void *shsym, char
 		}
 		return 0;
 	}
+	default:
+		return 0;
+	}
+
 err_out:
 	list_comm_cleanup(head, NULL);
 	return -1;
 }
 
-static int parse_elf32(elf_file *file, char *buf)
+static int parse_elf32(elf_file *ef, char *buf)
 {
 	int err;
-	file->elf_bits = 32;
 
-	file->elf_hdr_size = sizeof(Elf32_Ehdr);
-	file->elf_hdr = (Elf32_Ehdr *)malloc(file->elf_hdr_size);
-	if (!file->elf_hdr) {
-		err_dbg(0, "malloc err");
-		return -1;
-	}
-	memset(file->elf_hdr, 0, file->elf_hdr_size);
-	memcpy(file->elf_hdr, buf, file->elf_hdr_size);
+	Elf32_Ehdr *eh = (Elf32_Ehdr *)buf;
+	ef->elf_hdr = eh;
+	ef->elf_hdr_size = eh->e_ehsize;
 
-	Elf32_Ehdr *tmp = file->elf_hdr;
-	file->elf_machine = (uint16_t)tmp->e_machine;
-	file->elf_text_entry = (uint64_t)tmp->e_entry;
+	ef->elf_text_entry = (uint64_t)eh->e_entry;
 
-	/* some test before getting the program header */
-	if (tmp->e_ehsize != sizeof(Elf32_Ehdr))
-		err_dbg(0, "elf header size abnormal");
-	if (tmp->e_phoff != sizeof(Elf32_Ehdr))
-		err_dbg(0, "program header offset abnormal");
-	if (tmp->e_phentsize != sizeof(Elf32_Phdr))
-		err_dbg(0, "program header entsize abnormal");
+	ef->elf_phdr_size = eh->e_phnum * eh->e_phentsize;
+	if (!ef->elf_phdr_size)
+		ef->elf_phdr = NULL;
+	else
+		ef->elf_phdr = buf + eh->e_phoff;
 
-	file->elf_phdr_size = tmp->e_phnum * tmp->e_phentsize;
-	if (!file->elf_phdr_size)
-		file->elf_phdr = NULL;
-	else {
-		file->elf_phdr = (Elf32_Phdr *)malloc(file->elf_phdr_size);
-		if (!file->elf_phdr) {
-			err_dbg(0, "malloc err");
-			goto err_free0;
-		}
-		memset(file->elf_phdr, 0, file->elf_phdr_size);
-		memcpy(file->elf_phdr, buf+tmp->e_phoff, file->elf_phdr_size);
-	}
+	ef->elf_shdr_size = eh->e_shentsize * eh->e_shnum;
+	if (!ef->elf_shdr_size)
+		ef->elf_shdr = NULL;
+	else
+		ef->elf_shdr = buf + eh->e_shoff;
 
-	if (tmp->e_shentsize != sizeof(Elf32_Shdr))
-		err_dbg(0, "section header entsize abnormal");
-	file->elf_shdr_size = tmp->e_shentsize * tmp->e_shnum;
-	if (!file->elf_shdr_size)
-		file->elf_shdr = NULL;
-	else {
-		file->elf_shdr = (Elf32_Shdr *)malloc(file->elf_shdr_size);
-		if (!file->elf_shdr) {
-			err_dbg(0, "malloc err");
-			goto err_free1;
-		}
-		memset(file->elf_shdr, 0, file->elf_shdr_size);
-		memcpy(file->elf_shdr, buf+tmp->e_shoff, file->elf_shdr_size);
-	}
-
-	char *bin_rdata = bin_rdata(file->file);
-	Elf32_Ehdr *e = file->elf_hdr;
 	Elf32_Shdr *shstr, *strtab, *symtab, *dynstr, *dynsym;
 
 	/*
@@ -186,132 +179,99 @@ static int parse_elf32(elf_file *file, char *buf)
 	 * TODO, check this member if SHN_UNDEF, OR larger than or equal
 	 *	SHN_LORESERVE
 	 */
-	if (e->e_shstrndx == SHN_UNDEF) {
+	if (eh->e_shstrndx == SHN_UNDEF) {
 		err_dbg(0, "elf has no section name string table");
-		goto err_free2;
+		return -1;
 	}
-	shstr = get_sh_by_id(file, e->e_shstrndx);
-	file->shstrtab = shstr->sh_offset + bin_rdata;
+	shstr = get_sh_by_id(ef, eh->e_shstrndx);
+	ef->shstrtab = shstr->sh_offset + buf;
 
 	/*
 	 * INFO, get strtab
 	 */
-	strtab = get_sh_by_name(file, ".strtab");
+	strtab = get_sh_by_name(ef, ".strtab");
 	if (!strtab) {
 		err_dbg(0, "elf has no .strtab?");
-		goto err_free2;
+		return -1;
 	}
-	file->strtab = strtab->sh_offset + bin_rdata;
+	ef->strtab = strtab->sh_offset + buf;
 
 	/*
 	 * INFO, get symtab
 	 */
-	symtab = get_sh_by_name(file, ".symtab");
+	symtab = get_sh_by_name(ef, ".symtab");
 	if (!symtab) {
 		err_dbg(0, "elf has no .symtab?");
-		goto err_free2;
+		return -1;
 	}
-	err = add_symbols(file, &file->syms, symtab, file->strtab);
+	err = add_symbols(ef, &ef->syms, symtab, ef->strtab);
 	if (err == -1) {
 		err_dbg(0, "add_symbols err");
-		goto err_free2;
+		return -1;
 	}
 
 	/*
 	 * INFO: get dynstr
 	 */
-	dynstr = get_sh_by_name(file, ".dynstr");
+	dynstr = get_sh_by_name(ef, ".dynstr");
 	if (!dynstr) {
 		err_dbg(0, "elf has no .dynstr?");
 		goto do_syms;
 	}
-	file->dynstr = dynstr->sh_offset + bin_rdata;
+	ef->dynstr = dynstr->sh_offset + buf;
 
 	/*
 	 * INFO: get dynsym
 	 */
-	dynsym = get_sh_by_name(file, ".dynsym");
+	dynsym = get_sh_by_name(ef, ".dynsym");
 	if (!dynsym) {
 		err_dbg(0, "elf has no .dynsym");
 		goto err_free3;
 	}
-	err = add_symbols(file, &file->dynsyms, dynsym, file->dynstr);
+	err = add_symbols(ef, &ef->dynsyms, dynsym, ef->dynstr);
 	if (err == -1) {
 		err_dbg(0, "add_symbols err");
 		goto err_free3;
 	}
 
 do_syms:
-
 	return 0;
 
 err_free3:
-	list_comm_cleanup(&file->syms, NULL);
-err_free2:
-	free(file->elf_shdr);
-err_free1:
-	free(file->elf_phdr);
-err_free0:
-	free(file->elf_hdr);
+	list_comm_cleanup(&ef->syms, NULL);
 	return -1;
 }
 
-static int parse_elf64(elf_file *file, char *buf)
+static int parse_elf64(elf_file *ef, char *buf)
 {
 	int err = 0;
-	file->elf_bits = 64;
 
-	file->elf_hdr_size = sizeof(Elf64_Ehdr);
-	file->elf_hdr = (Elf64_Ehdr *)malloc(file->elf_hdr_size);
-	if (!file->elf_hdr) {
-		err_dbg(0, "malloc err");
-		return -1;
-	}
-	memset(file->elf_hdr, 0, file->elf_hdr_size);
-	memcpy(file->elf_hdr, buf, file->elf_hdr_size);
+	Elf64_Ehdr *eh = (Elf64_Ehdr *)buf;
+	ef->elf_hdr = eh;
+	ef->elf_hdr_size = eh->e_ehsize;
 
-	Elf64_Ehdr *tmp = file->elf_hdr;
-	file->elf_machine = (uint16_t)tmp->e_machine;
-	file->elf_text_entry = (uint64_t)tmp->e_entry;
+	ef->elf_text_entry = (uint64_t)eh->e_entry;
 
 	/* some test before getting the program header */
-	if (tmp->e_ehsize != sizeof(Elf64_Ehdr))
+	if (eh->e_ehsize != sizeof(Elf64_Ehdr))
 		err_dbg(0, "elf header size abnormal");
-	if (tmp->e_phoff != sizeof(Elf64_Ehdr))
+	if (eh->e_phoff != sizeof(Elf64_Ehdr))
 		err_dbg(0, "program header offset abnormal");
-	if (tmp->e_phentsize != sizeof(Elf64_Phdr))
+	if (eh->e_phentsize != sizeof(Elf64_Phdr))
 		err_dbg(0, "program header entsize abnormal");
 
-	file->elf_phdr_size = tmp->e_phnum * tmp->e_phentsize;
-	if (!file->elf_phdr_size)
-		file->elf_phdr = NULL;
-	else {
-		file->elf_phdr = (Elf64_Phdr *)malloc(file->elf_phdr_size);
-		if (!file->elf_phdr) {
-			err_dbg(0, "malloc err");
-			goto err_free0;
-		}
-		memset(file->elf_phdr, 0, file->elf_phdr_size);
-		memcpy(file->elf_phdr, buf+tmp->e_phoff, file->elf_phdr_size);
-	}
+	ef->elf_phdr_size = eh->e_phnum * eh->e_phentsize;
+	if (!ef->elf_phdr_size)
+		ef->elf_phdr = NULL;
+	else
+		ef->elf_phdr = buf + eh->e_phoff;
 
-	if (tmp->e_shentsize != sizeof(Elf64_Shdr))
-		err_dbg(0, "section header entsize abnormal");
-	file->elf_shdr_size = tmp->e_shentsize * tmp->e_shnum;
-	if (!file->elf_shdr_size)
-		file->elf_shdr = NULL;
-	else {
-		file->elf_shdr = (Elf64_Shdr *)malloc(file->elf_shdr_size);
-		if (!file->elf_shdr) {
-			err_dbg(0, "malloc err");
-			goto err_free1;
-		}
-		memset(file->elf_shdr, 0, file->elf_shdr_size);
-		memcpy(file->elf_shdr, buf+tmp->e_shoff, file->elf_shdr_size);
-	}
+	ef->elf_shdr_size = eh->e_shentsize * eh->e_shnum;
+	if (!ef->elf_shdr_size)
+		ef->elf_shdr = NULL;
+	else
+		ef->elf_shdr = buf + eh->e_shoff;
 
-	char *bin_rdata = bin_rdata(file->file);
-	Elf64_Ehdr *e = file->elf_hdr;
 	Elf64_Shdr *shstr, *strtab, *symtab, *dynstr, *dynsym;
 
 	/*
@@ -319,73 +279,66 @@ static int parse_elf64(elf_file *file, char *buf)
 	 * TODO, check this member if SHN_UNDEF, OR larger than or equal
 	 *	SHN_LORESERVE
 	 */
-	if (e->e_shstrndx == SHN_UNDEF) {
+	if (eh->e_shstrndx == SHN_UNDEF) {
 		err_dbg(0, "elf has no section name string table");
-		goto err_free2;
+		return -1;
 	}
-	shstr = get_sh_by_id(file, e->e_shstrndx);
-	file->shstrtab = shstr->sh_offset + bin_rdata;
+	shstr = get_sh_by_id(ef, eh->e_shstrndx);
+	ef->shstrtab = shstr->sh_offset + buf;
 
 	/*
 	 * INFO, get strtab
 	 */
-	strtab = get_sh_by_name(file, ".strtab");
+	strtab = get_sh_by_name(ef, ".strtab");
 	if (!strtab) {
 		err_dbg(0, "elf has no .strtab?");
-		goto err_free2;
+		return -1;
 	}
-	file->strtab = strtab->sh_offset + bin_rdata;
+	ef->strtab = strtab->sh_offset + buf;
 
 	/*
 	 * INFO, get symtab
 	 */
-	symtab = get_sh_by_name(file, ".symtab");
+	symtab = get_sh_by_name(ef, ".symtab");
 	if (!symtab) {
 		err_dbg(0, "elf has no .symtab?");
-		goto err_free2;
+		return -1;
 	}
-	err = add_symbols(file, &file->syms, symtab, file->strtab);
+	err = add_symbols(ef, &ef->syms, symtab, ef->strtab);
 	if (err == -1) {
 		err_dbg(0, "add_symbols err");
-		goto err_free2;
+		return -1;
 	}
 
 	/*
 	 * INFO: get dynstr
 	 */
-	dynstr = get_sh_by_name(file, ".dynstr");
+	dynstr = get_sh_by_name(ef, ".dynstr");
 	if (!dynstr) {
 		err_dbg(0, "elf has no .dynstr?");
 		goto do_syms;
 	}
-	file->dynstr = dynstr->sh_offset + bin_rdata;
+	ef->dynstr = dynstr->sh_offset + buf;
 
 	/*
 	 * INFO: get dynsym
 	 */
-	dynsym = get_sh_by_name(file, ".dynsym");
+	dynsym = get_sh_by_name(ef, ".dynsym");
 	if (!dynsym) {
 		err_dbg(0, "elf has no .dynsym");
 		goto err_free3;
 	}
-	err = add_symbols(file, &file->dynsyms, dynsym, file->dynstr);
+	err = add_symbols(ef, &ef->dynsyms, dynsym, ef->dynstr);
 	if (err == -1) {
 		err_dbg(0, "add_symbols err");
 		goto err_free3;
 	}
 
 do_syms:
-
 	return 0;
 
 err_free3:
-	list_comm_cleanup(&file->syms, NULL);
-err_free2:
-	free(file->elf_shdr);
-err_free1:
-	free(file->elf_phdr);
-err_free0:
-	free(file->elf_hdr);
+	list_comm_cleanup(&ef->syms, NULL);
 	return -1;
 }
 
@@ -422,26 +375,67 @@ elf_file *elf_parse(char *path, int flag)
 		err = -1;
 		goto free_ret2;
 	}
-
-	err = id_elf(buf);
-	if (err == -1) {
-		err_dbg(0, "file format err");
+	if (!elf_valid(buf)) {
+		err_dbg(0, "elf_valid() check failed");
 		err = -1;
 		goto free_ret2;
 	}
 
-	if (err == 32)
+	ef->elf_bits = elf_bits(buf);
+	if (ef->elf_bits == 32)
 		err = parse_elf32(ef, buf);
-	else if (err == 64)
+	else if (ef->elf_bits == 64)
 		err = parse_elf64(ef, buf);
 
-	if (err == -1)
-		goto free_ret2;
-	else
+	if (!err)
 		goto ret;
 free_ret2:
 	regfile_close(ef->file);
 free_ret:
+	free(ef);
+ret:
+	return (err == -1) ? NULL : ef;
+}
+
+elf_file *elf_parse_data(void *ctx)
+{
+	int err;
+	if (elf_valid(ctx)) {
+		err_dbg(0, "elf_valid() check failed");
+		err = -1;
+		goto ret;
+	}
+
+	elf_file *ef = (elf_file *)malloc(sizeof(elf_file));
+	if (!ef) {
+		err = -1;
+		err_dbg(0, "malloc err");
+		goto ret;
+	}
+	memset(ef, 0, sizeof(elf_file));
+	INIT_LIST_HEAD(&ef->syms);
+	INIT_LIST_HEAD(&ef->dynsyms);
+
+	ef->file = regfile_open_fake(REGFILE_T_BIN);
+	if (!ef->file) {
+		err_dbg(1, "regfile_open err");
+		err = -1;
+		goto free_elf;
+	}
+	bin_rdata(ef->file) = ctx;
+
+	char *buf = (char *)ctx;
+	ef->elf_bits = elf_bits(buf);
+	if (ef->elf_bits == 32)
+		err = parse_elf32(ef, buf);
+	else if (ef->elf_bits == 64)
+		err = parse_elf64(ef, buf);
+
+	if (!err)
+		goto ret;
+
+	regfile_close(ef->file);
+free_elf:
 	free(ef);
 ret:
 	return (err == -1) ? NULL : ef;
@@ -464,14 +458,8 @@ int elf_cleanup(elf_file *file)
 /*
  * get all elf symbols, use _elf_sym_full
  */
-int elf_get_syms(char *path, struct list_head *head, uint8_t *bits)
+int elf_get_syms(elf_file *ef, struct list_head *head, uint8_t *bits)
 {
-	elf_file *ef = elf_parse(path, O_RDONLY);
-	if (!ef) {
-		err_dbg(0, "elf_parse err");
-		return -1;
-	}
-
 	INIT_LIST_HEAD(head);
 	*bits = ef->elf_bits;
 	list_comm *tmp;
@@ -512,9 +500,25 @@ int elf_get_syms(char *path, struct list_head *head, uint8_t *bits)
 		list_add_tail(&_new->sibling, head);
 	}
 
-	elf_cleanup(ef);
-
 	return 0;
+}
+
+int elf_get_syms_path(char *path, struct list_head *head, uint8_t *bits)
+{
+	int err = 0;
+	elf_file *ef = elf_parse(path, O_RDONLY);
+	if (!ef) {
+		err_dbg(0, "elf_parse err");
+		return -1;
+	}
+
+	err = elf_get_syms(ef, head, bits);
+	if (err == -1) {
+		err_dbg(0, "elf_get_syms err");
+	}
+
+	elf_cleanup(ef);
+	return err;
 }
 
 void elf_drop_syms(struct list_head *head)
@@ -1367,3 +1371,10 @@ next_loop:
 	return 0;
 }
 #endif
+
+/*
+ * ************************************************************************
+ * The following functions use libelf library
+ * check https://www.zybuluo.com/devilogic/note/139554 for interfaces
+ * ************************************************************************
+ */

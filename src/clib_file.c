@@ -243,11 +243,44 @@ close_ret:
 	return NULL;
 }
 
+regfile *regfile_open_fake(int type)
+{
+	regfile *ret = NULL;
+	ret = (regfile *)malloc(sizeof(*ret));
+	if (!ret) {
+		err_dbg(0, "malloc err");
+		return NULL;
+	}
+	memset(ret, 0, sizeof(*ret));
+
+	ret->fake = 1;
+	ret->fd = -1;
+	ret->type = type;
+	if (type == REGFILE_T_TXT) {
+		INIT_LIST_HEAD(txt_rdata(ret));
+		INIT_LIST_HEAD(txt_wdata(ret));
+	} else if (type == REGFILE_T_BIN) {
+		;
+	} else {
+		err_dbg(0, "type not implemented");
+		free(ret);
+		return NULL;
+	}
+
+	return ret;
+}
+
 int regfile_close(regfile *file)
 {
 	if (!file) {
 		err_dbg(0, "arg check err");
 		return -1;
+	}
+
+	if (file->fake) {
+		/* user cleanup it themselves */
+		free(file);
+		return 0;
 	}
 
 	int ret = close(file->fd);

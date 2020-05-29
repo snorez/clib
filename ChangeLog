@@ -1,3 +1,6 @@
+2020-05-29
+	* clib_elf: rewrite
+
 2020-05-04
 	* clib_dbg: remove
 	* clib_eh: rename, rewrite self_sigact

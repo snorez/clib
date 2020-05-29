@@ -46,28 +46,108 @@ struct _elf_sym_full {
 
 typedef struct _elf_file {
 	regfile		*file;
-	uint8_t		elf_bits;
-	uint16_t	elf_machine;
 	uint64_t	elf_text_entry;
 
 	void		*elf_hdr;
-	uint32_t	elf_hdr_size;
-
 	void		*elf_phdr;
-	uint32_t	elf_phdr_size;
-
 	void		*elf_shdr;
-	uint32_t	elf_shdr_size;
-
 	void		*shstrtab;
 	void		*strtab;		/* for strtab */
-
-	struct list_head syms;			/* struct _elf_sym nodes */
 	void		*dynstr;
+
+	struct list_head syms;		/* struct _elf_sym nodes */
 	struct list_head dynsyms;		/* struct _elf_sym nodes */
+
+	uint32_t	elf_hdr_size;
+	uint32_t	elf_phdr_size;
+	uint32_t	elf_shdr_size;
+
+	uint8_t		elf_bits;
 } elf_file;
 
+static inline int elf_bits(char *buf)
+{
+	return (buf[EI_CLASS]-1) ? 64 : 32;
+}
+
+static inline int elf_type(elf_file *ef)
+{
+	switch (ef->elf_bits) {
+	case 32:
+	{
+		Elf32_Ehdr *eh = ef->elf_hdr;
+		return eh->e_type;
+	}
+	case 64:
+	{
+		Elf64_Ehdr *eh = ef->elf_hdr;
+		return eh->e_type;
+	}
+	default:
+	{
+		return ET_NONE;
+	}
+	}
+}
+
+static inline void *get_sh_by_id(elf_file *ef, int idx)
+{
+	switch (ef->elf_bits) {
+	case 32:
+	{
+		Elf32_Ehdr *e = ef->elf_hdr;
+		if (idx > e->e_shnum)
+			return NULL;
+		return ((char *)ef->elf_shdr + e->e_shentsize * idx);
+	}
+	case 64:
+	{
+		Elf64_Ehdr *e = ef->elf_hdr;
+		if (idx > e->e_shnum)
+			return NULL;
+		return ((char *)ef->elf_shdr + e->e_shentsize * idx);
+	}
+	default:
+	{
+		return NULL;
+	}
+	}
+}
+
+static inline void *get_sh_by_name(elf_file *ef, const char *str)
+{
+	switch (ef->elf_bits) {
+	case 32:
+	{
+		Elf32_Ehdr *e = ef->elf_hdr;
+		Elf32_Shdr *s;
+		for (size_t i = 0; i < e->e_shnum; i++) {
+			s = ef->elf_shdr + e->e_shentsize * i;
+			if (!memcmp(ef->shstrtab+s->sh_name,str,strlen(str)+1))
+				return s;
+		}
+		return NULL;
+	}
+	case 64:
+	{
+		Elf64_Ehdr *e = ef->elf_hdr;
+		Elf64_Shdr *s;
+		for (size_t i = 0; i < e->e_shnum; i++) {
+			s = ef->elf_shdr + e->e_shentsize * i;
+			if (!memcmp(ef->shstrtab+s->sh_name,str,strlen(str)+1))
+				return s;
+		}
+		return NULL;
+	}
+	default:
+	{
+		return NULL;
+	}
+	}
+}
+
 extern elf_file *elf_parse(char *path, int flag);
+extern elf_file *elf_parse_data(void *ctx);
 extern int elf_cleanup(elf_file *);
 
 extern void dump_elf_ehdr(elf_file *);
@@ -81,7 +161,8 @@ extern void dump_elf_dynstr(elf_file *);
 extern void dump_elf_sym(elf_file *);
 extern void dump_elf_dynsym(elf_file *);
 
-extern int elf_get_syms(char *path, struct list_head *head, uint8_t *bits);
+extern int elf_get_syms(elf_file *ef, struct list_head *head, uint8_t *bits);
+extern int elf_get_syms_path(char *path, struct list_head *head, uint8_t *bits);
 extern void elf_drop_syms(struct list_head *head);
 
 #ifdef USELIB

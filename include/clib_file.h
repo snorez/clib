@@ -49,6 +49,7 @@ typedef struct {
 	int			fd;
 	int			openflag;
 	int			type;
+	int			fake;
 
 	union {
 		struct {
@@ -73,6 +74,7 @@ extern ssize_t clib_write(int fd, void *buf, size_t count);
 extern char *clib_loadfile(const char *path, size_t *len);
 
 extern regfile *regfile_open(int type, const char *path, int flag, ...);
+extern regfile *regfile_open_fake(int type);
 extern int regfile_close(regfile *);
 extern int regfile_readall(regfile *);
 

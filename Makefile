@@ -46,6 +46,7 @@ CC_FLAGS=$(SELF_CFLAGS) $(EXTRA_CFLAGS)
 CC_OPT_static = $(CC) $(CC_FLAGS) -rdynamic -DHAS_CAPSTONE
 CC_OPT_dynamic = $(CC) $(CC_FLAGS) -rdynamic -DHAS_CAPSTONE
 CC_OPT_low = $(CC) $(CC_FLAGS) -rdynamic
+LK_FLAG=-lpthread -ldl -lcapstone -lreadline -lncurses
 
 obj_static = clib_eh.o clib_file.o clib_list.o clib_buf.o clib_net.o \
 	     clib_crypt.o clib_elf.o clib_utils.o clib_timer.o \
@@ -85,7 +86,7 @@ endif
 # before copy, we need to use rm to delete the file first, then do the copy
 # otherwise, program load this lib will crash
 shared: $(obj_dynamic)
-	cd $(TMP);$(CC_OPT_dynamic) -rdynamic -shared -fPIC $(obj_dynamic) -lpthread -ldl -lcapstone -lreadline -lncurses -o libclib$(ARCH).so;cd $(CWD);rm -f $(LIB)/libclib$(ARCH).so;cp $(TMP)/libclib$(ARCH).so $(LIB)/
+	cd $(TMP);$(CC_OPT_dynamic) -rdynamic -shared -fPIC $(obj_dynamic) $(LK_FLAG) -o libclib$(ARCH).so;cd $(CWD);rm -f $(LIB)/libclib$(ARCH).so;cp $(TMP)/libclib$(ARCH).so $(LIB)/
 
 shared_low_ver: $(obj_dynamic_low)
 	cd $(TMP);$(CC_OPT_low) $(obj_dynamic_low) -Wl,--wrap=memcpy -rdynamic -shared -fPIC -ldl -lpthread -o libclib$(ARCH)_low.so;cd $(CWD);rm -f $(LIB)/libclib$(ARCH)_low.so;cp $(TMP)/libclib$(ARCH)_low.so $(LIB)/

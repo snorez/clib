@@ -185,7 +185,7 @@ void clib_dladdr(void *addr, Dl_info *info)
 
 	int diff = -1;
 	struct _elf_sym_full *t = NULL;
-	elf_get_syms((char *)info->dli_fname, elf_syms, bits);
+	elf_get_syms_path((char *)info->dli_fname, elf_syms, bits);
 
 	struct _elf_sym_full *tmp;
 	list_for_each_entry(tmp, elf_syms, sibling) {
