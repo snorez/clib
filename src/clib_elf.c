@@ -390,7 +390,7 @@ ret:
 elf_file *elf_parse_data(void *ctx)
 {
 	int err;
-	if (elf_valid(ctx)) {
+	if (!elf_valid(ctx)) {
 		err_dbg(0, "elf_valid() check failed");
 		err = -1;
 		goto ret;
