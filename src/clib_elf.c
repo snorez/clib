@@ -458,10 +458,9 @@ int elf_cleanup(elf_file *file)
 /*
  * get all elf symbols, use _elf_sym_full
  */
-int elf_get_syms(elf_file *ef, struct list_head *head, uint8_t *bits)
+int elf_get_syms(elf_file *ef, struct list_head *head)
 {
 	INIT_LIST_HEAD(head);
-	*bits = ef->elf_bits;
 	list_comm *tmp;
 	struct _elf_sym_full *_new;
 	list_for_each_entry(tmp, &ef->syms, list_head) {
@@ -469,14 +468,14 @@ int elf_get_syms(elf_file *ef, struct list_head *head, uint8_t *bits)
 		_new = (struct _elf_sym_full *)malloc(sizeof(*_new));
 		_new->name = malloc(strlen(sym->name)+1);
 		memcpy(_new->name, sym->name, strlen(sym->name)+1);
-		if (*bits == 32)
+		if (ef->elf_bits == 32)
 			memcpy((char *)&_new->data.sym0,
 				(char *)sym->data, sizeof(Elf32_Sym));
-		else if (*bits == 64)
+		else if (ef->elf_bits == 64)
 			memcpy((char *)&_new->data.sym1,
 				(char *)sym->data, sizeof(Elf64_Sym));
 		else {
-			err_dbg(0, "Not support: %d\n", *bits);
+			err_dbg(0, "Not support: %d\n", ef->elf_bits);
 			return -1;
 		}
 		list_add_tail(&_new->sibling, head);
@@ -487,14 +486,14 @@ int elf_get_syms(elf_file *ef, struct list_head *head, uint8_t *bits)
 		_new = (struct _elf_sym_full *)malloc(sizeof(*_new));
 		_new->name = malloc(strlen(sym->name)+1);
 		memcpy(_new->name, sym->name, strlen(sym->name)+1);
-		if (*bits == 32)
+		if (ef->elf_bits == 32)
 			memcpy((char *)&_new->data.sym0,
 				(char *)sym->data, sizeof(Elf32_Sym));
-		else if (*bits == 64)
+		else if (ef->elf_bits == 64)
 			memcpy((char *)&_new->data.sym1,
 				(char *)sym->data, sizeof(Elf64_Sym));
 		else {
-			err_dbg(0, "Not support: %d\n", *bits);
+			err_dbg(0, "Not support: %d\n", ef->elf_bits);
 			return -1;
 		}
 		list_add_tail(&_new->sibling, head);
@@ -512,11 +511,12 @@ int elf_get_syms_path(char *path, struct list_head *head, uint8_t *bits)
 		return -1;
 	}
 
-	err = elf_get_syms(ef, head, bits);
+	err = elf_get_syms(ef, head);
 	if (err == -1) {
 		err_dbg(0, "elf_get_syms err");
 	}
 
+	*bits = ef->elf_bits;
 	elf_cleanup(ef);
 	return err;
 }

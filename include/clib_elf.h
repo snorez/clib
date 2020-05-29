@@ -161,7 +161,7 @@ extern void dump_elf_dynstr(elf_file *);
 extern void dump_elf_sym(elf_file *);
 extern void dump_elf_dynsym(elf_file *);
 
-extern int elf_get_syms(elf_file *ef, struct list_head *head, uint8_t *bits);
+extern int elf_get_syms(elf_file *ef, struct list_head *head);
 extern int elf_get_syms_path(char *path, struct list_head *head, uint8_t *bits);
 extern void elf_drop_syms(struct list_head *head);
 
