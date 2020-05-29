@@ -77,12 +77,12 @@ static inline int elf_type(elf_file *ef)
 	switch (ef->elf_bits) {
 	case 32:
 	{
-		Elf32_Ehdr *eh = ef->elf_hdr;
+		Elf32_Ehdr *eh = (Elf32_Ehdr *)ef->elf_hdr;
 		return eh->e_type;
 	}
 	case 64:
 	{
-		Elf64_Ehdr *eh = ef->elf_hdr;
+		Elf64_Ehdr *eh = (Elf64_Ehdr *)ef->elf_hdr;
 		return eh->e_type;
 	}
 	default:
@@ -97,14 +97,14 @@ static inline void *get_sh_by_id(elf_file *ef, int idx)
 	switch (ef->elf_bits) {
 	case 32:
 	{
-		Elf32_Ehdr *e = ef->elf_hdr;
+		Elf32_Ehdr *e = (Elf32_Ehdr *)ef->elf_hdr;
 		if (idx > e->e_shnum)
 			return NULL;
 		return ((char *)ef->elf_shdr + e->e_shentsize * idx);
 	}
 	case 64:
 	{
-		Elf64_Ehdr *e = ef->elf_hdr;
+		Elf64_Ehdr *e = (Elf64_Ehdr *)ef->elf_hdr;
 		if (idx > e->e_shnum)
 			return NULL;
 		return ((char *)ef->elf_shdr + e->e_shentsize * idx);
@@ -121,22 +121,26 @@ static inline void *get_sh_by_name(elf_file *ef, const char *str)
 	switch (ef->elf_bits) {
 	case 32:
 	{
-		Elf32_Ehdr *e = ef->elf_hdr;
+		Elf32_Ehdr *e = (Elf32_Ehdr *)ef->elf_hdr;
 		Elf32_Shdr *s;
 		for (size_t i = 0; i < e->e_shnum; i++) {
-			s = ef->elf_shdr + e->e_shentsize * i;
-			if (!memcmp(ef->shstrtab+s->sh_name,str,strlen(str)+1))
+			s = (Elf32_Shdr *)((long)ef->elf_shdr +
+						e->e_shentsize * i);
+			if (!memcmp((void *)((long)ef->shstrtab + s->sh_name),
+						str, strlen(str)+1))
 				return s;
 		}
 		return NULL;
 	}
 	case 64:
 	{
-		Elf64_Ehdr *e = ef->elf_hdr;
+		Elf64_Ehdr *e = (Elf64_Ehdr *)ef->elf_hdr;
 		Elf64_Shdr *s;
 		for (size_t i = 0; i < e->e_shnum; i++) {
-			s = ef->elf_shdr + e->e_shentsize * i;
-			if (!memcmp(ef->shstrtab+s->sh_name,str,strlen(str)+1))
+			s = (Elf64_Shdr *)((long)ef->elf_shdr +
+						e->e_shentsize * i);
+			if (!memcmp((void *)((long)ef->shstrtab + s->sh_name),
+						str, strlen(str)+1))
 				return s;
 		}
 		return NULL;
