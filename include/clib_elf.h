@@ -42,6 +42,8 @@ struct _elf_sym_full {
 	} data;
 
 	void			*load_addr;
+	char			bind;
+	char			type;
 };
 
 typedef struct _elf_file {
@@ -205,7 +207,7 @@ extern int elf_get_syms(elf_file *ef, struct list_head *head);
 extern int elf_get_syms_path(char *path, struct list_head *head, uint8_t *bits);
 extern void elf_drop_syms(struct list_head *head);
 
-extern void get_sym_loadaddr(elf_file *ef, struct _elf_sym_full *sym);
+extern void get_sym_detail(elf_file *ef, struct _elf_sym_full *sym);
 
 #ifdef USELIB
 extern int elf_uselib(char *libname, unsigned long load_addr);
