@@ -572,7 +572,7 @@ void get_sym_loadaddr(elf_file *ef, struct _elf_sym_full *sym)
 			Elf32_Sym s = sym->data.sym0;
 			if (s.st_shndx == SHN_UNDEF)
 				break;
-			sym->load_addr = (void *)(long)s.st_value;
+			sym->load_addr = buf + s.st_value;
 			break;
 		}
 		case 64:
@@ -580,7 +580,7 @@ void get_sym_loadaddr(elf_file *ef, struct _elf_sym_full *sym)
 			Elf64_Sym s = sym->data.sym1;
 			if (s.st_shndx == SHN_UNDEF)
 				break;
-			sym->load_addr = (void *)s.st_value;
+			sym->load_addr = buf + s.st_value;
 			break;
 		}
 		default:
