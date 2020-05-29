@@ -436,9 +436,6 @@ int elf_cleanup(elf_file *file)
 	if (!file)
 		return -1;
 	regfile_close(file->file);
-	free(file->elf_hdr);
-	free(file->elf_phdr);
-	free(file->elf_shdr);
 	list_comm_cleanup(&file->syms, NULL);
 	list_comm_cleanup(&file->dynsyms, NULL);
 	free(file);
