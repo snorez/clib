@@ -539,6 +539,8 @@ void get_sym_detail(elf_file *ef, struct _elf_sym_full *sym)
 			if (s.st_shndx == SHN_COMMON)
 				break;
 			Elf32_Shdr *shdr = get_sh_by_id(ef, s.st_shndx);
+			if (!shdr)
+				break;
 			void *taddr = shdr->sh_offset + buf;
 			sym->load_addr = taddr + s.st_value;
 			break;
@@ -549,6 +551,8 @@ void get_sym_detail(elf_file *ef, struct _elf_sym_full *sym)
 			if (s.st_shndx == SHN_COMMON)
 				break;
 			Elf64_Shdr *shdr = get_sh_by_id(ef, s.st_shndx);
+			if (!shdr)
+				break;
 			void *taddr = shdr->sh_offset + buf;
 			sym->load_addr = taddr + s.st_value;
 			break;
