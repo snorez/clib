@@ -192,22 +192,22 @@ static int parse_elf32(elf_file *ef, char *buf)
 	strtab = get_sh_by_name(ef, ".strtab");
 	if (!strtab) {
 		err_dbg(0, "elf has no .strtab?");
-		return -1;
-	}
-	ef->strtab = strtab->sh_offset + buf;
+	} else {
+		ef->strtab = strtab->sh_offset + buf;
 
-	/*
-	 * INFO, get symtab
-	 */
-	symtab = get_sh_by_name(ef, ".symtab");
-	if (!symtab) {
-		err_dbg(0, "elf has no .symtab?");
-		return -1;
-	}
-	err = add_symbols(ef, &ef->syms, symtab, ef->strtab);
-	if (err == -1) {
-		err_dbg(0, "add_symbols err");
-		return -1;
+		/*
+		 * INFO, get symtab
+		 */
+		symtab = get_sh_by_name(ef, ".symtab");
+		if (!symtab) {
+			err_dbg(0, "elf has no .symtab?");
+			return -1;
+		}
+		err = add_symbols(ef, &ef->syms, symtab, ef->strtab);
+		if (err == -1) {
+			err_dbg(0, "add_symbols err");
+			return -1;
+		}
 	}
 
 	/*
@@ -216,25 +216,24 @@ static int parse_elf32(elf_file *ef, char *buf)
 	dynstr = get_sh_by_name(ef, ".dynstr");
 	if (!dynstr) {
 		err_dbg(0, "elf has no .dynstr?");
-		goto do_syms;
-	}
-	ef->dynstr = dynstr->sh_offset + buf;
+	} else {
+		ef->dynstr = dynstr->sh_offset + buf;
 
-	/*
-	 * INFO: get dynsym
-	 */
-	dynsym = get_sh_by_name(ef, ".dynsym");
-	if (!dynsym) {
-		err_dbg(0, "elf has no .dynsym");
-		goto err_free3;
-	}
-	err = add_symbols(ef, &ef->dynsyms, dynsym, ef->dynstr);
-	if (err == -1) {
-		err_dbg(0, "add_symbols err");
-		goto err_free3;
+		/*
+		 * INFO: get dynsym
+		 */
+		dynsym = get_sh_by_name(ef, ".dynsym");
+		if (!dynsym) {
+			err_dbg(0, "elf has no .dynsym");
+			goto err_free3;
+		}
+		err = add_symbols(ef, &ef->dynsyms, dynsym, ef->dynstr);
+		if (err == -1) {
+			err_dbg(0, "add_symbols err");
+			goto err_free3;
+		}
 	}
 
-do_syms:
 	return 0;
 
 err_free3:
@@ -292,22 +291,22 @@ static int parse_elf64(elf_file *ef, char *buf)
 	strtab = get_sh_by_name(ef, ".strtab");
 	if (!strtab) {
 		err_dbg(0, "elf has no .strtab?");
-		return -1;
-	}
-	ef->strtab = strtab->sh_offset + buf;
+	} else {
+		ef->strtab = strtab->sh_offset + buf;
 
-	/*
-	 * INFO, get symtab
-	 */
-	symtab = get_sh_by_name(ef, ".symtab");
-	if (!symtab) {
-		err_dbg(0, "elf has no .symtab?");
-		return -1;
-	}
-	err = add_symbols(ef, &ef->syms, symtab, ef->strtab);
-	if (err == -1) {
-		err_dbg(0, "add_symbols err");
-		return -1;
+		/*
+		 * INFO, get symtab
+		 */
+		symtab = get_sh_by_name(ef, ".symtab");
+		if (!symtab) {
+			err_dbg(0, "elf has no .symtab?");
+			return -1;
+		}
+		err = add_symbols(ef, &ef->syms, symtab, ef->strtab);
+		if (err == -1) {
+			err_dbg(0, "add_symbols err");
+			return -1;
+		}
 	}
 
 	/*
@@ -316,25 +315,24 @@ static int parse_elf64(elf_file *ef, char *buf)
 	dynstr = get_sh_by_name(ef, ".dynstr");
 	if (!dynstr) {
 		err_dbg(0, "elf has no .dynstr?");
-		goto do_syms;
-	}
-	ef->dynstr = dynstr->sh_offset + buf;
+	} else {
+		ef->dynstr = dynstr->sh_offset + buf;
 
-	/*
-	 * INFO: get dynsym
-	 */
-	dynsym = get_sh_by_name(ef, ".dynsym");
-	if (!dynsym) {
-		err_dbg(0, "elf has no .dynsym");
-		goto err_free3;
-	}
-	err = add_symbols(ef, &ef->dynsyms, dynsym, ef->dynstr);
-	if (err == -1) {
-		err_dbg(0, "add_symbols err");
-		goto err_free3;
+		/*
+		 * INFO: get dynsym
+		 */
+		dynsym = get_sh_by_name(ef, ".dynsym");
+		if (!dynsym) {
+			err_dbg(0, "elf has no .dynsym");
+			goto err_free3;
+		}
+		err = add_symbols(ef, &ef->dynsyms, dynsym, ef->dynstr);
+		if (err == -1) {
+			err_dbg(0, "add_symbols err");
+			goto err_free3;
+		}
 	}
 
-do_syms:
 	return 0;
 
 err_free3:
@@ -528,6 +526,72 @@ void elf_drop_syms(struct list_head *head)
 		list_del(&tmp->sibling);
 		free(tmp->name);
 		free(tmp);
+	}
+}
+
+void get_sym_loadaddr(elf_file *ef, struct _elf_sym_full *sym)
+{
+	int type = elf_type(ef);
+	char *buf = bin_rdata(ef->file);
+
+	switch (type) {
+	case ET_REL:
+	{
+		switch (ef->elf_bits) {
+		case 32:
+		{
+			Elf32_Sym s = sym->data.sym0;
+			if (s.st_shndx == SHN_COMMON)
+				break;
+			Elf32_Shdr *shdr = get_sh_by_id(ef, s.st_shndx);
+			void *taddr = shdr->sh_offset + buf;
+			sym->load_addr = taddr + s.st_value;
+			break;
+		}
+		case 64:
+		{
+			Elf64_Sym s = sym->data.sym1;
+			if (s.st_shndx == SHN_COMMON)
+				break;
+			Elf64_Shdr *shdr = get_sh_by_id(ef, s.st_shndx);
+			void *taddr = shdr->sh_offset + buf;
+			sym->load_addr = taddr + s.st_value;
+			break;
+		}
+		default:
+			break;
+		}
+		break;
+	}
+	case ET_EXEC:
+	case ET_DYN:
+	{
+		switch (ef->elf_bits) {
+		case 32:
+		{
+			Elf32_Sym s = sym->data.sym0;
+			if (s.st_shndx == SHN_UNDEF)
+				break;
+			sym->load_addr = (void *)(long)s.st_value;
+			break;
+		}
+		case 64:
+		{
+			Elf64_Sym s = sym->data.sym1;
+			if (s.st_shndx == SHN_UNDEF)
+				break;
+			sym->load_addr = (void *)s.st_value;
+			break;
+		}
+		default:
+			break;
+		}
+		break;
+	}
+	default:
+	{
+		break;
+	}
 	}
 }
 

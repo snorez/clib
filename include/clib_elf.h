@@ -30,7 +30,7 @@ DECL_BEGIN
 
 struct _elf_sym {
 	char		*name;
-	void		*data;		/* Elf32_sym / Elf64_sym */
+	void		*data;		/* Elf32_Sym / Elf64_Sym */
 };
 
 struct _elf_sym_full {
@@ -146,6 +146,46 @@ static inline void *get_sh_by_name(elf_file *ef, const char *str)
 	}
 }
 
+static inline int sym_bind(elf_file *ef, struct _elf_sym_full *sym)
+{
+	switch (ef->elf_bits) {
+	case 32:
+	{
+		Elf32_Sym s = sym->data.sym0;
+		return ELF32_ST_BIND(s.st_info);
+	}
+	case 64:
+	{
+		Elf64_Sym s = sym->data.sym1;
+		return ELF64_ST_BIND(s.st_info);
+	}
+	default:
+	{
+		return STB_LOCAL;
+	}
+	}
+}
+
+static inline int sym_type(elf_file *ef, struct _elf_sym_full *sym)
+{
+	switch (ef->elf_bits) {
+	case 32:
+	{
+		Elf32_Sym s = sym->data.sym0;
+		return ELF32_ST_TYPE(s.st_info);
+	}
+	case 64:
+	{
+		Elf64_Sym s = sym->data.sym1;
+		return ELF64_ST_TYPE(s.st_info);
+	}
+	default:
+	{
+		return STT_NOTYPE;
+	}
+	}
+}
+
 extern elf_file *elf_parse(char *path, int flag);
 extern elf_file *elf_parse_data(void *ctx);
 extern int elf_cleanup(elf_file *);
@@ -164,6 +204,8 @@ extern void dump_elf_dynsym(elf_file *);
 extern int elf_get_syms(elf_file *ef, struct list_head *head);
 extern int elf_get_syms_path(char *path, struct list_head *head, uint8_t *bits);
 extern void elf_drop_syms(struct list_head *head);
+
+extern void get_sym_loadaddr(elf_file *ef, struct _elf_sym_full *sym);
 
 #ifdef USELIB
 extern int elf_uselib(char *libname, unsigned long load_addr);
