@@ -251,14 +251,6 @@ static int parse_elf64(elf_file *ef, char *buf)
 
 	ef->elf_text_entry = (uint64_t)eh->e_entry;
 
-	/* some test before getting the program header */
-	if (eh->e_ehsize != sizeof(Elf64_Ehdr))
-		err_dbg(0, "elf header size abnormal");
-	if (eh->e_phoff != sizeof(Elf64_Ehdr))
-		err_dbg(0, "program header offset abnormal");
-	if (eh->e_phentsize != sizeof(Elf64_Phdr))
-		err_dbg(0, "program header entsize abnormal");
-
 	ef->elf_phdr_size = eh->e_phnum * eh->e_phentsize;
 	if (!ef->elf_phdr_size)
 		ef->elf_phdr = NULL;
