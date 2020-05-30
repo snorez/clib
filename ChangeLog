@@ -1,5 +1,6 @@
 2020-05-30
 	* clib_elf: get sym size in get_sym_detail()
+	* clib_disas: add new helper disas_next()
 
 2020-05-29
 	* clib_elf: rewrite

@@ -17,6 +17,37 @@
  */
 #include "../include/clib.h"
 
+int disas_next(int arch, int mode, void *addr, char *buf, size_t bufsz)
+{
+	memset(buf, 0, bufsz);
+	int rv = 0;
+
+#ifdef HAS_CAPSTONE
+	csh handle;
+	cs_insn *insn;
+	size_t count;
+
+	if (cs_open(arch, mode, &handle) != CS_ERR_OK)
+		return -1;
+	count = cs_disasm(handle, addr, X86_X64_OPCODE_MAXLEN,
+			  (unsigned long)addr, 1, &insn);
+	if (count == 1) {
+		rv = insn[0].size;
+		if (rv <= bufsz)
+			memcpy(buf, insn[0].bytes, rv);
+		cs_free(insn, count);
+		cs_close(&handle);
+		return rv;
+	} else {
+		cs_close(&handle);
+		return -1;
+	}
+#else
+	return 0;
+#endif
+
+}
+
 int disas_single(int arch, int mode, void *addr)
 {
 #ifdef HAS_CAPSTONE

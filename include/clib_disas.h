@@ -28,6 +28,7 @@ DECL_BEGIN
 
 #define		X86_X64_OPCODE_MAXLEN		15
 
+extern int disas_next(int arch, int mode, void *addr, char *buf, size_t bufsz);
 extern int disas_single(int arch, int mode, void *addr);
 
 DECL_END
