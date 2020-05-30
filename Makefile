@@ -23,7 +23,7 @@ vpath %.0 $(TMP)/
 vpath %.1 $(TMP)/
 
 CC = gcc
-SELF_CFLAGS+=-g -O3
+SELF_CFLAGS+=-g -O2
 SELF_CFLAGS+=-Wall -std=gnu11 -m$(ARCH) -D_FILE_OFFSET_BITS=64
 #SELF_CFLAGS+=-fno-omit-frame-pointer
 #SELF_CFLAGS+=-DCONFIG_CLIB_THREADPOOL_MAX=0x40
