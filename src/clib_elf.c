@@ -525,6 +525,7 @@ void get_sym_detail(elf_file *ef, struct _elf_sym_full *sym)
 
 	sym->bind = sym_bind(ef, sym);
 	sym->type = sym_type(ef, sym);
+	sym->size = sym_size(ef, sym);
 
 	switch (type) {
 	case ET_REL:

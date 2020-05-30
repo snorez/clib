@@ -1,3 +1,6 @@
+2020-05-30
+	* clib_elf: get sym size in get_sym_detail()
+
 2020-05-29
 	* clib_elf: rewrite
 	* clib_elf: add helpers to parse symbol table

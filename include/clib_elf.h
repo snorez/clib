@@ -44,6 +44,7 @@ struct _elf_sym_full {
 	void			*load_addr;
 	char			bind;
 	char			type;
+	unsigned int		size;
 };
 
 typedef struct _elf_file {
@@ -188,6 +189,26 @@ static inline int sym_type(elf_file *ef, struct _elf_sym_full *sym)
 	default:
 	{
 		return STT_NOTYPE;
+	}
+	}
+}
+
+static inline int sym_size(elf_file *ef, struct _elf_sym_full *sym)
+{
+	switch (ef->elf_bits) {
+	case 32:
+	{
+		Elf32_Sym s = sym->data.sym0;
+		return s.st_size;
+	}
+	case 64:
+	{
+		Elf64_Sym s = sym->data.sym1;
+		return s.st_size;
+	}
+	default:
+	{
+		return 0;
 	}
 	}
 }
