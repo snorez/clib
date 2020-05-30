@@ -188,6 +188,11 @@ static inline void disable_eh_mode(int pos)
 	eh_mode &= ~(1<<pos);
 }
 
+static inline int get_eh_mode(int pos)
+{
+	return eh_mode & (1<<pos);
+}
+
 static inline void enable_dbg_mode(void)
 {
 	enable_eh_mode(EH_M_DBG_SHIFT);
@@ -196,6 +201,11 @@ static inline void enable_dbg_mode(void)
 static inline void disable_dbg_mode(void)
 {
 	disable_eh_mode(EH_M_DBG_SHIFT);
+}
+
+static inline int get_dbg_mode(void)
+{
+	return get_eh_mode(EH_M_DBG_SHIFT);
 }
 
 static inline void enable_silent_mode(void)
@@ -208,6 +218,11 @@ static inline void disable_silent_mode(void)
 	disable_eh_mode(EH_M_SILENT_SHIFT);
 }
 
+static inline int get_silent_mode(void)
+{
+	return get_eh_mode(EH_M_SILENT_SHIFT);
+}
+
 static inline void enable_mt_mode(void)
 {
 	enable_eh_mode(EH_M_MT_SHIFT);
@@ -216,6 +231,11 @@ static inline void enable_mt_mode(void)
 static inline void disable_mt_mode(void)
 {
 	disable_eh_mode(EH_M_MT_SHIFT);
+}
+
+static inline int get_mt_mode(void)
+{
+	return get_eh_mode(EH_M_MT_SHIFT);
 }
 
 static inline struct eh_list *eh_list_new(clib_sigfunc func, int signo,
