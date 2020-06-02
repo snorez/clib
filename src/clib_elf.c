@@ -32,7 +32,7 @@ static int elf_check_magic(char *buf)
 
 static int elf_check_endian(char *buf)
 {
-	char c = buf[EI_DATA];
+	char c = elf_endian(buf);
 	if (c == ELFDATA2LSB)
 		return 1;
 	err_dbg(0, "EI_DATA endian not implemented.");

@@ -73,6 +73,11 @@ static inline int elf_bits(char *buf)
 	return (buf[EI_CLASS]-1) ? 64 : 32;
 }
 
+static inline int elf_endian(char *buf)
+{
+	return buf[EI_DATA];
+}
+
 static inline int elf_type(elf_file *ef)
 {
 	switch (ef->elf_bits) {

@@ -17,9 +17,11 @@
  */
 #include "../include/clib.h"
 
-int disas_next(int arch, int mode, void *addr, char *buf, size_t bufsz)
+int disas_next(int arch, int mode, void *addr, char *buf, size_t bufsz,
+		unsigned int *opcid)
 {
 	memset(buf, 0, bufsz);
+	*opcid = (unsigned int)-1;
 	int rv = 0;
 
 #ifdef HAS_CAPSTONE
@@ -33,8 +35,10 @@ int disas_next(int arch, int mode, void *addr, char *buf, size_t bufsz)
 			  (unsigned long)addr, 1, &insn);
 	if (count == 1) {
 		rv = insn[0].size;
-		if (rv <= bufsz)
+		if (rv <= bufsz) {
 			memcpy(buf, insn[0].bytes, rv);
+			*opcid = insn[0].id;
+		}
 		cs_free(insn, count);
 		cs_close(&handle);
 		return rv;
