@@ -592,6 +592,116 @@ void get_sym_detail(elf_file *ef, struct _elf_sym_full *sym)
 	}
 }
 
+char *get_relentname_by_offset(elf_file *ef, char *relshdrname, int add,
+			       unsigned long offset)
+{
+	char *ret = NULL;
+	char *start;
+	size_t cnt;
+
+	/*
+	 * FIXME: the r_offset has different meaning in different object files.
+	 */
+	switch (ef->elf_bits) {
+	case 32:
+	{
+		long sym_idx = -1;
+		Elf32_Shdr *s;
+		s = (Elf32_Shdr *)get_sh_by_name(ef, relshdrname);
+		if (!s)
+			break;
+
+		start = s->sh_offset + bin_rdata(ef->file);
+		cnt = s->sh_size / s->sh_entsize;
+
+		for (size_t i = 0; i < cnt; i++) {
+			if (!add) {
+				Elf32_Rel *rel;
+				rel = (Elf32_Rel *)(start + s->sh_entsize * i);
+				if (rel->r_offset != offset)
+					continue;
+				sym_idx = ELF32_R_SYM(rel->r_info);
+				break;
+			} else {
+				Elf32_Rela *rel;
+				rel = (Elf32_Rela *)(start + s->sh_entsize * i);
+				if (rel->r_offset != offset)
+					continue;
+				sym_idx = ELF32_R_SYM(rel->r_info);
+				break;
+			}
+		}
+
+		if (sym_idx == -1)
+			break;
+
+		Elf32_Shdr *symtab;
+		symtab = get_sh_by_name(ef, ".symtab");
+		if (!symtab) {
+			err_dbg(0, "elf has no .symtab?");
+			break;
+		}
+
+		Elf32_Sym *sym;
+		sym = (Elf32_Sym *)(bin_rdata(ef->file) + symtab->sh_offset +
+					symtab->sh_entsize * sym_idx);
+		ret = ef->strtab + sym->st_name;
+		break;
+	}
+	case 64:
+	{
+		long sym_idx = -1;
+		Elf64_Shdr *s;
+		s = (Elf64_Shdr *)get_sh_by_name(ef, relshdrname);
+		if (!s)
+			break;
+
+		start = s->sh_offset + bin_rdata(ef->file);
+		cnt = s->sh_size / s->sh_entsize;
+
+		for (size_t i = 0; i < cnt; i++) {
+			if (!add) {
+				Elf64_Rel *rel;
+				rel = (Elf64_Rel *)(start + s->sh_entsize * i);
+				if (rel->r_offset != offset)
+					continue;
+				sym_idx = ELF64_R_SYM(rel->r_info);
+				break;
+			} else {
+				Elf64_Rela *rel;
+				rel = (Elf64_Rela *)(start + s->sh_entsize * i);
+				if (rel->r_offset != offset)
+					continue;
+				sym_idx = ELF64_R_SYM(rel->r_info);
+				break;
+			}
+		}
+
+		if (sym_idx == -1)
+			break;
+
+		Elf64_Shdr *symtab;
+		symtab = get_sh_by_name(ef, ".symtab");
+		if (!symtab) {
+			err_dbg(0, "elf has no .symtab?");
+			break;
+		}
+
+		Elf64_Sym *sym;
+		sym = (Elf64_Sym *)(bin_rdata(ef->file) + symtab->sh_offset +
+					symtab->sh_entsize * sym_idx);
+		ret = ef->strtab + sym->st_name;
+		break;
+	}
+	default:
+	{
+		break;
+	}
+	}
+
+	return ret;
+}
+
 /*
  * ************************************************************************
  * dump elf infomation
