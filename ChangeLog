@@ -1,3 +1,7 @@
+2020-06-09
+	* clib_elf: add is_section_text()/is_section_data()
+	* clib_elf: add shndx field in _elf_sym_full
+
 2020-05-30
 	* clib_elf: get sym size in get_sym_detail()
 	* clib_disas: add new helper disas_next()

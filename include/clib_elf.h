@@ -44,6 +44,7 @@ struct _elf_sym_full {
 	void			*load_addr;
 	char			bind;
 	char			type;
+	uint16_t		shndx;
 	unsigned int		size;
 };
 
@@ -198,6 +199,26 @@ static inline int sym_type(elf_file *ef, struct _elf_sym_full *sym)
 	}
 }
 
+static inline int sym_shndx(elf_file *ef, struct _elf_sym_full *sym)
+{
+	switch (ef->elf_bits) {
+	case 32:
+	{
+		Elf32_Sym s = sym->data.sym0;
+		return s.st_shndx;
+	}
+	case 64:
+	{
+		Elf64_Sym s = sym->data.sym1;
+		return s.st_shndx;
+	}
+	default:
+	{
+		return 0;
+	}
+	}
+}
+
 static inline int sym_size(elf_file *ef, struct _elf_sym_full *sym)
 {
 	switch (ef->elf_bits) {
@@ -210,6 +231,64 @@ static inline int sym_size(elf_file *ef, struct _elf_sym_full *sym)
 	{
 		Elf64_Sym s = sym->data.sym1;
 		return s.st_size;
+	}
+	default:
+	{
+		return 0;
+	}
+	}
+}
+
+static inline int is_section_text(elf_file *ef, struct _elf_sym_full *sym)
+{
+	switch (ef->elf_bits) {
+	case 32:
+	{
+		Elf32_Shdr *s = (Elf32_Shdr *)get_sh_by_id(ef, sym->shndx);
+		if (!s)
+			return 0;
+		if ((s->sh_type == SHT_PROGBITS) &&
+			(s->sh_flags & SHF_EXECINSTR))
+			return 1;
+		return 0;
+	}
+	case 64:
+	{
+		Elf64_Shdr *s = (Elf64_Shdr *)get_sh_by_id(ef, sym->shndx);
+		if (!s)
+			return 0;
+		if ((s->sh_type == SHT_PROGBITS) &&
+			(s->sh_flags & SHF_EXECINSTR))
+			return 1;
+		return 0;
+	}
+	default:
+	{
+		return 0;
+	}
+	}
+}
+
+static inline int is_section_data(elf_file *ef, struct _elf_sym_full *sym)
+{
+	switch (ef->elf_bits) {
+	case 32:
+	{
+		Elf32_Shdr *s = (Elf32_Shdr *)get_sh_by_id(ef, sym->shndx);
+		if (!s)
+			return 0;
+		if ((s->sh_type == SHT_PROGBITS) && (s->sh_flags & SHF_WRITE))
+			return 1;
+		return 0;
+	}
+	case 64:
+	{
+		Elf64_Shdr *s = (Elf64_Shdr *)get_sh_by_id(ef, sym->shndx);
+		if (!s)
+			return 0;
+		if ((s->sh_type == SHT_PROGBITS) && (s->sh_flags & SHF_WRITE))
+			return 1;
+		return 0;
 	}
 	default:
 	{
