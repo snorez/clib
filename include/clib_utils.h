@@ -42,6 +42,7 @@
 #include <limits.h>
 #include <sys/mman.h>
 #include <linux/userfaultfd.h>
+#include <linux/types.h>
 
 #ifdef __cplusplus
 
@@ -98,6 +99,15 @@ DECL_BEGIN
 #define _weak_alias(name,aliasname) \
 extern __typeof (name) aliasname __attribute__((weak,alias(#name)))
 #endif
+
+typedef __s8	s8;
+typedef __u8	u8;
+typedef __s16	s16;
+typedef __u16	u16;
+typedef __s32	s32;
+typedef __u32	u32;
+typedef __s64	s64;
+typedef __u64	u64;
 
 #define clib__round_mask(x, y)	((__typeof__(x))((y)-1))
 #define clib_round_up(x, y)	((((x)-1)|clib__round_mask(x, y)) + 1)
