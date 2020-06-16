@@ -1,3 +1,6 @@
+2020-06-16
+	* clib: copy insn.c from linux kernel(v4.18)
+
 2020-06-09
 	* clib_elf: add is_section_text()/is_section_data()
 	* clib_elf: add shndx field in _elf_sym_full

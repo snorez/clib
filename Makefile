@@ -48,19 +48,31 @@ CC_OPT_dynamic = $(CC) $(CC_FLAGS) -rdynamic -DHAS_CAPSTONE
 CC_OPT_low = $(CC) $(CC_FLAGS) -rdynamic
 LK_FLAG=-lpthread -ldl -lcapstone -lreadline -lncurses
 
-obj_static = clib_eh.o clib_file.o clib_list.o clib_buf.o clib_net.o \
-	     clib_crypt.o clib_elf.o clib_utils.o clib_timer.o \
-	     clib_disas.o clib_logfile.o clib_module.o clib_rbtree.o \
-	     clib_ui.o clib_mm.o clib_print.o clib_rwpool.o clib_threadpool.o
-obj_dynamic = clib_eh.0 clib_file.0 clib_list.0 clib_buf.0 clib_net.0 \
-	      clib_crypt.0 clib_elf.0 clib_utils.0 clib_timer.0 \
-	      clib_disas.0 clib_logfile.0 clib_module.0 clib_rbtree.0 \
-	      clib_ui.0 clib_mm.0 clib_print.0 clib_rwpool.0 clib_threadpool.0
-obj_dynamic_low = clib_eh.1 clib_file.1 clib_list.1 clib_buf.1 clib_net.1 \
-		  clib_crypt.1 clib_elf.1 clib_utils.1 clib_timer.1 \
-		  clib_disas.1 clib_logfile.1 clib_memcpy.1 clib_module.1 \
-		  clib_rbtree.1 \
-		  clib_ui.1 clib_mm.1 clib_print.1 clib_rwpool.1 clib_threadpool.1
+SRCS = \
+       clib_eh.c \
+       clib_file.c \
+       clib_list.c \
+       clib_buf.c \
+       clib_net.c \
+       clib_crypt.c \
+       clib_elf.c \
+       clib_utils.c \
+       clib_timer.c \
+       clib_disas.c \
+       clib_logfile.c \
+       clib_module.c \
+       clib_rbtree.c \
+       clib_ui.c \
+       clib_mm.c \
+       clib_print.c \
+       clib_rwpool.c \
+       clib_threadpool.c \
+       insn.c \
+       inat.c
+
+obj_static = $(SRCS:%.c=%.o)
+obj_dynamic = $(SRCS:%.c=%.0)
+obj_dynamic_low = $(SRCS:%.c=%.1)
 
 # all: static shared shared_low_ver
 all: prepare shared
