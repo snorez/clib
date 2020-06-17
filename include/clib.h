@@ -39,6 +39,7 @@
 #include "../include/clib_rwpool.h"
 #include "../include/clib_threadpool.h"
 #include "../include/insn.h"
+#include "../include/clib_bitmap.h"
 
 DECL_BEGIN
 

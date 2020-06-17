@@ -68,7 +68,8 @@ SRCS = \
        clib_rwpool.c \
        clib_threadpool.c \
        insn.c \
-       inat.c
+       inat.c \
+       clib_bitmap.c
 
 obj_static = $(SRCS:%.c=%.o)
 obj_dynamic = $(SRCS:%.c=%.0)

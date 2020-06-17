@@ -1,3 +1,6 @@
+2020-06-17
+	* clib: add clib_bitmap
+
 2020-06-16
 	* clib: copy insn.c from linux kernel(v4.18)
 
