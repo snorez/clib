@@ -24,7 +24,7 @@ void clib_bitmap_destroy(struct clib_bitmap *map)
 	free(map);
 }
 
-static void clib_bitmap_modify(struct clib_bitmap *map, u64 bit, int clear)
+static s64 clib_bitmap_modify(struct clib_bitmap *map, u64 bit, int clear)
 {
 	u64 idx = bit / (8 * sizeof(map->map[0]));
 	u64 bit_nr = bit % (8 * sizeof(map->map[0]));
@@ -32,24 +32,24 @@ static void clib_bitmap_modify(struct clib_bitmap *map, u64 bit, int clear)
 
 	if (idx >= map->cnt) {
 		err_dbg(0, "target bit exceed the total length.");
-		return;
+		return -1;
 	}
 
 	target = &map->map[idx];
 	if (clear)
-		test_and_clear_bit(bit_nr, target);
+		return test_and_clear_bit(bit_nr, target);
 	else
-		test_and_set_bit(bit_nr, target);
+		return test_and_set_bit(bit_nr, target);
 }
 
-void clib_bitmap_set(struct clib_bitmap *map, u64 bit)
+s64 clib_bitmap_set(struct clib_bitmap *map, u64 bit)
 {
-	clib_bitmap_modify(map, bit, 0);
+	return clib_bitmap_modify(map, bit, 0);
 }
 
-void clib_bitmap_clear(struct clib_bitmap *map, u64 bit)
+s64 clib_bitmap_clear(struct clib_bitmap *map, u64 bit)
 {
-	clib_bitmap_modify(map, bit, 1);
+	return clib_bitmap_modify(map, bit, 1);
 }
 
 static s64 clib_bitmap_find_next(struct clib_bitmap *map, u64 start_bit,

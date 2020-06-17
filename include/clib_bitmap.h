@@ -14,8 +14,8 @@ struct clib_bitmap {
 
 C_SYM struct clib_bitmap *clib_bitmap_create(u64 bits);
 C_SYM void clib_bitmap_destroy(struct clib_bitmap *map);
-C_SYM void clib_bitmap_set(struct clib_bitmap *map, u64 bit);
-C_SYM void clib_bitmap_clear(struct clib_bitmap *map, u64 bit);
+C_SYM s64 clib_bitmap_set(struct clib_bitmap *map, u64 bit);
+C_SYM s64 clib_bitmap_clear(struct clib_bitmap *map, u64 bit);
 C_SYM s64 clib_bitmap_nonzero(struct clib_bitmap *map, u64 start_bit);
 C_SYM s64 clib_bitmap_zero(struct clib_bitmap *map, u64 start_bit);;
 

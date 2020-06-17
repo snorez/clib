@@ -24,6 +24,8 @@
 #include "clib_utils.h"
 #include "inat.h"
 
+DECL_BEGIN
+
 struct insn_field {
 	union {
 		insn_value_t value;
@@ -226,5 +228,7 @@ static inline int insn_masking_exception(struct insn *insn)
 		(insn->opcode.bytes[0] == MOV_SREG_OPCODE &&
 		 X86_MODRM_REG(insn->modrm.bytes[0]) == 2);
 }
+
+DECL_END
 
 #endif /* _ASM_X86_INSN_H */
