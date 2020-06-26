@@ -40,6 +40,7 @@
 #include "../include/clib_threadpool.h"
 #include "../include/insn.h"
 #include "../include/clib_bitmap.h"
+#include "../include/clib_json.h"
 
 DECL_BEGIN
 
