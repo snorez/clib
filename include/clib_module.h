@@ -55,26 +55,16 @@ C_SYM void clib_module_exit(void)
 char clib_module_name[] = #x;	\
 static char __maybe_unused this_module_name[] = #x
 
+#define	CLIB_MODULE_NEEDEDx(x, ...) \
+const char *clib_module_needed[x+1] = {__VA_ARGS__}
 #define	CLIB_MODULE_NEEDED0()	\
-const char *clib_module_needed[] = {NULL}
+	CLIB_MODULE_NEEDEDx(0)
 #define	CLIB_MODULE_NEEDED1(x)	\
-const char *clib_module_needed[] = {#x, NULL}
+	CLIB_MODULE_NEEDEDx(1, x)
 #define	CLIB_MODULE_NEEDED2(x0, x1)	\
-const char *clib_module_needed[] = {#x0, #x1, NULL}
+	CLIB_MODULE_NEEDEDx(2, x0, x1)
 #define	CLIB_MODULE_NEEDED3(x0, x1, x2)	\
-const char *clib_module_needed[] = {#x0, #x1, #x2, NULL}
-#define	CLIB_MODULE_NEEDED4(x0, x1, x2, x3)	\
-const char *clib_module_needed[] = {#x0, #x1, #x2, #x3, NULL}
-#define	CLIB_MODULE_NEEDED5(x0, x1, x2, x3, x4)	\
-const char *clib_module_needed[] = {#x0, #x1, #x2, #x3, #x4, NULL}
-#define	CLIB_MODULE_NEEDED6(x0, x1, x2, x3, x4, x5)	\
-const char *clib_module_needed[] = {#x0, #x1, #x2, #x3, #x4, #x5, NULL}
-#define	CLIB_MODULE_NEEDED7(x0, x1, x2, x3, x4, x5, x6)	\
-const char *clib_module_needed[] = {#x0, #x1, #x2, #x3, #x4, #x5, #x6, NULL}
-#define	CLIB_MODULE_NEEDED8(x0, x1, x2, x3, x4, x5, x6, x7)	\
-const char *clib_module_needed[] = {#x0, #x1, #x2, #x3, #x4, #x5, #x6, #x7, NULL}
-#define	CLIB_MODULE_NEEDED9(x0, x1, x2, x3, x4, x5, x6, x7, x8)	\
-const char *clib_module_needed[] = {#x0, #x1, #x2, #x3, #x4, #x5, #x6, #x7, #x8, NULL}
+	CLIB_MODULE_NEEDEDx(3, x0, x1, x2)
 
 extern int clib_module_load(int argc, char *argv[]);
 extern int clib_module_unload(int argc, char *argv[]);

@@ -20,7 +20,6 @@
 
 static int adjust_json_buf(char **buf, size_t total_len, size_t *this_len)
 {
-	int ret = 0;
 	char *start = *buf;
 	char *end = start + total_len;
 
