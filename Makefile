@@ -112,5 +112,5 @@ clean:
 	@rm -vf $(TMP)/libclib*
 	@rm -v -rf $(TMP)/clib_static
 
-dist_clean: clean
+distclean: clean
 	@rm -vf ./lib/libclib*

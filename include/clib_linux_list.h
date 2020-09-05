@@ -36,6 +36,11 @@ struct list_head {
 	struct list_head *next, *prev;
 };
 
+/* to save some memory */
+struct slist_head {
+	struct slist_head *next;
+};
+
 struct hlist_head {
 	struct hlist_node *first;
 };
@@ -53,14 +58,22 @@ struct hlist_node {
 #endif
 
 #define LIST_HEAD_INIT(name) { &(name), &(name) }
+#define	SLIST_HEAD_INIT(name) { NULL }
 
 #define LIST_HEAD(name) \
 	struct list_head name = LIST_HEAD_INIT(name)
+#define	SLIST_HEAD(name) \
+	struct slist_head name = SLIST_HEAD_INIT(name)
 
 static inline void INIT_LIST_HEAD(struct list_head *list)
 {
 	list->next = list;
 	list->prev = list;
+}
+
+static inline void INIT_SLIST_HEAD(struct slist_head *list)
+{
+	list->next = NULL;
 }
 
 /*
@@ -82,6 +95,18 @@ static inline void list_move_head(struct list_head *head,
 	}
 }
 
+static inline void slist_move_head(struct slist_head *head,
+					struct slist_head *orig_head)
+{
+	if (!orig_head->next) {
+		INIT_SLIST_HEAD(head);
+		return;
+	} else {
+		head->next = orig_head->next;
+		orig_head->next = NULL;
+	}
+}
+
 /*
  * Insert a new entry between two known consecutive entries.
  *
@@ -98,6 +123,13 @@ static inline void __list_add(struct list_head *new_node,
 	prev->next = new_node;
 }
 
+static inline void __slist_add(struct slist_head *new_node,
+				struct slist_head *prev)
+{
+	new_node->next = prev->next;
+	prev->next = new_node;
+}
+
 /**
  * list_add - add a new entry
  * @new: new entry to be added
@@ -111,6 +143,10 @@ static inline void list_add(struct list_head *new_node, struct list_head *head)
 	__list_add(new_node, head, head->next);
 }
 
+static inline void slist_add(struct slist_head *new_node, struct slist_head *head)
+{
+	__slist_add(new_node, head);
+}
 
 /**
  * list_add_tail - add a new entry
@@ -123,6 +159,33 @@ static inline void list_add(struct list_head *new_node, struct list_head *head)
 static inline void list_add_tail(struct list_head *new_node, struct list_head *head)
 {
 	__list_add(new_node, head->prev, head);
+}
+
+static inline struct slist_head *__slist_prev_entry(struct slist_head *head,
+						    struct slist_head *cur)
+{
+	struct slist_head *prev = head;
+	while (prev->next && (prev->next != cur))
+		prev = prev->next;
+	return prev;
+}
+
+static inline int slist_in_head(struct slist_head *head,
+				struct slist_head *cur)
+{
+	struct slist_head *prev;
+	prev = __slist_prev_entry(head, cur);
+	if (prev->next == cur)
+		return 1;
+	else
+		return 0;
+}
+
+static inline void slist_add_tail(struct slist_head *new_node,
+					struct slist_head *head)
+{
+	struct slist_head *last = __slist_prev_entry(head, NULL);
+	__slist_add(new_node, last);
 }
 
 /*
@@ -139,6 +202,11 @@ static inline void __list_del(struct list_head * prev, struct list_head * next)
 	prev->next = next;
 }
 
+static inline void __slist_del(struct slist_head *prev, struct slist_head *next)
+{
+	prev->next = next;
+}
+
 /**
  * list_del - deletes entry from list.
  * @entry: the element to delete from the list.
@@ -150,11 +218,24 @@ static inline void __list_del_entry(struct list_head *entry)
 	__list_del(entry->prev, entry->next);
 }
 
+static inline void __slist_del_entry(struct slist_head *entry,
+					struct slist_head *head)
+{
+	struct slist_head *prev = __slist_prev_entry(head, entry);
+	__slist_del(prev, entry->next);
+}
+
 static inline void list_del(struct list_head *entry)
 {
 	__list_del(entry->prev, entry->next);
 	entry->next = (struct list_head *)LIST_POISON1;
 	entry->prev = (struct list_head *)LIST_POISON2;
+}
+
+static inline void slist_del(struct slist_head *entry, struct slist_head *head)
+{
+	__slist_del_entry(entry, head);
+	INIT_SLIST_HEAD(entry);
 }
 
 /**
@@ -173,11 +254,28 @@ static inline void list_replace(struct list_head *old,
 	new_node->prev->next = new_node;
 }
 
+static inline void slist_replace(struct slist_head *old,
+				 struct slist_head *new_node,
+				 struct slist_head *head)
+{
+	struct slist_head *prev = __slist_prev_entry(head, old);
+	prev->next = new_node;
+	new_node->next = old->next;
+}
+
 static inline void list_replace_init(struct list_head *old,
 					struct list_head *new_node)
 {
 	list_replace(old, new_node);
 	INIT_LIST_HEAD(old);
+}
+
+static inline void slist_replace_init(struct slist_head *old,
+					struct slist_head *new_node,
+					struct slist_head *head)
+{
+	slist_replace(old, new_node, head);
+	INIT_SLIST_HEAD(old);
 }
 
 /**
@@ -231,6 +329,11 @@ static inline int list_is_last(const struct list_head *list,
 static inline int list_empty(const struct list_head *head)
 {
 	return head->next == head;
+}
+
+static inline int slist_empty(struct slist_head *head)
+{
+	return head->next == NULL;
 }
 
 /**
@@ -406,6 +509,9 @@ static inline void list_splice_tail_init(struct list_head *list,
 #define list_entry(ptr, type, member) \
 	container_of(ptr, type, member)
 
+#define	slist_entry(ptr, type, member) \
+	list_entry(ptr, type, member)
+
 /**
  * list_first_entry - get the first element from a list
  * @ptr:	the list head to take the element from.
@@ -416,6 +522,9 @@ static inline void list_splice_tail_init(struct list_head *list,
  */
 #define list_first_entry(ptr, type, member) \
 	list_entry((ptr)->next, type, member)
+
+#define	slist_first_entry(ptr, type, member) \
+	list_first_entry(ptr, type, member)
 
 /**
  * list_last_entry - get the last element from a list
@@ -428,6 +537,9 @@ static inline void list_splice_tail_init(struct list_head *list,
 #define list_last_entry(ptr, type, member) \
 	list_entry((ptr)->prev, type, member)
 
+#define	slist_last_entry(ptr, type, member) \
+	slist_entry(__slist_prev_entry(ptr, NULL), type, member)
+
 /**
  * list_first_entry_or_null - get the first element from a list
  * @ptr:	the list head to take the element from.
@@ -439,6 +551,9 @@ static inline void list_splice_tail_init(struct list_head *list,
 #define list_first_entry_or_null(ptr, type, member) \
 	(!list_empty(ptr) ? list_first_entry(ptr, type, member) : NULL)
 
+#define	slist_first_entry_or_null(ptr, type, member) \
+	(!slist_empty(ptr) ? slist_first_entry(ptr, type, member) : NULL)
+
 /**
  * list_next_entry - get the next element in list
  * @pos:	the type * to cursor
@@ -447,6 +562,12 @@ static inline void list_splice_tail_init(struct list_head *list,
 #define list_next_entry(pos, member) \
 	list_entry((pos)->member.next, typeof(*(pos)), member)
 
+#define	slist_next_entry(pos, member) \
+	slist_entry((pos)->member.next, typeof(*(pos)), member)
+
+#define	slist_next_entry_safe(pos, member) \
+	(pos ? slist_next_entry(pos, member) : NULL)
+
 /**
  * list_prev_entry - get the prev element in list
  * @pos:	the type * to cursor
@@ -454,6 +575,10 @@ static inline void list_splice_tail_init(struct list_head *list,
  */
 #define list_prev_entry(pos, member) \
 	list_entry((pos)->member.prev, typeof(*(pos)), member)
+
+#define	slist_prev_entry(pos, head, member) \
+	slist_entry(__slist_prev_entry(head, &(pos)->member), typeof(*(pos)), \
+			member)
 
 /**
  * list_for_each	-	iterate over a list
@@ -503,6 +628,10 @@ static inline void list_splice_tail_init(struct list_head *list,
 	     &pos->member != (head);					\
 	     pos = list_next_entry(pos, member))
 
+#define	slist_for_each_entry(pos, head, member)				\
+	for (pos = slist_first_entry(head, typeof(*pos), member);	\
+		pos; pos = slist_next_entry(pos, member))
+
 /**
  * list_for_each_entry_reverse - iterate backwards over list of given type.
  * @pos:	the type * to use as a loop cursor.
@@ -511,7 +640,7 @@ static inline void list_splice_tail_init(struct list_head *list,
  */
 #define list_for_each_entry_reverse(pos, head, member)			\
 	for (pos = list_last_entry(head, typeof(*pos), member);		\
-	     &pos->member != (head); 					\
+	     &pos->member != (head);					\
 	     pos = list_prev_entry(pos, member))
 
 /**
@@ -577,6 +706,11 @@ static inline void list_splice_tail_init(struct list_head *list,
 		n = list_next_entry(pos, member);			\
 	     &pos->member != (head); 					\
 	     pos = n, n = list_next_entry(n, member))
+
+#define	slist_for_each_entry_safe(pos, n, head, member)			\
+	for (pos = slist_first_entry(head, typeof(*pos), member),	\
+		n = slist_next_entry_safe(pos, member);			\
+		pos; pos = n, n = slist_next_entry_safe(n, member))
 
 /**
  * list_for_each_entry_safe_continue - continue list iteration safe against removal
