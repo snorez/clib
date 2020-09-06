@@ -98,7 +98,7 @@ static inline void list_move_head(struct list_head *head,
 static inline void slist_move_head(struct slist_head *head,
 					struct slist_head *orig_head)
 {
-	if (!orig_head->next) {
+	if (orig_head->next == NULL) {
 		INIT_SLIST_HEAD(head);
 		return;
 	} else {
@@ -165,17 +165,17 @@ static inline struct slist_head *__slist_prev_entry(struct slist_head *head,
 						    struct slist_head *cur)
 {
 	struct slist_head *prev = head;
-	while (prev->next && (prev->next != cur))
+	while ((prev->next != NULL) && (prev->next != cur))
 		prev = prev->next;
 	return prev;
 }
 
-static inline int slist_in_head(struct slist_head *head,
-				struct slist_head *cur)
+static inline int slist_in_head(struct slist_head *node,
+				struct slist_head *head)
 {
 	struct slist_head *prev;
-	prev = __slist_prev_entry(head, cur);
-	if (prev->next == cur)
+	prev = __slist_prev_entry(head, node);
+	if (prev->next == node)
 		return 1;
 	else
 		return 0;

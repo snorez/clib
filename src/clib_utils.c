@@ -338,3 +338,26 @@ void show_cap(int pid)
 			cap_data_data[1].inheritable);
 	return;
 }
+
+void clib_memcpy_bits(void *dest, u32 dst_bits, void *src, u32 src_bits)
+{
+	void *wpos = dest;
+	void *rpos = src;
+	u32 bits_left = src_bits;
+	if (bits_left > dst_bits)
+		bits_left = dst_bits;
+
+	while (bits_left > 8) {
+		*(char *)wpos = *(char *)rpos;
+		wpos = (void *)((char *)wpos + 1);
+		rpos = (void *)((char *)rpos + 1);
+		bits_left -= 8;
+	}
+
+	for (u32 i = 0; i < bits_left; i++) {
+		if (test_bit(i, (long *)rpos))
+			test_and_set_bit(i, (long *)wpos);
+		else
+			test_and_clear_bit(i, (long *)wpos);
+	}
+}

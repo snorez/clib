@@ -134,6 +134,7 @@ extern char *clib_ap_buffer(const char *fmt, ...);
 extern int bind_on_cpu(int num);
 extern void setup_ns(void);
 extern void show_cap(int pid);
+extern void clib_memcpy_bits(void *dst, u32 dst_bits, void *src, u32 src_bits);
 
 static inline int get_online_cpus(void)
 {
@@ -256,6 +257,15 @@ static inline int is_same_path(const char *path0, const char *path1)
 		return 1;
 
 	return 0;
+}
+
+static inline void *clib_memcpy(void *dst, size_t dstlen,
+				void *src, size_t srclen)
+{
+	size_t copylen = dstlen;
+	if (copylen > srclen)
+		copylen = srclen;
+	return memcpy(dst, src, copylen);
 }
 
 DECL_END
