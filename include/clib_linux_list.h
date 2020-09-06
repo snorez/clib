@@ -76,6 +76,18 @@ static inline void INIT_SLIST_HEAD(struct slist_head *list)
 	list->next = NULL;
 }
 
+static inline int slist_check(struct slist_head *node,
+				 struct slist_head *head)
+{
+	struct slist_head *cur = head->next;
+	while (cur) {
+		if (cur == node)
+			return 1;
+		cur = cur->next;
+	}
+	return 0;
+}
+
 /*
  * adjust the list_head element, this is happened when copy the list_head
  */
@@ -148,6 +160,16 @@ static inline void slist_add(struct slist_head *new_node, struct slist_head *hea
 	__slist_add(new_node, head);
 }
 
+static inline int slist_add_check(struct slist_head *node,
+					struct slist_head *head)
+{
+	int err = 0;
+	err = slist_check(node, head);
+	if (!err)
+		slist_add(node, head);
+	return err;
+}
+
 /**
  * list_add_tail - add a new entry
  * @new: new entry to be added
@@ -170,6 +192,23 @@ static inline struct slist_head *__slist_prev_entry(struct slist_head *head,
 	return prev;
 }
 
+static inline void slist_add_tail(struct slist_head *new_node,
+					struct slist_head *head)
+{
+	struct slist_head *last = __slist_prev_entry(head, NULL);
+	__slist_add(new_node, last);
+}
+
+static inline int slist_add_tail_check(struct slist_head *node,
+					  struct slist_head *head)
+{
+	int err = 0;
+	err = slist_check(node, head);
+	if (!err)
+		slist_add_tail(node, head);
+	return err;
+}
+
 static inline int slist_in_head(struct slist_head *node,
 				struct slist_head *head)
 {
@@ -179,13 +218,6 @@ static inline int slist_in_head(struct slist_head *node,
 		return 1;
 	else
 		return 0;
-}
-
-static inline void slist_add_tail(struct slist_head *new_node,
-					struct slist_head *head)
-{
-	struct slist_head *last = __slist_prev_entry(head, NULL);
-	__slist_add(new_node, last);
 }
 
 /*
