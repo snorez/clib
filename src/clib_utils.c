@@ -361,3 +361,54 @@ void clib_memcpy_bits(void *dest, u32 dst_bits, void *src, u32 src_bits)
 			test_and_clear_bit(i, (long *)wpos);
 	}
 }
+
+/*
+ * random seed use current systime may not be safe, so
+ * libsodium may be a good choice, use randombytes_buf/randombytes_uniform
+ * instead
+ */
+long s_random(void)
+{
+	struct timeval tv;
+	if (gettimeofday(&tv, NULL) == -1) {
+		err_dbg(1, "gettimeofday err");
+		srand(random());
+		return random();
+	}
+	srand(tv.tv_sec + tv.tv_usec);
+	return random();
+}
+
+void random_bits(void *dst, size_t bits)
+{
+	size_t bits_left = bits;
+	void *wpos = dst;
+	while (bits_left) {
+		if (bits_left >= (sizeof(long) * 8)) {
+			long val = s_random();
+			*(long *)wpos = val;
+			wpos += sizeof(long);
+			bits_left -= (sizeof(long) * 8);
+		} else if (bits_left >= (sizeof(int) * 8)) {
+			long val = s_random();
+			*(int *)wpos = (int)val;
+			wpos += sizeof(int);
+			bits_left -= (sizeof(int) * 8);
+		} else if (bits_left >= (sizeof(char) * 8)) {
+			long val = s_random();
+			*(char *)wpos = (char)val;
+			wpos += sizeof(char);
+			bits_left -= (sizeof(char) * 8);
+		} else {
+			for (size_t i = 0; i < bits_left; i++) {
+				long val = s_random() % 2;
+				if (!val)
+					test_and_clear_bit(i, (long *)wpos);
+				else
+					test_and_set_bit(i, (long *)wpos);
+			}
+			bits_left = 0;
+		}
+	}
+	return;
+}

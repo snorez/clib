@@ -48,22 +48,6 @@ int buf_printable(char *b, size_t len)
 	}
 	return 1;
 }
-/*
- * random seed use current systime may not be safe, so
- * libsodium may be a good choice, use randombytes_buf/randombytes_uniform
- * instead
- */
-long s_random(void)
-{
-	struct timeval tv;
-	if (gettimeofday(&tv, NULL) == -1) {
-		err_dbg(1, "gettimeofday err");
-		srand(random());
-		return random();
-	}
-	srand(tv.tv_sec + tv.tv_usec);
-	return random();
-}
 
 char *random_str_nr_en(size_t cnt)
 {
