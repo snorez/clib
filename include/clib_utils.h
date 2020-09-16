@@ -140,6 +140,8 @@ extern long s_random(void);
 extern void random_bits(void *dst, size_t bits);
 extern int clib_int_extend(char *buf, size_t bufbits, void *src,
 			   size_t origbits, int signbit);
+extern int clib_compare_bits(void *l, size_t lbytes, int lsign,
+				void *r, size_t rbytes, int rsign);
 
 static inline int get_online_cpus(void)
 {

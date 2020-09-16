@@ -489,3 +489,60 @@ int clib_int_extend(char *buf, size_t bufbits, void *src, size_t origbits,
 			 bufbits - origbits, signbit);
 	return 0;
 }
+
+static int __do_compare(char *l, char *r, size_t bytes, int sign)
+{
+	/* TODO: endian? */
+	int l_msb_bit = test_bit(7, (long *)&l[bytes-1]);
+	int r_msb_bit = test_bit(7, (long *)&r[bytes-1]);
+
+	if (sign) {
+		if (l_msb_bit > r_msb_bit)
+			return -1;
+		else if (l_msb_bit < r_msb_bit)
+			return 1;
+	} else {
+		if (l_msb_bit > r_msb_bit)
+			return 1;
+		else if (l_msb_bit < r_msb_bit)
+			return -1;
+	}
+
+	for (size_t i = bytes; i > 0; i--) {
+		char *curlb = &l[i-1];
+		char *currb = &r[i-1];
+		for (int j = 7; j >= 0; j--) {
+			int lv, rv;
+			lv = test_bit(j, (long *)curlb);
+			rv = test_bit(j, (long *)currb);
+			if (lv > rv)
+				return 1;
+			else if (lv < rv)
+				return -1;
+		}
+	}
+
+	return 0;
+}
+
+int clib_compare_bits(void *l, size_t lbytes, int lsign,
+			void *r, size_t rbytes, int rsign)
+{
+	size_t compare_bytes = lbytes;
+	int compare_sign = lsign;
+	if (compare_bytes < rbytes) {
+		compare_bytes = rbytes;
+		compare_sign = rsign;
+	}
+
+	char _l[compare_bytes];
+	char _r[compare_bytes];
+	int err;
+
+	err = clib_int_extend(_l, compare_bytes * 8, l, lbytes * 8, lsign);
+	(void)err;
+	err = clib_int_extend(_r, compare_bytes * 8, r, rbytes * 8, rsign);
+	(void)err;
+
+	return __do_compare(_l, _r, compare_bytes, compare_sign);
+}
