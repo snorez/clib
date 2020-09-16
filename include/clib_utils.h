@@ -134,9 +134,12 @@ extern char *clib_ap_buffer(const char *fmt, ...);
 extern int bind_on_cpu(int num);
 extern void setup_ns(void);
 extern void show_cap(int pid);
+extern void clib_memset_bits(void *dst, u8 bit_offset, u32 dst_bits, int val);
 extern void clib_memcpy_bits(void *dst, u32 dst_bits, void *src, u32 src_bits);
 extern long s_random(void);
 extern void random_bits(void *dst, size_t bits);
+extern int clib_int_extend(char *buf, size_t bufbits, void *src,
+			   size_t origbits, int signbit);
 
 static inline int get_online_cpus(void)
 {

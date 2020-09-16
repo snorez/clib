@@ -339,6 +339,70 @@ void show_cap(int pid)
 	return;
 }
 
+/*
+ * dest: the address to write
+ * bit_offset: the first bit offset of dest[0]
+ * dst_bits: total bits to write
+ * val: 0 or 1;
+ */
+void clib_memset_bits(void *dest, u8 bit_offset, u32 dst_bits, int val)
+{
+	val = val ? 1 : 0;
+	u32 bits_left = dst_bits;
+	void *wpos = dest;
+
+	if (bit_offset) {
+		for (u32 i = bit_offset; i < 8; i++) {
+			if (!val)
+				test_and_clear_bit(i , (long *)wpos);
+			else
+				test_and_set_bit(i, (long *)wpos);
+		}
+		bits_left -= (8 - bit_offset);
+		wpos += 1;
+	}
+
+	while (bits_left) {
+		if (bits_left >= 64) {
+			if (!val)
+				*(u64 *)wpos = 0;
+			else
+				*(u64 *)wpos = (u64)-1;
+			wpos += 8;
+			bits_left -= 64;
+		} else if (bits_left >= 32) {
+			if (!val)
+				*(u32 *)wpos = 0;
+			else
+				*(u32 *)wpos = (u32)-1;
+			wpos += 4;
+			bits_left -= 32;
+		} else if (bits_left >= 16) {
+			if (!val)
+				*(u16 *)wpos = 0;
+			else
+				*(u16 *)wpos = (u16)-1;
+			wpos += 2;
+			bits_left -= 16;
+		} else if (bits_left >= 8) {
+			if (!val)
+				*(u8 *)wpos = 0;
+			else
+				*(u8 *)wpos = (u8)-1;
+			wpos += 1;
+			bits_left -= 8;
+		} else {
+			for (u32 i = 0; i < bits_left; i++) {
+				if (!val)
+					test_and_clear_bit(i, (long *)wpos);
+				else
+					test_and_set_bit(i, (long *)wpos);
+			}
+			bits_left = 0;
+		}
+	}
+}
+
 void clib_memcpy_bits(void *dest, u32 dst_bits, void *src, u32 src_bits)
 {
 	void *wpos = dest;
@@ -411,4 +475,17 @@ void random_bits(void *dst, size_t bits)
 		}
 	}
 	return;
+}
+
+int clib_int_extend(char *buf, size_t bufbits, void *src, size_t origbits,
+			int signbit)
+{
+	if (bufbits < origbits)
+		return -1;
+
+	clib_memset_bits(buf, 0, bufbits, 0);
+	clib_memcpy_bits(buf, bufbits, src, origbits);
+	clib_memset_bits(buf + (origbits / 8), (origbits % 8),
+			 bufbits - origbits, signbit);
+	return 0;
 }
