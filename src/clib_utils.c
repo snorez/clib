@@ -533,6 +533,11 @@ int clib_compare_bits(void *l, size_t lbytes, int lsign,
 	if (compare_bytes < rbytes) {
 		compare_bytes = rbytes;
 		compare_sign = rsign;
+	} else if (compare_bytes == rbytes) {
+		if (!lsign)
+			compare_sign = lsign;
+		else if (!rsign)
+			compare_sign = rsign;
 	}
 
 	char _l[compare_bytes];

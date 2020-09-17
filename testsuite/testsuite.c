@@ -6,6 +6,7 @@ C_SYM void n(void)
 
 TESTCASE_DECL(test_slist);
 TESTCASE_DECL(test_int_extend);
+TESTCASE_DECL(test_compare_bits);
 
 struct testsuite {
 	char	*name;
@@ -14,6 +15,7 @@ struct testsuite {
 	/* Edit new testcase here */
 	TESTCASE(test_slist),
 	TESTCASE(test_int_extend),
+	TESTCASE(test_compare_bits),
 };
 
 int main(int argc, char *argv[])

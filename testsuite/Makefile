@@ -15,7 +15,8 @@ CC_INCLUDE=
 CC_SRCS=\
 	testsuite.c \
 	test-slist.c \
-	test-int-extend.c
+	test-int-extend.c \
+	test-compare-bits.c
 
 CC_OBJS=$(CC_SRCS:%.c=%.o)
 
