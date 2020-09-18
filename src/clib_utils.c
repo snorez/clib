@@ -490,22 +490,28 @@ int clib_int_extend(char *buf, size_t bufbits, void *src, size_t origbits,
 	return 0;
 }
 
-static int __do_compare(char *l, char *r, size_t bytes, int sign)
+static int __do_compare(char *l, char *r, size_t bytes, int sign, s64 *retval)
 {
 	/* TODO: endian? */
 	int l_msb_bit = test_bit(7, (long *)&l[bytes-1]);
 	int r_msb_bit = test_bit(7, (long *)&r[bytes-1]);
 
 	if (sign) {
-		if (l_msb_bit > r_msb_bit)
-			return -1;
-		else if (l_msb_bit < r_msb_bit)
-			return 1;
+		if (l_msb_bit > r_msb_bit) {
+			*retval = -1;
+			return 0;
+		} else if (l_msb_bit < r_msb_bit) {
+			*retval = 1;
+			return 0;
+		}
 	} else {
-		if (l_msb_bit > r_msb_bit)
-			return 1;
-		else if (l_msb_bit < r_msb_bit)
-			return -1;
+		if (l_msb_bit > r_msb_bit) {
+			*retval = 1;
+			return 0;
+		} else if (l_msb_bit < r_msb_bit) {
+			*retval = -1;
+			return 0;
+		}
 	}
 
 	for (size_t i = bytes; i > 0; i--) {
@@ -515,39 +521,103 @@ static int __do_compare(char *l, char *r, size_t bytes, int sign)
 			int lv, rv;
 			lv = test_bit(j, (long *)curlb);
 			rv = test_bit(j, (long *)currb);
-			if (lv > rv)
-				return 1;
-			else if (lv < rv)
-				return -1;
+			if (lv > rv) {
+				*retval = 1;
+				return 0;
+			} else if (lv < rv) {
+				*retval = -1;
+				return 0;
+			}
 		}
 	}
 
+	*retval = 0;
 	return 0;
 }
 
-int clib_compare_bits(void *l, size_t lbytes, int lsign,
-			void *r, size_t rbytes, int rsign)
+static int __do_bitior(char *l, char *r, size_t bytes, int sign, s64 *retval)
 {
-	size_t compare_bytes = lbytes;
-	int compare_sign = lsign;
-	if (compare_bytes < rbytes) {
-		compare_bytes = rbytes;
-		compare_sign = rsign;
-	} else if (compare_bytes == rbytes) {
+	char *_ret = (char *)retval;
+	for (size_t i = 0; i < bytes; i++) {
+		_ret[i] = l[i] | r[i];
+	}
+	return 0;
+}
+
+static int __do_bitxor(char *l, char *r, size_t bytes, int sign, s64 *retval)
+{
+	char *_ret = (char *)retval;
+	for (size_t i = 0; i < bytes; i++) {
+		_ret[i] = l[i] ^ r[i];
+	}
+	return 0;
+}
+
+static int __do_bitand(char *l, char *r, size_t bytes, int sign, s64 *retval)
+{
+	char *_ret = (char *)retval;
+	for (size_t i = 0; i < bytes; i++) {
+		_ret[i] = l[i] & r[i];
+	}
+	return 0;
+}
+
+/*
+ * return value:
+ *	-1: error occured
+ *	0: success
+ */
+int clib_compute_bits(void *l, size_t lbytes, int lsign,
+			void *r, size_t rbytes, int rsign,
+			int flag, s64 *retval)
+{
+	size_t compute_bytes = lbytes;
+	int compute_sign = lsign;
+	if (compute_bytes < rbytes) {
+		compute_bytes = rbytes;
+		compute_sign = rsign;
+	} else if (compute_bytes == rbytes) {
 		if (!lsign)
-			compare_sign = lsign;
+			compute_sign = lsign;
 		else if (!rsign)
-			compare_sign = rsign;
+			compute_sign = rsign;
 	}
 
-	char _l[compare_bytes];
-	char _r[compare_bytes];
+	if (compute_bytes > sizeof(*retval)) {
+		err_dbg(0, "params should not be large than 64bits\n");
+		return -1;
+	}
+
+	char _l[compute_bytes];
+	char _r[compute_bytes];
 	int err;
 
-	err = clib_int_extend(_l, compare_bytes * 8, l, lbytes * 8, lsign);
+	err = clib_int_extend(_l, compute_bytes * 8, l, lbytes * 8, lsign);
 	(void)err;
-	err = clib_int_extend(_r, compare_bytes * 8, r, rbytes * 8, rsign);
+	err = clib_int_extend(_r, compute_bytes * 8, r, rbytes * 8, rsign);
 	(void)err;
 
-	return __do_compare(_l, _r, compare_bytes, compare_sign);
+	switch (flag) {
+	case CLIB_COMPUTE_F_COMPARE:
+	{
+		return __do_compare(_l, _r, compute_bytes, compute_sign, retval);
+	}
+	case CLIB_COMPUTE_F_BITIOR:
+	{
+		return __do_bitior(_l, _r, compute_bytes, compute_sign, retval);
+	}
+	case CLIB_COMPUTE_F_BITXOR:
+	{
+		return __do_bitxor(_l, _r, compute_bytes, compute_sign, retval);
+	}
+	case CLIB_COMPUTE_F_BITAND:
+	{
+		return __do_bitand(_l, _r, compute_bytes, compute_sign, retval);
+	}
+	default:
+	{
+		err_dbg(0, "%d not implemented yet\n");
+		return -1;
+	}
+	}
 }

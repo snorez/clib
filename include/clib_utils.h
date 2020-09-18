@@ -122,6 +122,14 @@ typedef __u64	u64;
 		type __max2 = (y);		\
 		__max1 > __max2 ? __max1 : __max2; })
 
+enum clib_compute_flag {
+	CLIB_COMPUTE_F_UNK,
+	CLIB_COMPUTE_F_COMPARE,
+	CLIB_COMPUTE_F_BITIOR,
+	CLIB_COMPUTE_F_BITXOR,
+	CLIB_COMPUTE_F_BITAND,
+};
+
 extern int hex2int(char *hex);
 extern int no_aslr(int argc, char *argv[]);
 extern int tmp_close_std(int close_fd);
@@ -140,8 +148,9 @@ extern long s_random(void);
 extern void random_bits(void *dst, size_t bits);
 extern int clib_int_extend(char *buf, size_t bufbits, void *src,
 			   size_t origbits, int signbit);
-extern int clib_compare_bits(void *l, size_t lbytes, int lsign,
-				void *r, size_t rbytes, int rsign);
+extern int clib_compute_bits(void *l, size_t lbytes, int lsign,
+				void *r, size_t rbytes, int rsign, int flag,
+				s64 *retval);
 
 static inline int get_online_cpus(void)
 {
