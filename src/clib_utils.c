@@ -490,7 +490,8 @@ int clib_int_extend(char *buf, size_t bufbits, void *src, size_t origbits,
 	return 0;
 }
 
-static int __do_compare(char *l, char *r, size_t bytes, int sign, s64 *retval)
+static int __do_compare(char *l, char *r, size_t bytes, int sign,
+			cur_max_signint *retval)
 {
 	/* TODO: endian? */
 	int l_msb_bit = test_bit(7, (long *)&l[bytes-1]);
@@ -535,7 +536,8 @@ static int __do_compare(char *l, char *r, size_t bytes, int sign, s64 *retval)
 	return 0;
 }
 
-static int __do_bitior(char *l, char *r, size_t bytes, int sign, s64 *retval)
+static int __do_bitior(char *l, char *r, size_t bytes, int sign,
+			cur_max_signint *retval)
 {
 	char *_ret = (char *)retval;
 	for (size_t i = 0; i < bytes; i++) {
@@ -544,7 +546,8 @@ static int __do_bitior(char *l, char *r, size_t bytes, int sign, s64 *retval)
 	return 0;
 }
 
-static int __do_bitxor(char *l, char *r, size_t bytes, int sign, s64 *retval)
+static int __do_bitxor(char *l, char *r, size_t bytes, int sign,
+			cur_max_signint *retval)
 {
 	char *_ret = (char *)retval;
 	for (size_t i = 0; i < bytes; i++) {
@@ -553,7 +556,8 @@ static int __do_bitxor(char *l, char *r, size_t bytes, int sign, s64 *retval)
 	return 0;
 }
 
-static int __do_bitand(char *l, char *r, size_t bytes, int sign, s64 *retval)
+static int __do_bitand(char *l, char *r, size_t bytes, int sign,
+			cur_max_signint *retval)
 {
 	char *_ret = (char *)retval;
 	for (size_t i = 0; i < bytes; i++) {
@@ -562,6 +566,175 @@ static int __do_bitand(char *l, char *r, size_t bytes, int sign, s64 *retval)
 	return 0;
 }
 
+#define	__do_arithmetic_X(type, l, r, retval, op) \
+	do {\
+		type _l = *(type *)l;\
+		type _r = *(type *)r;\
+		switch (op) {\
+		case 1:\
+		{\
+			*retval = (cur_max_signint)(_l + _r);\
+			return 0;\
+		}\
+		case 2:\
+		{\
+			*retval = (cur_max_signint)(_l - _r);\
+			return 0;\
+		}\
+		case 3:\
+		{\
+			*retval = (cur_max_signint)(_l * _r);\
+			return 0;\
+		}\
+		case 4:\
+		{\
+			if (!_r) {\
+				err_dbg(0, "div zero\n");\
+				return -1;\
+			}\
+			*retval = (cur_max_signint)(_l / _r);\
+			return 0;\
+		}\
+		default:\
+		{\
+			err_dbg(0, "should not happend\n");\
+			return -1;\
+		}\
+		}\
+	} while (0)
+
+static int __do_arithmetic_1_signed(char *l, char *r, cur_max_signint *retval,
+					int op)
+{
+	__do_arithmetic_X(char, l, r, retval, op);
+}
+
+static int __do_arithmetic_1_unsigned(char *l, char *r, cur_max_signint *retval,
+					int op)
+{
+	__do_arithmetic_X(unsigned char, l, r, retval, op);
+}
+
+static int __do_arithmetic_2_signed(char *l, char *r, cur_max_signint *retval,
+					int op)
+{
+	__do_arithmetic_X(short, l, r, retval, op);
+}
+
+static int __do_arithmetic_2_unsigned(char *l, char *r, cur_max_signint *retval,
+					int op)
+{
+	__do_arithmetic_X(unsigned short, l, r, retval, op);
+}
+
+static int __do_arithmetic_4_signed(char *l, char *r, cur_max_signint *retval,
+					int op)
+{
+	__do_arithmetic_X(int, l, r, retval, op);
+}
+
+static int __do_arithmetic_4_unsigned(char *l, char *r, cur_max_signint *retval,
+					int op)
+{
+	__do_arithmetic_X(unsigned int, l, r, retval, op);
+}
+
+static int __do_arithmetic_8_signed(char *l, char *r, cur_max_signint *retval,
+					int op)
+{
+	__do_arithmetic_X(long, l, r, retval, op);
+}
+
+static int __do_arithmetic_8_unsigned(char *l, char *r, cur_max_signint *retval,
+					int op)
+{
+	__do_arithmetic_X(unsigned long, l, r, retval, op);
+}
+
+/*
+ * @op:
+ *	1: add
+ *	2: sub
+ *	3: mul
+ *	4: div
+ */
+static int __do_arithmetic(char *l, char *r, size_t bytes, int sign,
+				cur_max_signint *retval, int op)
+{
+	switch (bytes) {
+	case 1:
+	{
+		if (sign)
+			return __do_arithmetic_1_signed(l, r, retval, op);
+		else
+			return __do_arithmetic_1_unsigned(l, r, retval, op);
+	}
+	case 2:
+	{
+		if (sign)
+			return __do_arithmetic_2_signed(l, r, retval, op);
+		else
+			return __do_arithmetic_2_unsigned(l, r, retval, op);
+	}
+	case 4:
+	{
+		if (sign)
+			return __do_arithmetic_4_signed(l, r, retval, op);
+		else
+			return __do_arithmetic_4_unsigned(l, r, retval, op);
+	}
+	case 8:
+	{
+		if (sign)
+			return __do_arithmetic_8_signed(l, r, retval, op);
+		else
+			return __do_arithmetic_8_unsigned(l, r, retval, op);
+	}
+	default:
+	{
+		err_dbg(0, "bytes %ld not handled\n", bytes);
+		return -1;
+	}
+	}
+}
+
+static int __do_add(char *l, char *r, size_t bytes, int sign,
+			cur_max_signint *retval)
+{
+	return __do_arithmetic(l, r, bytes, sign, retval, 1);
+}
+
+static int __do_sub(char *l, char *r, size_t bytes, int sign,
+			cur_max_signint *retval)
+{
+	return __do_arithmetic(l, r, bytes, sign, retval, 2);
+}
+
+static int __do_mul(char *l, char *r, size_t bytes, int sign,
+			cur_max_signint *retval)
+{
+	return __do_arithmetic(l, r, bytes, sign, retval, 3);
+}
+
+static int __do_div(char *l, char *r, size_t bytes, int sign,
+			cur_max_signint *retval)
+{
+	return __do_arithmetic(l, r, bytes, sign, retval, 4);
+}
+
+static struct {
+	int	flag;
+	int	(*callback)(char *, char *, size_t, int, cur_max_signint *);
+} compute_cbs[] = {
+	{CLIB_COMPUTE_F_COMPARE, __do_compare},
+	{CLIB_COMPUTE_F_BITIOR, __do_bitior},
+	{CLIB_COMPUTE_F_BITXOR, __do_bitxor},
+	{CLIB_COMPUTE_F_BITAND, __do_bitand},
+	{CLIB_COMPUTE_F_ADD, __do_add},
+	{CLIB_COMPUTE_F_SUB, __do_sub},
+	{CLIB_COMPUTE_F_MUL, __do_mul},
+	{CLIB_COMPUTE_F_DIV, __do_div},
+};
 /*
  * return value:
  *	-1: error occured
@@ -569,7 +742,7 @@ static int __do_bitand(char *l, char *r, size_t bytes, int sign, s64 *retval)
  */
 int clib_compute_bits(void *l, size_t lbytes, int lsign,
 			void *r, size_t rbytes, int rsign,
-			int flag, s64 *retval)
+			int flag, cur_max_signint *retval)
 {
 	size_t compute_bytes = lbytes;
 	int compute_sign = lsign;
@@ -597,27 +770,14 @@ int clib_compute_bits(void *l, size_t lbytes, int lsign,
 	err = clib_int_extend(_r, compute_bytes * 8, r, rbytes * 8, rsign);
 	(void)err;
 
-	switch (flag) {
-	case CLIB_COMPUTE_F_COMPARE:
-	{
-		return __do_compare(_l, _r, compute_bytes, compute_sign, retval);
+	for (size_t i = 0; i < sizeof(compute_cbs) / sizeof(compute_cbs[0]);
+			i++) {
+		if (compute_cbs[i].flag != flag)
+			continue;
+		return compute_cbs[i].callback(_l, _r, compute_bytes,
+						compute_sign, retval);
 	}
-	case CLIB_COMPUTE_F_BITIOR:
-	{
-		return __do_bitior(_l, _r, compute_bytes, compute_sign, retval);
-	}
-	case CLIB_COMPUTE_F_BITXOR:
-	{
-		return __do_bitxor(_l, _r, compute_bytes, compute_sign, retval);
-	}
-	case CLIB_COMPUTE_F_BITAND:
-	{
-		return __do_bitand(_l, _r, compute_bytes, compute_sign, retval);
-	}
-	default:
-	{
-		err_dbg(0, "%d not implemented yet\n");
-		return -1;
-	}
-	}
+		
+	err_dbg(0, "%d not implemented yet\n", flag);
+	return -1;
 }
