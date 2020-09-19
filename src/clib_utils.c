@@ -595,6 +595,15 @@ static int __do_bitand(char *l, char *r, size_t bytes, int sign,
 			*retval = (cur_max_signint)(_l / _r);\
 			return 0;\
 		}\
+		case 5:\
+		{\
+			if (!_r) {\
+				err_dbg(0, "div zero\n");\
+				return -1;\
+			}\
+			*retval = (cur_max_signint)(_l % _r);\
+			return 0;\
+		}\
 		default:\
 		{\
 			err_dbg(0, "should not happend\n");\
@@ -722,6 +731,12 @@ static int __do_div(char *l, char *r, size_t bytes, int sign,
 	return __do_arithmetic(l, r, bytes, sign, retval, 4);
 }
 
+static int __do_mod(char *l, char *r, size_t bytes, int sign,
+			cur_max_signint *retval)
+{
+	return __do_arithmetic(l, r, bytes, sign, retval, 5);
+}
+
 static int __do_shift(char *l, char *r, size_t bytes, int sign,
 			cur_max_signint *retval, int dir)
 {
@@ -829,6 +844,7 @@ static struct {
 	{CLIB_COMPUTE_F_SUB, __do_sub},
 	{CLIB_COMPUTE_F_MUL, __do_mul},
 	{CLIB_COMPUTE_F_DIV, __do_div},
+	{CLIB_COMPUTE_F_MOD, __do_mod},
 	{CLIB_COMPUTE_F_SHL, __do_shl},
 	{CLIB_COMPUTE_F_SHR, __do_shr},
 #if 0
