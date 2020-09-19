@@ -132,6 +132,10 @@ enum clib_compute_flag {
 	CLIB_COMPUTE_F_SUB,
 	CLIB_COMPUTE_F_MUL,
 	CLIB_COMPUTE_F_DIV,
+	CLIB_COMPUTE_F_SHL,
+	CLIB_COMPUTE_F_SHR,
+	CLIB_COMPUTE_F_ROL,
+	CLIB_COMPUTE_F_ROR,
 };
 
 extern int hex2int(char *hex);
@@ -153,6 +157,7 @@ extern void random_bits(void *dst, size_t bits);
 extern int clib_int_extend(char *buf, size_t bufbits, void *src,
 			   size_t origbits, int signbit);
 typedef s64 cur_max_signint;
+typedef s64 cur_max_unsignint;
 extern int clib_compute_bits(void *l, size_t lbytes, int lsign,
 				void *r, size_t rbytes, int rsign, int flag,
 				cur_max_signint *retval);

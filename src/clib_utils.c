@@ -722,6 +722,101 @@ static int __do_div(char *l, char *r, size_t bytes, int sign,
 	return __do_arithmetic(l, r, bytes, sign, retval, 4);
 }
 
+static int __do_shift(char *l, char *r, size_t bytes, int sign,
+			cur_max_signint *retval, int dir)
+{
+	cur_max_signint shift_cnt;
+	cur_max_signint orig_val;
+	switch (bytes) {
+	case 1:
+	{
+		if (sign) {
+			char _lc = *(char *)l;
+			char _rc = *(char *)r;
+			orig_val = (cur_max_signint)_lc;
+			shift_cnt = (cur_max_signint)_rc;
+		} else {
+			unsigned char _lc = *(unsigned char *)l;
+			unsigned char _rc = *(unsigned char *)r;
+			orig_val = (cur_max_signint)_lc;
+			shift_cnt = (cur_max_signint)_rc;
+		}
+		break;
+	}
+	case 2:
+	{
+		if (sign) {
+			short _lc = *(short *)l;
+			short _rc = *(short *)r;
+			orig_val = (cur_max_signint)_lc;
+			shift_cnt = (cur_max_signint)_rc;
+		} else {
+			unsigned short _lc = *(unsigned short *)l;
+			unsigned short _rc = *(unsigned short *)r;
+			orig_val = (cur_max_signint)_lc;
+			shift_cnt = (cur_max_signint)_rc;
+		}
+		break;
+	}
+	case 4:
+	{
+		if (sign) {
+			int _lc = *(int *)l;
+			int _rc = *(int *)r;
+			orig_val = (cur_max_signint)_lc;
+			shift_cnt = (cur_max_signint)_rc;
+		} else {
+			unsigned int _lc = *(unsigned int *)l;
+			unsigned int _rc = *(unsigned int *)r;
+			orig_val = (cur_max_signint)_lc;
+			shift_cnt = (cur_max_signint)_rc;
+		}
+		break;
+	}
+	case 8:
+	{
+		if (sign) {
+			long _lc = *(long *)l;
+			long _rc = *(long *)r;
+			orig_val = (cur_max_signint)_lc;
+			shift_cnt = (cur_max_signint)_rc;
+		} else {
+			unsigned long _lc = *(unsigned long *)l;
+			unsigned long _rc = *(unsigned long *)r;
+			orig_val = (cur_max_signint)_lc;
+			shift_cnt = (cur_max_signint)_rc;
+		}
+		break;
+	}
+	default:
+	{
+		err_dbg(0, "bytes %ld not handled\n", bytes);
+		return -1;
+	}
+	}
+
+	if (!dir)
+		*retval = orig_val << shift_cnt;
+	else
+		if (sign)
+			*retval = orig_val >> shift_cnt;
+		else
+			*retval = (cur_max_unsignint)orig_val >> shift_cnt;
+	return 0;
+}
+
+static int __do_shl(char *l, char *r, size_t bytes, int sign,
+			cur_max_signint *retval)
+{
+	return __do_shift(l, r, bytes, sign, retval, 0);
+}
+
+static int __do_shr(char *l, char *r, size_t bytes, int sign,
+			cur_max_signint *retval)
+{
+	return __do_shift(l, r, bytes, sign, retval, 1);
+}
+
 static struct {
 	int	flag;
 	int	(*callback)(char *, char *, size_t, int, cur_max_signint *);
@@ -734,6 +829,12 @@ static struct {
 	{CLIB_COMPUTE_F_SUB, __do_sub},
 	{CLIB_COMPUTE_F_MUL, __do_mul},
 	{CLIB_COMPUTE_F_DIV, __do_div},
+	{CLIB_COMPUTE_F_SHL, __do_shl},
+	{CLIB_COMPUTE_F_SHR, __do_shr},
+#if 0
+	{CLIB_COMPUTE_F_ROL, __do_rol},
+	{CLIB_COMPUTE_F_ROR, __do_ror},
+#endif
 };
 /*
  * return value:
