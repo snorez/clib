@@ -478,24 +478,30 @@ void random_bits(void *dst, size_t bits)
 }
 
 int clib_int_extend(char *buf, size_t bufbits, void *src, size_t origbits,
-			int signbit)
+			int sign, int signbit)
 {
 	if (bufbits < origbits)
 		return -1;
 
 	clib_memset_bits(buf, 0, bufbits, 0);
 	clib_memcpy_bits(buf, bufbits, src, origbits);
-	clib_memset_bits(buf + (origbits / 8), (origbits % 8),
-			 bufbits - origbits, signbit);
+	if (sign && signbit)
+		clib_memset_bits(buf + (origbits / 8), (origbits % 8),
+				 bufbits - origbits, signbit);
 	return 0;
+}
+
+int clib_get_signbit(char *l, size_t bytes)
+{
+	/* FIXME: endian? */
+	return (int)test_bit(7, (long *)&l[bytes-1]);
 }
 
 static int __do_compare(char *l, char *r, size_t bytes, int sign,
 			cur_max_signint *retval)
 {
-	/* TODO: endian? */
-	int l_msb_bit = test_bit(7, (long *)&l[bytes-1]);
-	int r_msb_bit = test_bit(7, (long *)&r[bytes-1]);
+	int l_msb_bit = clib_get_signbit(l, bytes);
+	int r_msb_bit = clib_get_signbit(r, bytes);
 
 	if (sign) {
 		if (l_msb_bit > r_msb_bit) {
@@ -881,10 +887,14 @@ int clib_compute_bits(void *l, size_t lbytes, int lsign,
 	char _l[compute_bytes];
 	char _r[compute_bytes];
 	int err;
+	int lsignbit = clib_get_signbit(l, lbytes);
+	int rsignbit = clib_get_signbit(r, rbytes);
 
-	err = clib_int_extend(_l, compute_bytes * 8, l, lbytes * 8, lsign);
+	err = clib_int_extend(_l, compute_bytes * 8, l, lbytes * 8,
+				lsign, lsignbit);
 	(void)err;
-	err = clib_int_extend(_r, compute_bytes * 8, r, rbytes * 8, rsign);
+	err = clib_int_extend(_r, compute_bytes * 8, r, rbytes * 8,
+				rsign, rsignbit);
 	(void)err;
 
 	for (size_t i = 0; i < sizeof(compute_cbs) / sizeof(compute_cbs[0]);

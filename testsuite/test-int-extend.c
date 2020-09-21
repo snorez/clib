@@ -21,31 +21,33 @@ void test_int_extend(void)
 	unsigned long v;
 	int err;
 
-	err = clib_int_extend((char *)&v, sizeof(v) * 8, ((char *)&test), 8, 0);
+	err = clib_int_extend((char *)&v, sizeof(v) * 8, ((char *)&test), 8,
+				0, 1);
 	(void)err;
 	ts_output(1, stdout, "clib_int_extend(test.a 0) result: %lx\n", v);
 
-	err = clib_int_extend((char *)&v, sizeof(v) * 8, ((char *)&test), 8, 1);
+	err = clib_int_extend((char *)&v, sizeof(v) * 8, ((char *)&test), 8,
+				1, 1);
 	(void)err;
 	ts_output(1, stdout, "clib_int_extend(test.a 1) result: %lx\n", v);
 
 	err = clib_int_extend((char *)&v, sizeof(v) * 8,
-				((char *)&test + 1), 14, 0);
+				((char *)&test + 1), 14, 0, 1);
 	(void)err;
 	ts_output(1, stdout, "clib_int_extend(test.b 0) result: %lx\n", v);
 
 	err = clib_int_extend((char *)&v, sizeof(v) * 8,
-				((char *)&test + 1), 14, 1);
+				((char *)&test + 1), 14, 1, 1);
 	(void)err;
 	ts_output(1, stdout, "clib_int_extend(test.b 1) result: %lx\n", v);
 
 	err = clib_int_extend((char *)&v, sizeof(v) * 8,
-				((char *)&test + 3), 16, 0);
+				((char *)&test + 3), 16, 0, 1);
 	(void)err;
 	ts_output(1, stdout, "clib_int_extend(test.c 0) result: %lx\n", v);
 
 	err = clib_int_extend((char *)&v, sizeof(v) * 8,
-				((char *)&test + 3), 16, 1);
+				((char *)&test + 3), 16, 1, 1);
 	(void)err;
 	ts_output(1, stdout, "clib_int_extend(test.c 1) result: %lx\n", v);
 }

@@ -156,7 +156,8 @@ extern void clib_memcpy_bits(void *dst, u32 dst_bits, void *src, u32 src_bits);
 extern long s_random(void);
 extern void random_bits(void *dst, size_t bits);
 extern int clib_int_extend(char *buf, size_t bufbits, void *src,
-			   size_t origbits, int signbit);
+			   size_t origbits, int sign, int signbit);
+extern int clib_get_signbit(char *l, size_t bytes);
 typedef s64 cur_max_signint;
 typedef s64 cur_max_unsignint;
 extern int clib_compute_bits(void *l, size_t lbytes, int lsign,
