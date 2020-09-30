@@ -4,8 +4,8 @@ static struct slist_head this_head;
 static unsigned this_slist_id = 0;
 
 struct this_slist {
-	struct slist_head	sibling;
 	int			id;
+	struct slist_head	sibling;
 };
 
 static struct this_slist *this_slist_alloc(void)

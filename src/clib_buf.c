@@ -36,6 +36,9 @@ char nr_en[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
 int buf_printable(char *b, size_t len)
 {
 	size_t i = 0;
+	if (!len)
+		return 0;
+
 	for (i = 0; i < len; i++) {
 		if (!b[i]) {
 			for (; i < len; i++)
@@ -46,6 +49,7 @@ int buf_printable(char *b, size_t len)
 		if (!isprint(b[i]))
 			return 0;
 	}
+
 	return 1;
 }
 

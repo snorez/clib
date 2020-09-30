@@ -542,7 +542,7 @@ static inline void list_splice_tail_init(struct list_head *list,
 	container_of(ptr, type, member)
 
 #define	slist_entry(ptr, type, member) \
-	list_entry(ptr, type, member)
+	((ptr) ? container_of(ptr, type, member) : NULL)
 
 /**
  * list_first_entry - get the first element from a list
@@ -556,7 +556,7 @@ static inline void list_splice_tail_init(struct list_head *list,
 	list_entry((ptr)->next, type, member)
 
 #define	slist_first_entry(ptr, type, member) \
-	list_first_entry(ptr, type, member)
+	slist_entry((ptr)->next, type, member)
 
 /**
  * list_last_entry - get the last element from a list
