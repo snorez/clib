@@ -908,3 +908,45 @@ int clib_compute_bits(void *l, size_t lbytes, int lsign,
 	err_dbg(0, "%d not implemented yet\n", flag);
 	return -1;
 }
+
+int clib_in_loop(void *arr, size_t arrsz, size_t elemsz,
+		 int *start, int *head, int *tail, void *next_val)
+{
+	int in_loop = 0;
+	int idx;
+
+	if (*head == -1) {
+		idx = *start;
+		for (; idx < arrsz; idx++) {
+			if ((arrsz - idx) % 2)
+				continue;
+			size_t this_sz;
+			this_sz = (arrsz - idx) / 2;
+			void *ptr0, *ptr1;
+			ptr0 = array_idx_ptr(arr, elemsz, idx);
+			ptr1 = array_idx_ptr(arr, elemsz, idx + this_sz);
+			if (!memcmp(ptr0, ptr1, elemsz * this_sz)) {
+				*head = idx;
+				*tail = idx + this_sz - 1;
+				break;
+			}
+		}
+		*start = arrsz;
+	}
+
+	if (*head != -1) {
+		idx = *head;
+		int offs_idx = (arrsz - *start) % (*tail - *head + 1);
+		if (!memcmp(array_idx_ptr(arr, elemsz, idx + offs_idx),
+				next_val, elemsz))
+			in_loop = 1;
+
+		if (!in_loop) {
+			*start = arrsz;
+			*head = -1;
+			*tail = -1;
+		}
+	}
+
+	return in_loop;
+}

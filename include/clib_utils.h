@@ -163,6 +163,8 @@ typedef s64 cur_max_unsignint;
 extern int clib_compute_bits(void *l, size_t lbytes, int lsign,
 				void *r, size_t rbytes, int rsign, int flag,
 				cur_max_signint *retval);
+extern int clib_in_loop(void *arr, size_t arrsz, size_t elemsz,
+			int *start, int *head, int *tail, void *next_val);
 
 static inline int get_online_cpus(void)
 {
@@ -294,6 +296,12 @@ static inline void *clib_memcpy(void *dst, size_t dstlen,
 	if (copylen > srclen)
 		copylen = srclen;
 	return memcpy(dst, src, copylen);
+}
+
+/* elemsz must be 1 2 4 8... */
+static inline void *array_idx_ptr(void *start, size_t elemsz, size_t idx)
+{
+	return (void *)((char *)start + (elemsz * idx));
 }
 
 DECL_END

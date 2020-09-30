@@ -363,11 +363,6 @@ static inline int list_empty(const struct list_head *head)
 	return head->next == head;
 }
 
-static inline int slist_empty(struct slist_head *head)
-{
-	return head->next == NULL;
-}
-
 /**
  * list_empty_careful - tests whether a list is empty and not being modified
  * @head: the list to test
@@ -805,6 +800,48 @@ static inline void list_splice_tail_init(struct list_head *list,
  */
 #define list_safe_reset_next(pos, n, member)				\
 	n = list_next_entry(pos, member)
+
+static inline size_t slist_count(struct slist_head *head)
+{
+	struct slist_head *next = head->next;
+	size_t cnt = 0;
+	while (next) {
+		cnt++;
+		next = next->next;
+	}
+	return cnt;
+}
+
+static inline int slist_empty(struct slist_head *head)
+{
+	return (slist_count(head) == 0);
+}
+
+static inline int slist_ele_idx(struct slist_head *head,
+				    struct slist_head *ele)
+{
+	struct slist_head *next = head->next;
+	int idx = 0;
+	while (next) {
+		if (ele == next)
+			return idx;
+		idx++;
+		next = next->next;
+	}
+	return -1;
+}
+
+static inline struct slist_head *slist_idx_ele(struct slist_head *head, int idx)
+{
+	struct slist_head *next = head->next;
+	while (next) {
+		if (!idx)
+			return next;
+		idx--;
+		next = next->next;
+	}
+	return NULL;
+}
 
 /*
  * Double linked lists with a single pointer list head.
