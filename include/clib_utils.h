@@ -159,7 +159,7 @@ extern int clib_int_extend(char *buf, size_t bufbits, void *src,
 			   size_t origbits, int sign, int signbit);
 extern int clib_get_signbit(char *l, size_t bytes);
 typedef s64 cur_max_signint;
-typedef s64 cur_max_unsignint;
+typedef u64 cur_max_unsignint;
 extern int clib_compute_bits(void *l, size_t lbytes, int lsign,
 				void *r, size_t rbytes, int rsign, int flag,
 				cur_max_signint *retval);
