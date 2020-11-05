@@ -164,7 +164,7 @@ extern int clib_compute_bits(void *l, size_t lbytes, int lsign,
 				void *r, size_t rbytes, int rsign, int flag,
 				cur_max_signint *retval);
 extern int clib_in_loop(void *arr, size_t arrsz, size_t elemsz,
-			int *start, int *head, int *tail, void *next_val);
+			int *start, int *end, int *head, int *tail);
 
 static inline int get_online_cpus(void)
 {

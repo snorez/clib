@@ -909,42 +909,74 @@ int clib_compute_bits(void *l, size_t lbytes, int lsign,
 	return -1;
 }
 
+/*
+ * clib_in_loop: check if @arr contains some kind of loops.
+ * arr: the element array
+ * arrsz: the count of the array
+ * elemsz: array element size
+ * start: where to start to scan
+ * end: the last element previous scan at
+ * head: where the loop start
+ * tail: where the loop jump back to the start
+ *
+ * Return value:
+ *	0: not in loop
+ *	1: in loop
+ *	-1: need more information
+ */
 int clib_in_loop(void *arr, size_t arrsz, size_t elemsz,
-		 int *start, int *head, int *tail, void *next_val)
+		 int *start, int *end, int *head, int *tail)
 {
 	int in_loop = 0;
 	int idx;
+	int old_start, old_end, old_head, old_tail;
+	old_start = *start;
+	old_end = *end;
+	old_head = *head;
+	old_tail = *tail;
 
-	if (*head == -1) {
-		idx = *start;
-		for (; idx < arrsz; idx++) {
-			if ((arrsz - idx) % 2)
-				continue;
-			size_t this_sz;
-			this_sz = (arrsz - idx) / 2;
-			void *ptr0, *ptr1;
-			ptr0 = array_idx_ptr(arr, elemsz, idx);
-			ptr1 = array_idx_ptr(arr, elemsz, idx + this_sz);
-			if (!memcmp(ptr0, ptr1, elemsz * this_sz)) {
-				*head = idx;
-				*tail = idx + this_sz - 1;
-				break;
+	if (old_head == -1) {
+		/* scan from old_start */
+		for (idx = old_start; idx < arrsz; idx++) {
+			int max_eles = (arrsz - idx) / 2;
+			int i;
+			for (i = 1; i <= max_eles; i++) {
+				void *ptr0, *ptr1;
+				size_t this_sz;
+				this_sz = elemsz * i;
+				ptr0 = array_idx_ptr(arr, elemsz, idx);
+				ptr1 = array_idx_ptr(arr, elemsz, idx + i);
+				if (!memcmp(ptr0, ptr1, this_sz)) {
+					in_loop = 1;
+					*head = idx;
+					*tail = idx + i - 1;
+					*start = idx;
+					*end = idx + i * 2 - 1;
+					break;
+				}
 			}
+			if (in_loop)
+				break;
 		}
-		*start = arrsz;
-	}
-
-	if (*head != -1) {
-		idx = *head;
-		int offs_idx = (arrsz - *start) % (*tail - *head + 1);
-		if (!memcmp(array_idx_ptr(arr, elemsz, idx + offs_idx),
-				next_val, elemsz))
-			in_loop = 1;
-
-		if (!in_loop) {
-			*start = arrsz;
-			*head = -1;
-			*tail = -1;
+	} else {
+		if ((arrsz - old_end) < (old_tail - old_head + 1)) {
+			in_loop = -1;
+		} else {
+			idx = old_end + 1;
+			int loop_elecnt = old_tail - old_head + 1;
+			size_t this_sz = elemsz * loop_elecnt;
+			void *ptr0, *ptr1;
+			ptr0 = array_idx_ptr(arr, elemsz, old_start);
+			ptr1 = array_idx_ptr(arr, elemsz, idx);
+			if (!memcmp(ptr0, ptr1, this_sz)) {
+				in_loop = 1;
+				*end = idx + loop_elecnt - 1;
+			} else {
+				*start = idx;
+				*head = -1;
+				*tail = -1;
+				*end = *start;
+			}
 		}
 	}
 
