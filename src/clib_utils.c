@@ -572,6 +572,16 @@ static int __do_bitand(char *l, char *r, size_t bytes, int sign,
 	return 0;
 }
 
+static int __do_bitnot(char *l, char *r, size_t bytes, int sign,
+			cur_max_signint *retval)
+{
+	char *_ret = (char *)retval;
+	for (size_t i = 0; i < bytes; i++) {
+		_ret[i] = ~l[i];
+	}
+	return 0;
+}
+
 #define	__do_arithmetic_X(type, l, r, retval, op) \
 	do {\
 		type _l = *(type *)l;\
@@ -846,6 +856,7 @@ static struct {
 	{CLIB_COMPUTE_F_BITIOR, __do_bitior},
 	{CLIB_COMPUTE_F_BITXOR, __do_bitxor},
 	{CLIB_COMPUTE_F_BITAND, __do_bitand},
+	{CLIB_COMPUTE_F_BITNOT, __do_bitnot},
 	{CLIB_COMPUTE_F_ADD, __do_add},
 	{CLIB_COMPUTE_F_SUB, __do_sub},
 	{CLIB_COMPUTE_F_MUL, __do_mul},
@@ -867,6 +878,8 @@ int clib_compute_bits(void *l, size_t lbytes, int lsign,
 			void *r, size_t rbytes, int rsign,
 			int flag, cur_max_signint *retval)
 {
+	memset((void *)retval, 0, sizeof(*retval));
+
 	size_t compute_bytes = lbytes;
 	int compute_sign = lsign;
 	if (compute_bytes < rbytes) {
@@ -890,11 +903,13 @@ int clib_compute_bits(void *l, size_t lbytes, int lsign,
 	int lsignbit = clib_get_signbit(l, lbytes);
 	int rsignbit = clib_get_signbit(r, rbytes);
 
-	err = clib_int_extend(_l, compute_bytes * 8, l, lbytes * 8,
-				lsign, lsignbit);
+	err = clib_int_extend(_l, compute_bytes * BITS_PER_UNIT,
+			      l, lbytes * BITS_PER_UNIT,
+			      lsign, lsignbit);
 	(void)err;
-	err = clib_int_extend(_r, compute_bytes * 8, r, rbytes * 8,
-				rsign, rsignbit);
+	err = clib_int_extend(_r, compute_bytes * BITS_PER_UNIT,
+			      r, rbytes * BITS_PER_UNIT,
+			      rsign, rsignbit);
 	(void)err;
 
 	for (size_t i = 0; i < sizeof(compute_cbs) / sizeof(compute_cbs[0]);

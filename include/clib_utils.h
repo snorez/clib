@@ -100,6 +100,10 @@ DECL_BEGIN
 extern __typeof (name) aliasname __attribute__((weak,alias(#name)))
 #endif
 
+#ifndef BITS_PER_UNIT
+#define	BITS_PER_UNIT	(8)
+#endif
+
 typedef __s8	s8;
 typedef __u8	u8;
 typedef __s16	s16;
@@ -128,6 +132,7 @@ enum clib_compute_flag {
 	CLIB_COMPUTE_F_BITIOR,
 	CLIB_COMPUTE_F_BITXOR,
 	CLIB_COMPUTE_F_BITAND,
+	CLIB_COMPUTE_F_BITNOT,
 	CLIB_COMPUTE_F_ADD,
 	CLIB_COMPUTE_F_SUB,
 	CLIB_COMPUTE_F_MUL,
