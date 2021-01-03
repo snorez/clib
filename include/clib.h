@@ -41,6 +41,7 @@
 #include "../include/insn.h"
 #include "../include/clib_bitmap.h"
 #include "../include/clib_json.h"
+#include "../include/clib_sme.h"
 
 DECL_BEGIN
 

@@ -70,7 +70,8 @@ SRCS = \
        insn.c \
        inat.c \
        clib_bitmap.c \
-       clib_json.c
+       clib_json.c \
+       clib_sme.c
 
 obj_static = $(SRCS:%.c=%.o)
 obj_dynamic = $(SRCS:%.c=%.0)
