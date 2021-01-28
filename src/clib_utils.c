@@ -443,6 +443,15 @@ long s_random(void)
 	return random();
 }
 
+long rand_range(long min, long max)
+{
+	/* [min, max) */
+	long total = max - min;
+	long ret = s_random() % total;
+	ret += min;
+	return ret;
+}
+
 void random_bits(void *dst, size_t bits)
 {
 	size_t bits_left = bits;
