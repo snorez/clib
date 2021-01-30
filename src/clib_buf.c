@@ -70,7 +70,7 @@ char *random_str_nr_en(size_t cnt)
 	size_t len = strlen(nr_en);
 	size_t i;
 	for (i = 0; i < cnt; i++)
-		ret[i] = nr_en[s_random()%len];
+		ret[i] = nr_en[s_rand64()%len];
 	ret[cnt] = '\0';
 	return ret;
 }
@@ -92,7 +92,7 @@ char *random_str(size_t cnt)
 	size_t len = strlen(printable);
 	size_t i;
 	for (i = 0; i < cnt; i++)
-		ret[i] = printable[s_random()%len];
+		ret[i] = printable[s_rand64()%len];
 	ret[cnt] = '\0';
 	return ret;
 }

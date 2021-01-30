@@ -1,3 +1,6 @@
+2021-01-30
+	* clib_utils.c: rewrite s_rand*() functions
+
 2021-01-28
 	* clib: add rand_range to random a long integer in [min, max)
 

@@ -426,30 +426,83 @@ void clib_memcpy_bits(void *dest, u32 dst_bits, void *src, u32 src_bits)
 	}
 }
 
-/*
- * random seed use current systime may not be safe, so
- * libsodium may be a good choice, use randombytes_buf/randombytes_uniform
- * instead
- */
-long s_random(void)
+#define IMAX_BITS(m)	((m)/((m)%255+1) / 255%255*8 + 7-86/((m)%255+12))
+#define RAND_MAX_WIDTH	IMAX_BITS(RAND_MAX)
+_Static_assert((RAND_MAX & (RAND_MAX + 1u)) == 0, "RAND_MAX not a Mersenne number");
+
+static void __rand_seed(void)
 {
 	struct timeval tv;
 	if (gettimeofday(&tv, NULL) == -1) {
-		err_dbg(1, "gettimeofday err");
 		srand(random());
-		return random();
+		return;
 	}
 	srand(tv.tv_sec + tv.tv_usec);
-	return random();
+	return;
+}
+
+uint64_t s_rand64(void)
+{
+	uint64_t r = 0;
+	for (int i = 0; i < 64; i += RAND_MAX_WIDTH) {
+		__rand_seed();
+		r <<= RAND_MAX_WIDTH;
+		r ^= (unsigned)rand();
+	}
+	return r;
+}
+
+uint32_t s_rand32(void)
+{
+	uint32_t r = 0;
+	for (int i = 0; i < 32; i += RAND_MAX_WIDTH) {
+		__rand_seed();
+		r <<= RAND_MAX_WIDTH;
+		r ^= (unsigned)rand();
+	}
+	return r;
 }
 
 long rand_range(long min, long max)
 {
 	/* [min, max) */
 	long total = max - min;
-	long ret = s_random() % total;
+	long ret = s_rand64() % total;
 	ret += min;
 	return ret;
+}
+
+void rand_sort(int cnt, long *arr)
+{
+	memset(arr, 0, cnt * sizeof(arr[0]));
+	for (int i = 0; i < cnt; i++) {
+		while (1) {
+			long v = s_rand64();
+			int re_random = 0;
+			for (int j = 0; j < i; j++) {
+				if (arr[j] == v) {
+					re_random = 1;
+					break;
+				}
+			}
+			if (re_random)
+				continue;
+			arr[i] = v;
+			break;
+		}
+	}
+
+	for (int i = 0; i < cnt; i++) {
+		long v = arr[i];
+		for (int j = (i + 1); j < cnt; j++) {
+			if (arr[j] < v) {
+				long tmp = v;
+				v = arr[j];
+				arr[j] = tmp;
+			}
+		}
+		arr[i] = v;
+	}
 }
 
 void random_bits(void *dst, size_t bits)
@@ -458,23 +511,23 @@ void random_bits(void *dst, size_t bits)
 	void *wpos = dst;
 	while (bits_left) {
 		if (bits_left >= (sizeof(long) * 8)) {
-			long val = s_random();
+			long val = s_rand64();
 			*(long *)wpos = val;
 			wpos += sizeof(long);
 			bits_left -= (sizeof(long) * 8);
 		} else if (bits_left >= (sizeof(int) * 8)) {
-			long val = s_random();
+			long val = s_rand64();
 			*(int *)wpos = (int)val;
 			wpos += sizeof(int);
 			bits_left -= (sizeof(int) * 8);
 		} else if (bits_left >= (sizeof(char) * 8)) {
-			long val = s_random();
+			long val = s_rand64();
 			*(char *)wpos = (char)val;
 			wpos += sizeof(char);
 			bits_left -= (sizeof(char) * 8);
 		} else {
 			for (size_t i = 0; i < bits_left; i++) {
-				long val = s_random() % 2;
+				long val = s_rand64() % 2;
 				if (!val)
 					test_and_clear_bit(i, (long *)wpos);
 				else

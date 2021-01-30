@@ -39,7 +39,8 @@ typedef struct {
 } buf_struct;
 
 extern int buf_printable(char *buf, size_t len);
-extern long s_random(void);
+extern uint64_t s_rand64(void);
+extern uint32_t s_rand32(void);
 extern char *random_str_nr_en(size_t);
 extern char *random_str(size_t);
 extern char *mul_str(const char *, size_t);
