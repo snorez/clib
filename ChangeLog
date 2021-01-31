@@ -1,3 +1,6 @@
+2021-01-31
+	* clib_utils.c: add rand_sort_unsigned()
+
 2021-01-30
 	* clib_utils.c: rewrite s_rand*() functions
 

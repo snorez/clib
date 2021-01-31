@@ -505,6 +505,39 @@ void rand_sort(int cnt, long *arr)
 	}
 }
 
+void rand_sort_unsigned(int cnt, unsigned long *arr)
+{
+	memset(arr, 0, cnt * sizeof(arr[0]));
+	for (int i = 0; i < cnt; i++) {
+		while (1) {
+			unsigned long v = s_rand64();
+			int re_random = 0;
+			for (int j = 0; j < i; j++) {
+				if (arr[j] == v) {
+					re_random = 1;
+					break;
+				}
+			}
+			if (re_random)
+				continue;
+			arr[i] = v;
+			break;
+		}
+	}
+
+	for (int i = 0; i < cnt; i++) {
+		unsigned long v = arr[i];
+		for (int j = (i + 1); j < cnt; j++) {
+			if (arr[j] < v) {
+				unsigned long tmp = v;
+				v = arr[j];
+				arr[j] = tmp;
+			}
+		}
+		arr[i] = v;
+	}
+}
+
 void random_bits(void *dst, size_t bits)
 {
 	size_t bits_left = bits;
