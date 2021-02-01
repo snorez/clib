@@ -466,6 +466,9 @@ uint32_t s_rand32(void)
 long rand_range(long min, long max)
 {
 	/* [min, max) */
+	if (max <= min)
+		return 0;
+
 	long total = max - min;
 	long ret = s_rand64() % total;
 	ret += min;
