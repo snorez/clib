@@ -67,6 +67,7 @@ typedef struct {
 #define	bin_rdata(file)	(((regfile *)file)->data.bindata.rbuf)
 #define	bin_wdata(file)	(((regfile *)file)->data.bindata.wbuf)
 
+extern int abs_path(const char *path);
 extern int path_exists(const char *path);
 extern int clib_open(const char *pathname, int flags, ...);
 extern ssize_t clib_read(int fd, void *buf, size_t count);
@@ -86,9 +87,11 @@ extern uint32_t get_io_speed(void);
 extern int txtfile_readlines(regfile *);
 extern int txtfile_readline(regfile *, uint32_t lines);
 extern int txtfile_writelines(regfile *);
-extern int clib_split_file(char *path, char *bkp,
-				unsigned long start, unsigned long end);
-extern int clib_copy_file(char *path, char *bkp, unsigned long bytes);
+extern int clib_split_file(char *path, char *bkp, unsigned long start,
+			   unsigned long end, int verbose);
+extern int clib_copy_file_bytes(char *path, char *bkp, unsigned long bytes,
+				int verbose);
+extern int clib_copy_file(char *src, char *dest, int verbose);
 
 DECL_END
 

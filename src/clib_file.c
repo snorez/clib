@@ -18,6 +18,11 @@
  */
 #include "../include/clib.h"
 
+int abs_path(const char *path)
+{
+	return path[0] == '/';
+}
+
 int path_exists(const char *path)
 {
 	if (!path) {
@@ -566,8 +571,8 @@ static char buf[COPY_BLKSZ];
  * copy path[start:end] to bkp
  * if !end, take end as the last of the path
  */
-int clib_split_file(char *path, char *bkp,
-			unsigned long start, unsigned long end)
+int clib_split_file(char *path, char *bkp, unsigned long start,
+			unsigned long end, int verbose)
 {
 	char *infile = path;
 	char *outfile = bkp;
@@ -614,15 +619,21 @@ int clib_split_file(char *path, char *bkp,
 		goto err1;
 	}
 
-	fprintf(stdout, "%s: prepare copy %ld bytes from %s[%ld:%ld] to %s\n",
-			__FUNCTION__, bytes, infile, start, end, outfile);
-	fflush(stdout);
+	if (verbose) {
+		fprintf(stdout, "%s: prepare copy %ld bytes "
+				"from %s[%ld:%ld] to %s\n",
+				__FUNCTION__, bytes, infile,
+				start, end, outfile);
+		fflush(stdout);
+	}
 
 	left = bytes;
 	while (1) {
-		fprintf(stdout, "\r%s: process %.3f%%", __FUNCTION__,
-				(double)(bytes-left) * 100 / bytes);
-		fflush(stdout);
+		if (verbose) {
+			fprintf(stdout, "\r%s: process %.3f%%", __FUNCTION__,
+					(double)(bytes-left) * 100 / bytes);
+			fflush(stdout);
+		}
 
 		if (!left)
 			break;
@@ -645,8 +656,10 @@ int clib_split_file(char *path, char *bkp,
 
 		left -= this_copy;
 	}
-	fprintf(stdout, "\n");
-	fflush(stdout);
+	if (verbose) {
+		fprintf(stdout, "\n");
+		fflush(stdout);
+	}
 	err = 0;
 
 err1:
@@ -656,7 +669,20 @@ err0:
 	return err;
 }
 
-int clib_copy_file(char *path, char *bkp, unsigned long bytes)
+int clib_copy_file_bytes(char *path, char *bkp, unsigned long bytes, int verbose)
 {
-	return clib_split_file(path, bkp, 0, bytes);
+	return clib_split_file(path, bkp, 0, bytes, verbose);
+}
+
+int clib_copy_file(char *src, char *dest, int verbose)
+{
+	int err = 0;
+	struct stat st;
+	err = stat(dest, &st);
+	if (err == -1) {
+		err_dbg(1, "stat err");
+		return -1;
+	}
+
+	return clib_copy_file_bytes(src, dest, st.st_size, verbose);
 }

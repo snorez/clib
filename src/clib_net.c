@@ -667,3 +667,42 @@ free_ret:
 unlock:
 	return ret ? ret : -1;
 }
+
+int clib_listen_sock(int domain, int type, int protocol, int backlog, int *port)
+{
+	int err = 0;
+	int sock = -1;
+	int _port = 0;
+	struct sockaddr_in sa;
+
+	sock = socket(domain, type, protocol);
+	if (sock == -1) {
+		err_dbg(1, "socket err");
+		return -1;
+	}
+
+	while (1) {
+		_port = (int)rand_range(0x1000, 0x10000);
+
+		memset(&sa, 0, sizeof(sa));
+		sa.sin_family = AF_INET;
+		sa.sin_port = htons(_port);
+		sa.sin_addr.s_addr = htonl(INADDR_ANY);
+		err = bind(sock, (struct sockaddr *)&sa, sizeof(sa));
+		if (err == -1) {
+			continue;
+		} else {
+			break;
+		}
+	}
+
+	err = listen(sock, backlog);
+	if (err == -1) {
+		err_dbg(1, "listen err");
+		close(sock);
+		return -1;
+	}
+
+	*port = _port;
+	return sock;
+}

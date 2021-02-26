@@ -212,6 +212,8 @@ extern int xchg_sock_buf_len0(sock *file);
 extern int xchg_sock_buf_len1(sock *file);
 extern int sock_send(sock *file, void *msg, size_t len, int flag);
 extern int sock_recv(sock *file, void *msg, size_t len, int flag);
+extern int clib_listen_sock(int domain, int type, int protocol, int backlog,
+			    int *port);
 
 DECL_END
 
