@@ -678,7 +678,7 @@ int clib_copy_file(char *src, char *dest, int verbose)
 {
 	int err = 0;
 	struct stat st;
-	err = stat(dest, &st);
+	err = stat(src, &st);
 	if (err == -1) {
 		err_dbg(1, "stat err");
 		return -1;
