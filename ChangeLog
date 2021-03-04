@@ -1,3 +1,6 @@
+2021-03-04
+	* qemu_fuzzlib.c: add helpers for qemu mode fuzzing
+
 2021-02-01
 	* clib_utils.c: check params in rand_range()
 

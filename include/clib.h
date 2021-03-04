@@ -42,6 +42,7 @@
 #include "../include/clib_bitmap.h"
 #include "../include/clib_json.h"
 #include "../include/clib_sme.h"
+#include "../include/qemu_fuzzlib.h"
 
 DECL_BEGIN
 
