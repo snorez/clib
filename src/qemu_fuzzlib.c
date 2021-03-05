@@ -175,7 +175,7 @@ static char *default_guest_c_content = ""
 "			res[0] = QEMU_FUZZLIB_INST_BOOM;\n"
 "			res[1] = __LINE__;\n"
 "		} else if (WIFEXITED(status)) {\n"
-"			res[0] = WEXITSTATUS(status);\n"
+"			res[0] = (int)(char)WEXITSTATUS(status);\n"
 "			res[1] = __LINE__;\n"
 "		} else if (WIFSIGNALED(status)) {\n"
 "			char p[0x100];\n"
@@ -341,6 +341,7 @@ static int inst_init(struct qemu_fuzzlib_env *env,
 	inst->inst_workdir = workdir;
 	inst->res = QEMU_FUZZLIB_INST_NOT_TESTED;
 	inst->tid = 0;
+	inst->qemu_pid = -1;
 
 	return 0;
 }
@@ -389,14 +390,12 @@ static int prepare_launch_args_begin(struct qemu_fuzzlib_env *env,
 					struct qemu_fuzzlib_inst *inst,
 					char **args)
 {
-	static u32 memsz = 1;
-	static u32 core = 2;
 	char p[PATH_MAX];
 
 	args[0] = "/bin/bash";
 	args[1] = "-c";
 
-	snprintf(p, PATH_MAX, "%s -m %dG -smp %d -kernel %s -append \"console=ttyS0 root=/dev/sda earlyprintk=serial net.ifnames=0\" -drive file=%s,format=raw -net user,host=10.0.2.10,hostfwd=tcp:127.0.0.1:%d-:22 -net nic,model=e1000 -enable-kvm -nographic", env->qemu_exec_path, memsz, core, env->bzImage_file, inst->copied_osimage, inst->fwd_port);
+	snprintf(p, PATH_MAX, "%s -m %dG -smp %d -kernel %s -append \"console=ttyS0 root=/dev/sda earlyprintk=serial net.ifnames=0\" -drive file=%s,format=raw -net user,host=10.0.2.10,hostfwd=tcp:127.0.0.1:%d-:22 -net nic,model=e1000 -enable-kvm -nographic", env->qemu_exec_path, env->instance_memsz, env->instance_core, env->bzImage_file, inst->copied_osimage, inst->fwd_port);
 	args[2] = strdup(p);
 	if (!args[2]) {
 		err_dbg(1, "strdup err");
@@ -419,14 +418,17 @@ static int inst_vmlog_filter(struct qemu_fuzzlib_env *env,
 				char *keystr)
 {
 	int err = 0;
-	char *b;
+	char *b, *p;
 	if (path_exists(inst->vmlog)) {
 		b = clib_loadfile(inst->vmlog, NULL);
+		p = b + inst->vmlog_readpos;
 
-		if (!strstr(b, keystr)) {
+		p = strstr(p, keystr);
+		if (!p) {
 			err = 0;
 		} else {
 			err = 1;
+			inst->vmlog_readpos = p + strlen(keystr) + 1 - b;
 		}
 
 		free(b);
@@ -455,7 +457,8 @@ static int inst_launch_qemu(struct qemu_fuzzlib_env *env,
 		setsid();
 
 		extern char **environ;
-		int fd = open(inst->vmlog, O_WRONLY | O_CREAT | O_TRUNC,
+		int fd = open(inst->vmlog,
+				O_WRONLY | O_CREAT | O_TRUNC,
 				S_IRWXU);
 		if (fd == -1) {
 			err_dbg(1, "open err");
@@ -608,43 +611,46 @@ static int inst_run(struct qemu_fuzzlib_env *env, struct qemu_fuzzlib_inst *inst
 	static u32 accept_timeout = 3000*1000;
 	u32 cur_usleep = 0;
 	int err = QEMU_FUZZLIB_INST_NOT_TESTED;
-	int test_res[2];
-	int pid;
+	int test_res[2] = {QEMU_FUZZLIB_INST_NOT_TESTED, 0};
+	int need_kill_qemu = 0;
 	int run_script_pid;
 	int fd;
 	char *launch_args[0x30] = {0};
 
-	mutex_lock(&fwd_port_lock);
+	if (inst->qemu_pid == -1) {
+		mutex_lock(&fwd_port_lock);
 
-	err = find_valid_fwd_port(inst);
-	if (err < 0) {
-		err_dbg(0, "find_valid_fwd_port err");
-		err = QEMU_FUZZLIB_INST_NOT_TESTED;
+		err = find_valid_fwd_port(inst);
+		if (err < 0) {
+			err_dbg(0, "find_valid_fwd_port err");
+			err = QEMU_FUZZLIB_INST_NOT_TESTED;
+			mutex_unlock(&fwd_port_lock);
+			goto out;
+		}
+
+		err = prepare_launch_args_begin(env, inst, launch_args);
+		if (err < 0) {
+			err_dbg(0, "prepare_launch_args_begin err");
+			err = QEMU_FUZZLIB_INST_NOT_TESTED;
+			mutex_unlock(&fwd_port_lock);
+			goto out;
+		}
+
+		inst->vmlog_readpos = 0;
+		inst->qemu_pid = inst_launch_qemu(env, inst, launch_args);
 		mutex_unlock(&fwd_port_lock);
-		goto out;
-	}
+		if (inst->qemu_pid < 0) {
+			err_dbg(0, "inst_launch_qemu err");
+			err = QEMU_FUZZLIB_INST_NOT_TESTED;
+			goto free_out;
+		}
 
-	err = prepare_launch_args_begin(env, inst, launch_args);
-	if (err < 0) {
-		err_dbg(0, "prepare_launch_args_begin err");
-		err = QEMU_FUZZLIB_INST_NOT_TESTED;
-		mutex_unlock(&fwd_port_lock);
-		goto out;
-	}
-
-	pid = inst_launch_qemu(env, inst, launch_args);
-	mutex_unlock(&fwd_port_lock);
-	if (pid < 0) {
-		err_dbg(0, "inst_launch_qemu err");
-		err = QEMU_FUZZLIB_INST_NOT_TESTED;
-		goto free_out;
-	}
-
-	err = inst_create_workdir(env, inst);
-	if (err < 0) {
-		err_dbg(0, "inst_create_workdir err");
-		err = QEMU_FUZZLIB_INST_NOT_TESTED;
-		goto kill_out;
+		err = inst_create_workdir(env, inst);
+		if (err < 0) {
+			err_dbg(0, "inst_create_workdir err");
+			err = QEMU_FUZZLIB_INST_NOT_TESTED;
+			goto kill_out;
+		}
 	}
 
 	err = inst_upload_file(env, inst, env->script_file);
@@ -693,6 +699,7 @@ static int inst_run(struct qemu_fuzzlib_env *env, struct qemu_fuzzlib_inst *inst
 
 	fd = accept(inst->listen_fd, NULL, NULL);
 	if (fd == -1) {
+		need_kill_qemu = 1;
 		err_dbg(1, "accept err");
 		err = QEMU_FUZZLIB_INST_NOT_TESTED;
 		goto kill1_out;
@@ -704,6 +711,7 @@ static int inst_run(struct qemu_fuzzlib_env *env, struct qemu_fuzzlib_inst *inst
 	 */
 	err = read(fd, test_res, sizeof(test_res));
 	if (err != sizeof(test_res)) {
+		need_kill_qemu = 1;
 		test_res[0] = QEMU_FUZZLIB_INST_BOOM;
 		test_res[1] = __LINE__;
 	}
@@ -711,16 +719,23 @@ static int inst_run(struct qemu_fuzzlib_env *env, struct qemu_fuzzlib_inst *inst
 	err = !(QEMU_FUZZLIB_INST_NOT_TESTED);
 	inst->res = test_res[0];
 	inst->reason = test_res[1];
+	if (inst->res == QEMU_FUZZLIB_INST_BOOM) {
+		need_kill_qemu = 1;
+	}
 	close(fd);
 
 kill1_out:
 	(void)inst_destroy_child(run_script_pid);
 
 kill_out:
-	(void)inst_destroy_child_all(pid);
+	if (need_kill_qemu) {
+		(void)inst_destroy_child_all(inst->qemu_pid);
+		inst->qemu_pid = -1;
+	}
 
 free_out:
-	prepare_launch_args_end(launch_args);
+	if (launch_args[0])
+		prepare_launch_args_end(launch_args);
 
 out:
 	mutex_unlock(&inst->lock);
@@ -892,7 +907,8 @@ static char *env_set_fname(struct qemu_fuzzlib_env *env, char *fpath)
 static int env_init(struct qemu_fuzzlib_env *env, char *user_name, u64 user_id,
 			char *qemu_exec_path, char *bzImage_file,
 			char *osimage_file, char *host_id_rsa, char *listen_ip,
-			u64 inst_max, char *env_workdir, char *guest_workdir,
+			u64 inst_max, u32 inst_memsz, u32 inst_core,
+			char *env_workdir, char *guest_workdir,
 			char *guest_user, char *script_file, char *c_file,
 			char *sample_fname, char *fuzz_db,
 			int (*db_init)(struct qemu_fuzzlib_env *),
@@ -910,6 +926,8 @@ static int env_init(struct qemu_fuzzlib_env *env, char *user_name, u64 user_id,
 	env->host_id_rsa = host_id_rsa;
 	env->listen_ip = listen_ip;
 	env->instance_max = inst_max;
+	env->instance_memsz = inst_memsz;
+	env->instance_core = inst_core;
 	env->env_workdir = env_workdir;
 	env->guest_workdir = guest_workdir;
 	env->guest_user = guest_user;
@@ -1117,7 +1135,8 @@ static int env_idle(struct qemu_fuzzlib_env *env)
 	return 1;
 }
 
-static int env_save_file_to(char *src, char *workdir, char *folder, u64 idx)
+static int env_save_file_to(char *src, char *workdir, char *folder, u64 idx,
+				char *sample_fname)
 {
 	u64 pathsz;
 	int rename = 0;
@@ -1131,11 +1150,11 @@ static int env_save_file_to(char *src, char *workdir, char *folder, u64 idx)
 
 	do {
 		if (!rename) {
-			snprintf(save_path, pathsz, "%s/%s/%lld",
-				 workdir, folder, idx);
+			snprintf(save_path, pathsz, "%s/%s/%lld_%s",
+				 workdir, folder, idx, sample_fname);
 		} else {
-			snprintf(save_path, pathsz, "%s/%s/%lld(%d)",
-				 workdir, folder, idx, rename);
+			snprintf(save_path, pathsz, "%s/%s/%lld_%d_%s",
+				 workdir, folder, idx, rename, sample_fname);
 		}
 
 		if (path_exists(save_path)) {
@@ -1186,7 +1205,8 @@ static int env_save_crash(struct qemu_fuzzlib_env *env,
 			  struct qemu_fuzzlib_inst *inst)
 {
 	return env_save_file_to(inst->sample_file, env->env_workdir,
-				env->crash_folder_name, env->crash_cnt);
+				env->crash_folder_name, env->crash_cnt,
+				env->sample_fname);
 }
 
 static int env_save_not_tested(struct qemu_fuzzlib_env *env,
@@ -1194,7 +1214,7 @@ static int env_save_not_tested(struct qemu_fuzzlib_env *env,
 {
 	return env_save_file_to(inst->sample_file, env->env_workdir,
 				env->not_tested_folder_name,
-				env->not_tested_cnt);
+				env->not_tested_cnt, env->sample_fname);
 }
 
 static int env_acct(struct qemu_fuzzlib_env *env, struct qemu_fuzzlib_inst *inst)
@@ -1233,7 +1253,9 @@ static void env_check_inst_res(struct qemu_fuzzlib_env *env,
 	}
 	inst->tid = 0;
 
-	if (retval == (void *)QEMU_FUZZLIB_INST_NOT_TESTED) {
+	/* the thread will return NOT_TESTED or TESTED */
+	if ((retval == (void *)QEMU_FUZZLIB_INST_NOT_TESTED) ||
+	    (inst->res == QEMU_FUZZLIB_INST_NOT_TESTED)) {
 		err = env_save_not_tested(env, inst);
 		if (err < 0) {
 			err_dbg(0, "env_save_not_tested err");
@@ -1246,6 +1268,7 @@ static void env_check_inst_res(struct qemu_fuzzlib_env *env,
 			err_dbg(0, "env_acct err");
 		}
 	}
+	inst->res = QEMU_FUZZLIB_INST_NOT_TESTED;
 
 	return;
 }
@@ -1270,7 +1293,8 @@ struct qemu_fuzzlib_env *
 qemu_fuzzlib_env_setup(char *user_name, u64 user_id, char *qemu_exec_path,
 			char *bzImage_file, char *osimage_file,
 			char *host_id_rsa, char *listen_ip,
-			u64 inst_max, char *env_workdir, char *guest_workdir,
+			u64 inst_max, u32 inst_memsz, u32 inst_core,
+			char *env_workdir, char *guest_workdir,
 			char *guest_user, char *script_file, char *c_file,
 			char *sample_fname, char *fuzz_db,
 			int (*db_init)(struct qemu_fuzzlib_env *),
@@ -1295,8 +1319,8 @@ qemu_fuzzlib_env_setup(char *user_name, u64 user_id, char *qemu_exec_path,
 
 	err = env_init(env, user_name, user_id, qemu_exec_path, bzImage_file,
 			osimage_file, host_id_rsa, listen_ip, inst_max,
-			env_workdir, guest_workdir, guest_user,
-			script_file, c_file, sample_fname,
+			inst_memsz, inst_core, env_workdir, guest_workdir,
+			guest_user, script_file, c_file, sample_fname,
 			fuzz_db, db_init, mutate);
 	if (err < 0) {
 		err_dbg(0, "env_init err");
@@ -1320,12 +1344,18 @@ static int env_run_one(struct qemu_fuzzlib_env *env, int *updated)
 {
 	int err = 0;
 	struct qemu_fuzzlib_inst *inst = NULL;
-	static u32 times = 0x100000;
+	static u32 times = 0x1000000;
+	static u32 sleep_sec = 30;
 
-	for (u32 i = 0; i < times; i++) {
-		inst = env_idle_inst(env);
+	for (u32 j = 0; j < sleep_sec; j++) {
+		for (u32 i = 0; i < times; i++) {
+			inst = env_idle_inst(env);
+			if (inst)
+				break;
+		}
 		if (inst)
 			break;
+		sleep(1);
 	}
 	if (!inst) {
 		fprintf(stderr, "[-] no instance available, must be a bug.\n");

@@ -48,11 +48,13 @@ struct qemu_fuzzlib_inst {
 	char				*sample_file;
 	char				*copied_osimage;
 	char				*vmlog;
+	ssize_t				vmlog_readpos;
 	int				listen_fd;
 	int				listen_port;
 	int				fwd_port;
 	int				res;
 	int				reason;
+	int				qemu_pid;
 	pthread_t			tid;
 };
 
@@ -66,6 +68,8 @@ struct qemu_fuzzlib_env {
 	char				*host_id_rsa;
 	char				*listen_ip;
 	u64				instance_max;
+	u32				instance_memsz;
+	u32				instance_core;
 	char				*env_workdir;
 	char				*guest_workdir;
 	char				*guest_user;
@@ -97,7 +101,8 @@ extern struct qemu_fuzzlib_env *
 qemu_fuzzlib_env_setup(char *user_name, u64 user_id, char *qemu_exec_path,
 			char *bzImage_file, char *osimage_file,
 			char *host_id_rsa, char *listen_ip,
-			u64 inst_max, char *env_workdir, char *guest_workdir,
+			u64 inst_max, u32 inst_memsz, u32 inst_core,
+			char *env_workdir, char *guest_workdir,
 			char *guest_user, char *script_file, char *c_file,
 			char *sample_fname, char *fuzz_db,
 			int (*db_init)(struct qemu_fuzzlib_env *),
