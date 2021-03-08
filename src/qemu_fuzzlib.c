@@ -608,7 +608,7 @@ static int inst_run(struct qemu_fuzzlib_env *env, struct qemu_fuzzlib_inst *inst
 	 * drop the lock on inst
 	 */
 
-	static u32 accept_timeout = 3000*1000;
+	static u32 accept_timeout = 9000*1000;
 	u32 cur_usleep = 0;
 	int err = QEMU_FUZZLIB_INST_NOT_TESTED;
 	int test_res[2] = {QEMU_FUZZLIB_INST_NOT_TESTED, 0};
@@ -907,8 +907,8 @@ static char *env_set_fname(struct qemu_fuzzlib_env *env, char *fpath)
 static int env_init(struct qemu_fuzzlib_env *env, char *user_name, u64 user_id,
 			char *qemu_exec_path, char *bzImage_file,
 			char *osimage_file, char *host_id_rsa, char *listen_ip,
-			u64 inst_max, u32 inst_memsz, u32 inst_core,
-			char *env_workdir, char *guest_workdir,
+			u32 inst_max, u32 idle_sec, u32 inst_memsz,
+			u32 inst_core, char *env_workdir, char *guest_workdir,
 			char *guest_user, char *script_file, char *c_file,
 			char *sample_fname, char *fuzz_db,
 			int (*db_init)(struct qemu_fuzzlib_env *),
@@ -926,6 +926,7 @@ static int env_init(struct qemu_fuzzlib_env *env, char *user_name, u64 user_id,
 	env->host_id_rsa = host_id_rsa;
 	env->listen_ip = listen_ip;
 	env->instance_max = inst_max;
+	env->idle_sec = idle_sec;
 	env->instance_memsz = inst_memsz;
 	env->instance_core = inst_core;
 	env->env_workdir = env_workdir;
@@ -1292,8 +1293,8 @@ void qemu_fuzzlib_env_destroy(struct qemu_fuzzlib_env *env)
 struct qemu_fuzzlib_env *
 qemu_fuzzlib_env_setup(char *user_name, u64 user_id, char *qemu_exec_path,
 			char *bzImage_file, char *osimage_file,
-			char *host_id_rsa, char *listen_ip,
-			u64 inst_max, u32 inst_memsz, u32 inst_core,
+			char *host_id_rsa, char *listen_ip, u32 inst_max,
+			u32 idle_sec, u32 inst_memsz, u32 inst_core,
 			char *env_workdir, char *guest_workdir,
 			char *guest_user, char *script_file, char *c_file,
 			char *sample_fname, char *fuzz_db,
@@ -1319,9 +1320,9 @@ qemu_fuzzlib_env_setup(char *user_name, u64 user_id, char *qemu_exec_path,
 
 	err = env_init(env, user_name, user_id, qemu_exec_path, bzImage_file,
 			osimage_file, host_id_rsa, listen_ip, inst_max,
-			inst_memsz, inst_core, env_workdir, guest_workdir,
-			guest_user, script_file, c_file, sample_fname,
-			fuzz_db, db_init, mutate);
+			idle_sec, inst_memsz, inst_core, env_workdir,
+			guest_workdir, guest_user, script_file, c_file,
+			sample_fname, fuzz_db, db_init, mutate);
 	if (err < 0) {
 		err_dbg(0, "env_init err");
 		goto err_out;
@@ -1345,9 +1346,8 @@ static int env_run_one(struct qemu_fuzzlib_env *env, int *updated)
 	int err = 0;
 	struct qemu_fuzzlib_inst *inst = NULL;
 	static u32 times = 0x1000000;
-	static u32 sleep_sec = 30;
 
-	for (u32 j = 0; j < sleep_sec; j++) {
+	for (u32 j = 0; j < env->idle_sec; j++) {
 		for (u32 i = 0; i < times; i++) {
 			inst = env_idle_inst(env);
 			if (inst)

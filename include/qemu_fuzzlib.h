@@ -67,7 +67,8 @@ struct qemu_fuzzlib_env {
 	char				*osimage_file;
 	char				*host_id_rsa;
 	char				*listen_ip;
-	u64				instance_max;
+	u32				instance_max;
+	u32				idle_sec;
 	u32				instance_memsz;
 	u32				instance_core;
 	char				*env_workdir;
@@ -100,8 +101,8 @@ extern void qemu_fuzzlib_env_destroy(struct qemu_fuzzlib_env *env);
 extern struct qemu_fuzzlib_env *
 qemu_fuzzlib_env_setup(char *user_name, u64 user_id, char *qemu_exec_path,
 			char *bzImage_file, char *osimage_file,
-			char *host_id_rsa, char *listen_ip,
-			u64 inst_max, u32 inst_memsz, u32 inst_core,
+			char *host_id_rsa, char *listen_ip, u32 inst_max,
+			u32 idle_sec, u32 inst_memsz, u32 inst_core,
 			char *env_workdir, char *guest_workdir,
 			char *guest_user, char *script_file, char *c_file,
 			char *sample_fname, char *fuzz_db,
