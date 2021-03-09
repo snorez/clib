@@ -657,6 +657,8 @@ static int inst_run(struct qemu_fuzzlib_env *env, struct qemu_fuzzlib_inst *inst
 	if (err < 0) {
 		err_dbg(0, "inst_upload_file err");
 		err = QEMU_FUZZLIB_INST_NOT_TESTED;
+		/* if upload failed, launch qemu again. */
+		need_kill_qemu = 1;
 		goto kill_out;
 	}
 
