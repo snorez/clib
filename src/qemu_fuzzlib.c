@@ -1366,6 +1366,75 @@ err_out:
 	return NULL;
 }
 
+/*
+ * Return value:
+ *	1: the file in not_tested_folder is successfully moved to outf
+ *	0: error occurs
+ */
+static int env_reuse_not_tested(struct qemu_fuzzlib_env *env, char *outf)
+{
+	int ret = 0;
+	int err = 0;
+	DIR *fdir;
+	struct dirent *file;
+	char s[0x1000];
+
+	snprintf(s, sizeof(s), "%s/%s/", env->env_workdir,
+			env->not_tested_folder_name);
+	fdir = opendir(s);
+	if (!fdir) {
+		err_dbg(1, "opendir %s err", s);
+		return 0;
+	}
+
+	while ((file = readdir(fdir)) != NULL) {
+		char *b = NULL;
+		size_t sz = 0;
+		if (file->d_type == DT_DIR) {
+			continue;
+		}
+
+		if (file->d_type != DT_REG) {
+			continue;
+		}
+
+		/* move this file to outf */
+		snprintf(s, sizeof(s), "%s/%s/%s", env->env_workdir,
+				env->not_tested_folder_name, file->d_name);
+		b = clib_loadfile(s, &sz);
+		if (!b) {
+			err_dbg(0, "clib_loadfile err");
+			break;
+		}
+
+		int fd = open(outf, O_WRONLY | O_TRUNC | O_CREAT, S_IRWXU);
+		if (fd == -1) {
+			err_dbg(1, "open err");
+			free(b);
+			break;
+		}
+
+		err = write(fd, b, sz);
+		if (err != sz) {
+			if (err == -1)
+				err_dbg(1, "write err");
+			free(b);
+			close(fd);
+			break;
+		}
+
+		unlink(s);
+		free(b);
+		close(fd);
+
+		ret = 1;
+		break;
+	}
+
+	closedir(fdir);
+	return ret;
+}
+
 static int env_run_one(struct qemu_fuzzlib_env *env, int *updated)
 {
 	int err = 0;
@@ -1389,15 +1458,25 @@ static int env_run_one(struct qemu_fuzzlib_env *env, int *updated)
 
 	env_check_inst_res(env, inst, updated);
 
-	err = env->mutate(env, inst->sample_file);
-	if (err == QEMU_FUZZLIB_MUTATE_ERR) {
-		err_dbg(0, "mutate err");
-		mutex_unlock(&inst->lock);
-		return 0;
-	} else if (err == QEMU_FUZZLIB_MUTATE_DONE) {
-		err_dbg(0, "mutate done");
-		mutex_unlock(&inst->lock);
-		return 1;
+	/*
+	 * XXX: look not_tested_folder first for not test files, if there is
+	 * any, move it to inst->sample_file.
+	 * It is safe to read the dir casue env_save_not_tested() is called only
+	 * in this thread.
+	 */
+	err = env_reuse_not_tested(env, inst->sample_file);
+
+	if (err != 1) {
+		err = env->mutate(env, inst->sample_file);
+		if (err == QEMU_FUZZLIB_MUTATE_ERR) {
+			err_dbg(0, "mutate err");
+			mutex_unlock(&inst->lock);
+			return 0;
+		} else if (err == QEMU_FUZZLIB_MUTATE_DONE) {
+			err_dbg(0, "mutate done");
+			mutex_unlock(&inst->lock);
+			return 1;
+		}
 	}
 
 	err = env_run_inst(env, inst);

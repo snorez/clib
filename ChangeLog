@@ -1,6 +1,7 @@
 2021-03-12
 	* qemu_fuzzlib.c: limit vmlog file size
 	* qemu_fuzzlib.c: cleanup /var/log/* after qemu launched
+	* qemu_fuzzlib.c: re-test the not tested files
 
 2021-03-04
 	* qemu_fuzzlib.c: add helpers for qemu mode fuzzing
