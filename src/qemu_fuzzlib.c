@@ -543,6 +543,15 @@ static int inst_create_workdir(struct qemu_fuzzlib_env *env,
 	return inst_exec_cmd(env, inst, cmd);
 }
 
+static int inst_cleanup_logs(struct qemu_fuzzlib_env *env,
+				struct qemu_fuzzlib_inst *inst)
+{
+	static u32 cmdsz = 0x1000;
+	char cmd[cmdsz];
+	snprintf(cmd, cmdsz, "ssh -q -i %s -p %d -o \"StrictHostKeyChecking no\" root@127.0.0.1 \"rm -rf /var/log/*\"", env->host_id_rsa, inst->fwd_port);
+	return inst_call_system(cmd);
+}
+
 static int inst_upload_file(struct qemu_fuzzlib_env *env,
 				struct qemu_fuzzlib_inst *inst,
 				char *src)
@@ -648,6 +657,13 @@ static int inst_run(struct qemu_fuzzlib_env *env, struct qemu_fuzzlib_inst *inst
 		err = inst_create_workdir(env, inst);
 		if (err < 0) {
 			err_dbg(0, "inst_create_workdir err");
+			err = QEMU_FUZZLIB_INST_NOT_TESTED;
+			goto kill_out;
+		}
+
+		err = inst_cleanup_logs(env, inst);
+		if (err < 0) {
+			err_dbg(0, "inst_cleanup_logs err");
 			err = QEMU_FUZZLIB_INST_NOT_TESTED;
 			goto kill_out;
 		}
