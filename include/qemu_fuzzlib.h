@@ -41,6 +41,7 @@ enum qemu_fuzzlib_mutate_res {
 	QEMU_FUZZLIB_MUTATE_DONE,
 };
 
+#define	VMLOG_FILESZ		(128*1024)
 struct qemu_fuzzlib_inst {
 	mutex_t				lock;
 

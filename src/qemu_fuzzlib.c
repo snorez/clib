@@ -653,6 +653,13 @@ static int inst_run(struct qemu_fuzzlib_env *env, struct qemu_fuzzlib_inst *inst
 		}
 	}
 
+	/* limit the vmlog file size */
+	if (inst->vmlog_readpos > VMLOG_FILESZ) {
+		err = QEMU_FUZZLIB_INST_NOT_TESTED;
+		need_kill_qemu = 1;
+		goto kill_out;
+	}
+
 	err = inst_upload_file(env, inst, env->script_file);
 	if (err < 0) {
 		err_dbg(0, "inst_upload_file err");

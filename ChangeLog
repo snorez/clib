@@ -1,3 +1,6 @@
+2021-03-12
+	* qemu_fuzzlib.c: limit vmlog file size
+
 2021-03-04
 	* qemu_fuzzlib.c: add helpers for qemu mode fuzzing
 
