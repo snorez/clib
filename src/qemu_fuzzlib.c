@@ -27,6 +27,8 @@ static char *default_guest_sh_content = ""
 "GUEST_SAMPLE_OUT=qemu_fuzzlib_1\n"
 "\n"
 "sudo -s chmod o+w /dev/kmsg 2>/dev/null\n"
+"sudo -s sysctl kernel.dmesg_restrict=0\n"
+"sudo -s sysctl -p\n"
 "gcc $GUEST_C_FILE -o $GUEST_C_OUT && gcc $GUEST_SAMPLE_FILE -o $GUEST_SAMPLE_OUT && ./$GUEST_C_OUT $1 $2 $GUEST_SAMPLE_OUT &\n";
 
 /*
