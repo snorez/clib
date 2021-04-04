@@ -505,7 +505,7 @@ static int inst_launch_qemu(struct qemu_fuzzlib_env *env,
 			if (err == -1) {
 				err_dbg(1, "waitpid err");
 			} else if (err == pid) {
-				err_dbg(0, "qemu launch err");
+				/* err_dbg(0, "qemu launch err"); */
 				return -1;
 			}
 		}
