@@ -651,7 +651,7 @@ static int inst_run(struct qemu_fuzzlib_env *env, struct qemu_fuzzlib_inst *inst
 		inst->qemu_pid = inst_launch_qemu(env, inst, launch_args);
 		mutex_unlock(&fwd_port_lock);
 		if (inst->qemu_pid < 0) {
-			err_dbg(0, "inst_launch_qemu err");
+			/* err_dbg(0, "inst_launch_qemu err"); */
 			err = QEMU_FUZZLIB_INST_NOT_TESTED;
 			goto free_out;
 		}
