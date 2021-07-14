@@ -43,6 +43,7 @@
 #include "../include/clib_json.h"
 #include "../include/clib_sme.h"
 #include "../include/qemu_fuzzlib.h"
+#include "../include/bit-logger.h"
 
 DECL_BEGIN
 

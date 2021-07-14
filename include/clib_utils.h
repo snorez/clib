@@ -145,6 +145,7 @@ enum clib_compute_flag {
 };
 
 extern int hex2int(char *hex);
+extern void bin2hex(FILE *s, uint8_t *str, size_t size);
 extern int no_aslr(int argc, char *argv[]);
 extern int tmp_close_std(int close_fd);
 extern int restore_std(int closed_fd);

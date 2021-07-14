@@ -32,6 +32,19 @@ int hex2int(char *hex)
 	return ret;
 }
 
+void bin2hex(FILE *s, uint8_t *str, size_t size)
+{
+	for (size_t i = 0; i < size; i++) {
+		fprintf(s, "%02x ", (unsigned char)str[i]);
+		if (i && ((i % 0x10) == 0xf))
+			fprintf(s, "\n");
+	}
+	if (size % 0x10)
+		fprintf(s, "\n");
+
+	fflush(s);
+}
+
 /*
  * close aslr and execute this program again
  */

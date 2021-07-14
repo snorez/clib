@@ -74,24 +74,49 @@ extern void mt_print_fini_ncurse(void);
 #define	BUILD_BUG_ON(cond,msg) static_assert(!(cond),msg)
 
 /* for BUG BUG_ON WARN WARN_ON */
-#define	BUG()	\
+#define	BUG_MSG(fmt, ...) \
 	do {\
 	mt_print_fini_ncurse();\
-	fprintf(stderr,"***BUG***: %s|%s|%d\n",__FILE__,__FUNCTION__,__LINE__);\
+	fprintf(stderr,"***BUG***: %s|%s|%d, " fmt "\n",__FILE__,__FUNCTION__,__LINE__, ##__VA_ARGS__);\
 	show_bt();\
 	exit(-1);\
 	} while (0)
+
+#define	BUG()	\
+	do {\
+		BUG_MSG("");\
+	} while (0)
+
+#define	BUG_ON_MSG(cond, fmt, ...) \
+	do {\
+		if (unlikely(cond))\
+			BUG_MSG(fmt, ##__VA_ARGS__);\
+	} while (0)
+
 #define	BUG_ON(cond) \
 	do {\
 		if (unlikely(cond))\
 			BUG();\
 	} while (0)
-#define	WARN()	\
+
+#define	WARN_MSG(fmt, ...) \
 	do {\
 	mt_print_fini_ncurse();\
-	fprintf(stderr,"***WARN***: %s|%s|%d\n",__FILE__,__FUNCTION__,__LINE__);\
+	fprintf(stderr,"***WARN***: %s|%s|%d, " fmt "\n",__FILE__,__FUNCTION__,__LINE__, ##__VA_ARGS__);\
 	show_bt();\
 	} while (0)
+
+#define	WARN()	\
+	do {\
+		WARN_MSG("");\
+	} while (0)
+
+#define WARN_ON_MSG(cond, fmt, ...) \
+	do {\
+		if (unlikely(cond))\
+			WARN_MSG(fmt, ##__VA_ARGS__);\
+	} while (0)
+
 #define	WARN_ON(cond)	\
 	do {\
 		if (unlikely(cond))\

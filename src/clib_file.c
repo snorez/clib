@@ -41,6 +41,19 @@ int path_exists(const char *path)
 		return 1;
 }
 
+int create_dir(char *path)
+{
+	if (!path_exists(path)) {
+		int err = mkdir(path, S_IRWXU | S_IRWXG | S_IRWXO);
+		if (err == -1) {
+			err_dbg(1, "mkdir %s err");
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
 #ifndef CONFIG_IO_BYTES
 #define	IO_BYTES	(512*1024*1024)
 #else

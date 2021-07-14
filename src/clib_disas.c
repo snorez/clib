@@ -22,7 +22,7 @@ int disas_next(int arch, int mode, void *addr, char *buf, size_t bufsz,
 {
 	memset(buf, 0, bufsz);
 	*opcid = (unsigned int)-1;
-	int rv = 0;
+	int __maybe_unused rv = 0;
 
 #ifdef HAS_CAPSTONE
 	csh handle;

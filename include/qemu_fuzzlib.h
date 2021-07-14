@@ -22,6 +22,8 @@
 
 #include "clib.h"
 
+DECL_BEGIN
+
 #define	QEMU_BOOTUP_STR0	"Linux version"
 #define	QEMU_BOOTUP_STR1	"Command line"
 #define	QEMU_BOOTUP_DONE_STR	"syzkaller login:"
@@ -111,5 +113,7 @@ qemu_fuzzlib_env_setup(char *user_name, u64 user_id, char *qemu_exec_path,
 			int (*mutate)(struct qemu_fuzzlib_env *, char *));
 extern int qemu_fuzzlib_env_run(struct qemu_fuzzlib_env *env);
 extern int qemu_fuzzlib_gen_default_files(char *out_sh, char *out_c);
+
+DECL_END
 
 #endif /* end of include guard: QEMU_FUZZLIB_H_O9SRDRIE */

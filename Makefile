@@ -22,6 +22,12 @@ vpath %.o $(TMP)/
 vpath %.0 $(TMP)/
 vpath %.1 $(TMP)/
 
+TARGETS = all clean distclean
+MAKECMDGOALS ?= all
+ifeq (, $(filter $(TARGETS), $(MAKECMDGOALS)))
+MAKECMDGOALS=all
+endif
+
 CC = gcc
 SELF_CFLAGS+=-g -O2
 SELF_CFLAGS+=-Wall -std=gnu11 -m$(ARCH) -D_FILE_OFFSET_BITS=64
@@ -46,7 +52,7 @@ CC_FLAGS=$(SELF_CFLAGS) $(EXTRA_CFLAGS)
 CC_OPT_static = $(CC) $(CC_FLAGS) -rdynamic -DHAS_CAPSTONE
 CC_OPT_dynamic = $(CC) $(CC_FLAGS) -rdynamic -DHAS_CAPSTONE
 CC_OPT_low = $(CC) $(CC_FLAGS) -rdynamic
-LK_FLAG=-lpthread -ldl -lcapstone -lreadline -lncurses
+LDFLAGS=-lpthread -ldl -lcapstone -lreadline -lncurses
 
 SRCS = \
        clib_eh.c \
@@ -72,17 +78,30 @@ SRCS = \
        clib_bitmap.c \
        clib_json.c \
        clib_sme.c \
-       qemu_fuzzlib.c
+       qemu_fuzzlib.c \
+       bit-logger.c
+
+SUBFOLDERS =
+
+.PHONY: $(SUBFOLDERS)
 
 obj_static = $(SRCS:%.c=%.o)
 obj_dynamic = $(SRCS:%.c=%.0)
 obj_dynamic_low = $(SRCS:%.c=%.1)
 
+obj_subfolder_static += $(SUBFOLDERS:%=%.o)
+obj_subfolder_dynamic += $(SUBFOLDERS:%=%.0)
+obj_subfolder_dynamic_low += $(SUBFOLDERS:%=%.1)
+
 # all: static shared shared_low_ver
-all: prepare shared
+all: prepare $(SUBFOLDERS) shared static shared_low_ver
 
 prepare:
 	@mkdir -p $(TMP)
+
+$(SUBFOLDERS):
+	@echo "hello world" $(MAKECMDGOALS)
+	@make -C ./src/$@ $(MAKECMDGOALS)
 
 $(obj_static): %.o : %.c %.h
 	$(CC_OPT_static) -c $< -o $(TMP)/$@
@@ -94,25 +113,23 @@ $(obj_dynamic_low): %.1 : %.c
 
 static: $(obj_static)
 ifeq ($(ARCH),64)
-	cd $(TMP);rm -rf clib_static;mkdir clib_static;cd clib_static;ar x $(CAPSTONE_ALIB64)/x86_64-linux-gnu/libdl.a;ar x $(CAPSTONE_ALIB64)/libcapstone.a;ar x $(CAPSTONE_ALIB64)/x86_64-linux-gnu/libreadline.a;cd ..;ar -rcs libclib64.a $(obj_static_64) $(TMP)/clib_static/*.o;cd $(CWD);cp $(TMP)/libclib64.a $(LIB)/
+	cd $(TMP);rm -rf clib_static;mkdir clib_static;cd clib_static;ar x $(CAPSTONE_ALIB64)/x86_64-linux-gnu/libdl.a;ar x $(CAPSTONE_ALIB64)/x86_64-linux-gnu/libcapstone.a;ar x $(CAPSTONE_ALIB64)/x86_64-linux-gnu/libreadline.a;cd ..;ar -rcs libclib64.a $(obj_static) $(obj_subfolder_static) $(TMP)/clib_static/*.o;cd $(CWD);cp $(TMP)/libclib64.a $(LIB)/
 else
-	cd $(TMP);rm -rf clib_static;mkdir clib_static;cd clib_static;ar x $(CAPSTONE_ALIB32)/libdl.a;ar x $(CAPSTONE_ALIB32)/libcapstone.a;ar x $(CAPSTONE_ALIB32)/i386-linux-gnu/libreadline.a;cd ..;ar -rcs libclib32.a $(obj_static_32) $(TMP)/clib_static/*.o;cd $(CWD);cp $(TMP)/libclib32.a $(LIB)/
+	cd $(TMP);rm -rf clib_static;mkdir clib_static;cd clib_static;ar x $(CAPSTONE_ALIB32)/libdl.a;ar x $(CAPSTONE_ALIB32)/libcapstone.a;ar x $(CAPSTONE_ALIB32)/i386-linux-gnu/libreadline.a;cd ..;ar -rcs libclib32.a $(obj_static) $(obj_subfolder_static) $(TMP)/clib_static/*.o;cd $(CWD);cp $(TMP)/libclib32.a $(LIB)/
 endif
 
-# before copy, we need to use rm to delete the file first, then do the copy
-# otherwise, program load this lib will crash
 shared: $(obj_dynamic)
-	cd $(TMP);$(CC_OPT_dynamic) -rdynamic -shared -fPIC $(obj_dynamic) $(LK_FLAG) -o libclib$(ARCH).so;cd $(CWD);rm -f $(LIB)/libclib$(ARCH).so;cp $(TMP)/libclib$(ARCH).so $(LIB)/
+	cd $(TMP);$(CC_OPT_dynamic) -rdynamic -shared -fPIC $(obj_dynamic) $(obj_subfolder_dynamic) $(LDFLAGS) -o libclib$(ARCH).so;cd $(CWD);rm -f $(LIB)/libclib$(ARCH).so;cp $(TMP)/libclib$(ARCH).so $(LIB)/
 
 shared_low_ver: $(obj_dynamic_low)
-	cd $(TMP);$(CC_OPT_low) $(obj_dynamic_low) -Wl,--wrap=memcpy -rdynamic -shared -fPIC -ldl -lpthread -o libclib$(ARCH)_low.so;cd $(CWD);rm -f $(LIB)/libclib$(ARCH)_low.so;cp $(TMP)/libclib$(ARCH)_low.so $(LIB)/
+	cd $(TMP);$(CC_OPT_low) $(obj_dynamic_low) $(obj_subfolder_dynamic_low) -Wl,--wrap=memcpy -rdynamic -shared -fPIC -ldl -lpthread -o libclib$(ARCH)_low.so;cd $(CWD);rm -f $(LIB)/libclib$(ARCH)_low.so;cp $(TMP)/libclib$(ARCH)_low.so $(LIB)/
 
-clean:
+clean: $(SUBFOLDERS)
 	@rm -vf $(TMP)/*.o
 	@rm -vf $(TMP)/*.0
 	@rm -vf $(TMP)/*.1
 	@rm -vf $(TMP)/libclib*
 	@rm -v -rf $(TMP)/clib_static
 
-distclean: clean
+distclean: $(SUBFOLDERS) clean
 	@rm -vf ./lib/libclib*

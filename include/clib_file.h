@@ -69,6 +69,7 @@ typedef struct {
 
 extern int abs_path(const char *path);
 extern int path_exists(const char *path);
+extern int create_dir(char *path);
 extern int clib_open(const char *pathname, int flags, ...);
 extern ssize_t clib_read(int fd, void *buf, size_t count);
 extern ssize_t clib_write(int fd, void *buf, size_t count);

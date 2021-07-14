@@ -15,12 +15,18 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef __GNUC__
+#ifndef ATOMIC_H_ED79JAJV
+#define ATOMIC_H_ED79JAJV
+
+#if !defined __clang__ && !defined __GNUC__
 #error "please use GCC"
 #endif
 
-#ifndef ATOMIC_H_ED79JAJV
-#define ATOMIC_H_ED79JAJV
+#ifdef __clang__
+extern void __atomic_store_8(volatile long *, long, int);
+extern long __atomic_load_8(volatile long *, int);
+extern long __atomic_exchange_8(volatile long *, long, int);
+#endif
 
 #include "../include/clib_utils.h"
 

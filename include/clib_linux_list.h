@@ -354,6 +354,17 @@ static inline int list_is_last(const struct list_head *list,
 	return list->next == head;
 }
 
+static inline size_t list_count(struct list_head *head)
+{
+	size_t cnt = 0;
+	struct list_head *tmp = head->next;
+	while (tmp != head) {
+		cnt++;
+		tmp = tmp->next;
+	}
+	return cnt;
+}
+
 /**
  * list_empty - tests whether a list is empty
  * @head: the list to test.
