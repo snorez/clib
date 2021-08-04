@@ -79,7 +79,8 @@ SRCS = \
        clib_json.c \
        clib_sme.c \
        qemu_fuzzlib.c \
-       bit-logger.c
+       bit-logger.c \
+       clib_shm.c
 
 SUBFOLDERS =
 
@@ -100,7 +101,6 @@ prepare:
 	@mkdir -p $(TMP)
 
 $(SUBFOLDERS):
-	@echo "hello world" $(MAKECMDGOALS)
 	@make -C ./src/$@ $(MAKECMDGOALS)
 
 $(obj_static): %.o : %.c %.h

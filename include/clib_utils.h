@@ -126,6 +126,10 @@ typedef __u64	u64;
 		type __max2 = (y);		\
 		__max1 > __max2 ? __max1 : __max2; })
 
+#ifndef ARRAY_CNT
+#define	ARRAY_CNT(arr)	(sizeof(arr) / sizeof(arr[0]))
+#endif
+
 enum clib_compute_flag {
 	CLIB_COMPUTE_F_UNK,
 	CLIB_COMPUTE_F_COMPARE,
