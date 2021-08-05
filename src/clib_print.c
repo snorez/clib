@@ -208,15 +208,15 @@ void mt_print_progress(double cur, double total)
 
 void clib_pretty_fprint(FILE *s, int max, const char *fmt, ...)
 {
-	char buf[max];
-	memset(buf, 0, max);
+	char buf[max+1];
+	memset(buf, 0, max+1);
 
 	va_list ap;
 	va_start(ap, fmt);
 
 	int c = vsnprintf(buf, max, fmt, ap);
 	if (c >= max) {
-		buf[max-1] = '\0';
+		buf[max-1] = ' ';
 		buf[max-2] = '.';
 		buf[max-3] = '.';
 		buf[max-4] = '.';
