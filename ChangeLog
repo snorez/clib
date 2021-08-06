@@ -1,3 +1,6 @@
+2021-08-06
+	* clib_atomic.h: use PTHREAD_RWLOCK instead of the original rwlock
+
 2021-03-12
 	* qemu_fuzzlib.c: limit vmlog file size
 	* qemu_fuzzlib.c: cleanup /var/log/* after qemu launched

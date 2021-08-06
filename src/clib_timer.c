@@ -20,7 +20,7 @@
 #include "../include/clib.h"
 
 static LIST_HEAD(timer_head);
-static lock_t timer_head_lock;
+static rwlock_t timer_head_lock = RWLOCK_INIT_V;
 static int mt_timer_callback_registered = 0;
 static int timeout_less = 1;
 static void mt_timer_callback(int signo, siginfo_t *si, void *arg)

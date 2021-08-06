@@ -651,7 +651,7 @@ void show_bt(void)
  * for multi-thread backtrace
  */
 LIST_HEAD(clib_dbg_mt_head);
-rwlock_t clib_dbg_mt_lock;
+rwlock_t clib_dbg_mt_lock = RWLOCK_INIT_V;
 
 static inline unsigned long uc_sp(ucontext_t *uc)
 {

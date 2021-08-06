@@ -203,7 +203,16 @@ typedef struct {
 typedef atomic_t lock_t;
 typedef atomic_t ref_t;
 typedef lock_t mutex_t;
+
+#define	CONFIG_USE_PTHREAD_RWLOCK
+#ifndef CONFIG_USE_PTHREAD_RWLOCK
 typedef lock_t rwlock_t;
+#define	RWLOCK_INIT_V	0
+#else
+#include <pthread.h>
+typedef pthread_rwlock_t rwlock_t;
+#define	RWLOCK_INIT_V	PTHREAD_RWLOCK_INITIALIZER
+#endif
 
 #ifndef __cplusplus
 typedef _Bool	bool;
@@ -412,7 +421,14 @@ static inline bool mutex_try_lock(lock_t *v)
 	return true;
 }
 
-static inline bool read_lock(lock_t *v)
+#ifndef CONFIG_USE_PTHREAD_RWLOCK
+static inline int rwlock_init(rwlock_t *lock)
+{
+	atomic_set(v, 0);
+	return 0;
+}
+
+static inline int read_lock(rwlock_t *v)
 {
 	while (1) {
 		mutex_lock_bit(v, 1);
@@ -422,11 +438,11 @@ static inline bool read_lock(lock_t *v)
 			test_and_clear_bit(3, &v->counter);
 			atomic_add(1<<4, v);
 			mutex_unlock_bit(v, 1);
-			return true;
+			return 0;
 		} else if (val == 1) {
 			atomic_add(1<<4, v);
 			mutex_unlock_bit(v, 1);
-			return true;
+			return 0;
 		} else {
 			mutex_unlock_bit(v, 1);
 			do_nop(0x10);
@@ -434,7 +450,7 @@ static inline bool read_lock(lock_t *v)
 	}
 }
 
-static inline bool read_try_lock(lock_t *v)
+static inline int read_try_lock(rwlock_t *v)
 {
 	mutex_lock_bit(v, 1);
 	unsigned long val = (atomic_read(v) >> 2) & 0x3;
@@ -443,18 +459,18 @@ static inline bool read_try_lock(lock_t *v)
 		test_and_clear_bit(3, &v->counter);
 		atomic_add(1<<4, v);
 		mutex_unlock_bit(v, 1);
-		return true;
+		return 0;
 	} else if (val == 1) {
 		atomic_add(1<<4, v);
 		mutex_unlock_bit(v, 1);
-		return true;
+		return 0;
 	} else {
 		mutex_unlock_bit(v, 1);
-		return false;
+		return -1;
 	}
 }
 
-static inline bool write_lock(lock_t *v)
+static inline int write_lock(rwlock_t *v)
 {
 	while (1) {
 		mutex_lock_bit(v, 1);
@@ -463,7 +479,7 @@ static inline bool write_lock(lock_t *v)
 			test_and_set_bit(2, &v->counter);
 			test_and_set_bit(3, &v->counter);
 			mutex_unlock_bit(v, 1);
-			return true;
+			return 0;
 		} else {
 			mutex_unlock_bit(v, 1);
 			do_nop(0x10);
@@ -471,7 +487,7 @@ static inline bool write_lock(lock_t *v)
 	}
 }
 
-static inline bool write_try_lock(lock_t *v)
+static inline int write_try_lock(rwlock_t *v)
 {
 	mutex_lock_bit(v, 1);
 	unsigned long val = (atomic_read(v) >> 2) & 0x3;
@@ -479,14 +495,14 @@ static inline bool write_try_lock(lock_t *v)
 		test_and_set_bit(2, &v->counter);
 		test_and_set_bit(3, &v->counter);
 		mutex_unlock_bit(v, 1);
-		return true;
+		return 0;
 	} else {
 		mutex_unlock_bit(v, 1);
-		return false;
+		return -1;
 	}
 }
 
-static inline void read_unlock(lock_t *v)
+static inline int read_unlock(rwlock_t *v)
 {
 	mutex_lock_bit(v, 1);
 	unsigned long val = (atomic_read(v) >> 2) & 0x3;
@@ -495,7 +511,7 @@ static inline void read_unlock(lock_t *v)
 			test_and_clear_bit(2, &v->counter);
 			test_and_clear_bit(3, &v->counter);
 			mutex_unlock_bit(v, 1);
-			return;
+			return 0;
 		}
 		atomic_sub(1<<4, v);
 		if (!(atomic_read(v) >> 4)) {
@@ -504,10 +520,10 @@ static inline void read_unlock(lock_t *v)
 		}
 	}
 	mutex_unlock_bit(v, 1);
-	return;
+	return 0;
 }
 
-static inline void write_unlock(lock_t *v)
+static inline int write_unlock(rwlock_t *v)
 {
 	mutex_lock_bit(v, 1);
 	unsigned long val = (atomic_read(v) >> 2) & 0x3;
@@ -516,8 +532,54 @@ static inline void write_unlock(lock_t *v)
 		test_and_clear_bit(3, &v->counter);
 	}
 	mutex_unlock_bit(v, 1);
-	return;
+	return 0;
 }
+
+static inline int rwlock_destroy(rwlock_t *v)
+{
+	return 0;
+}
+#else
+static inline int rwlock_init(rwlock_t *v)
+{
+	return pthread_rwlock_init(v, NULL);
+}
+
+static inline int read_lock(rwlock_t *v)
+{
+	return pthread_rwlock_rdlock(v);
+}
+
+static inline int read_try_lock(rwlock_t *v)
+{
+	return pthread_rwlock_tryrdlock(v);
+}
+
+static inline int write_lock(rwlock_t *v)
+{
+	return pthread_rwlock_wrlock(v);
+}
+
+static inline int write_try_lock(rwlock_t *v)
+{
+	return pthread_rwlock_trywrlock(v);
+}
+
+static inline int read_unlock(rwlock_t *v)
+{
+	return pthread_rwlock_unlock(v);
+}
+
+static inline int write_unlock(rwlock_t *v)
+{
+	return pthread_rwlock_unlock(v);
+}
+
+static inline int rwlock_destroy(rwlock_t *v)
+{
+	return pthread_rwlock_destroy(v);
+}
+#endif
 
 static inline bool ref_inc_not_zero(ref_t *v)
 {
