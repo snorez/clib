@@ -1108,3 +1108,35 @@ int clib_in_loop(void *arr, size_t arrsz, size_t elemsz,
 
 	return in_loop;
 }
+
+int set_stacksize(size_t size)
+{
+	struct rlimit rlim;
+	int err;
+
+	err = getrlimit(RLIMIT_STACK, &rlim);
+	if (err == -1) {
+		err_dbg(1, "getrlimit err");
+		return -1;
+	}
+
+	rlim.rlim_cur = size;
+	err = setrlimit(RLIMIT_STACK, &rlim);
+	if (err == -1) {
+		err_dbg(1, "setrlimit err");
+		return -1;
+	}
+
+	err = getrlimit(RLIMIT_STACK, &rlim);
+	if (err == -1) {
+		err_dbg(1, "getrlimit err");
+		return -1;
+	}
+
+	if (rlim.rlim_cur != size) {
+		err_dbg(0, "set stack size error");
+		return -1;
+	}
+
+	return 0;
+}

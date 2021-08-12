@@ -225,17 +225,17 @@ typedef _Bool	bool;
 #endif
 typedef unsigned long size_t;
 
-static inline bool test_and_set_bit(long nr, volatile long *addr)
+static __always_inline bool test_and_set_bit(long nr, volatile long *addr)
 {
 	GEN_BINARY_RMWcc(LOCK_PREFIX "bts", *addr, "Ir", nr, "%0", c);
 }
 
-static inline bool test_and_clear_bit(long nr, volatile long *addr)
+static __always_inline bool test_and_clear_bit(long nr, volatile long *addr)
 {
 	GEN_BINARY_RMWcc(LOCK_PREFIX "btr", *addr, "Ir", nr, "%0", c);
 }
 
-static inline bool test_bit(long nr, volatile long *addr)
+static __always_inline bool test_bit(long nr, volatile long *addr)
 {
 	bool oldbit;
 
@@ -247,17 +247,17 @@ static inline bool test_bit(long nr, volatile long *addr)
 	return oldbit;
 }
 
-static inline void atomic_set(atomic_t *v, long i)
+static __always_inline void atomic_set(atomic_t *v, long i)
 {
 	__atomic_store_8(&v->counter, i, __ATOMIC_SEQ_CST);
 }
 
-static inline long atomic_read(atomic_t *v)
+static __always_inline long atomic_read(atomic_t *v)
 {
 	return __atomic_load_8(&v->counter, __ATOMIC_SEQ_CST);
 }
 
-static inline long atomic_set_return(atomic_t *v, long i)
+static __always_inline long atomic_set_return(atomic_t *v, long i)
 {
 	return __atomic_exchange_8(&v->counter, i, __ATOMIC_SEQ_CST);
 }
@@ -268,7 +268,7 @@ static inline long atomic_set_return(atomic_t *v, long i)
  *
  * Atomically adds @i to @v.
  */
-static inline void atomic_add(long i, atomic_t *v)
+static __always_inline void atomic_add(long i, atomic_t *v)
 {
 	asm volatile(LOCK_PREFIX "add %1,%0"
 		     : "+m" (v->counter)
@@ -282,7 +282,7 @@ static inline void atomic_add(long i, atomic_t *v)
  *
  * Atomically subtracts @i from @v.
  */
-static inline void atomic_sub(long i, atomic_t *v)
+static __always_inline void atomic_sub(long i, atomic_t *v)
 {
 	asm volatile(LOCK_PREFIX "sub %1,%0"
 		     : "+m" (v->counter)
@@ -298,7 +298,7 @@ static inline void atomic_sub(long i, atomic_t *v)
  * true if the result is zero, or false for all
  * other cases.
  */
-static inline bool atomic_sub_and_test(long i, atomic_t *v)
+static __always_inline bool atomic_sub_and_test(long i, atomic_t *v)
 {
 	GEN_BINARY_RMWcc(LOCK_PREFIX "sub", v->counter, "er", i, "%0", e);
 }
@@ -309,7 +309,7 @@ static inline bool atomic_sub_and_test(long i, atomic_t *v)
  *
  * Atomically increments @v by 1.
  */
-static inline void atomic_inc(atomic_t *v)
+static __always_inline void atomic_inc(atomic_t *v)
 {
 	asm volatile(LOCK_PREFIX "incl %0"
 		     : "+m" (v->counter));
@@ -321,7 +321,7 @@ static inline void atomic_inc(atomic_t *v)
  *
  * Atomically decrements @v by 1.
  */
-static inline void atomic_dec(atomic_t *v)
+static __always_inline void atomic_dec(atomic_t *v)
 {
 	asm volatile(LOCK_PREFIX "decl %0"
 		     : "+m" (v->counter));
@@ -335,7 +335,7 @@ static inline void atomic_dec(atomic_t *v)
  * returns true if the result is 0, or false for all other
  * cases.
  */
-static inline bool atomic_dec_and_test(atomic_t *v)
+static __always_inline bool atomic_dec_and_test(atomic_t *v)
 {
 	GEN_UNARY_RMWcc(LOCK_PREFIX "decl", v->counter, "%0", e);
 }
@@ -348,7 +348,7 @@ static inline bool atomic_dec_and_test(atomic_t *v)
  * and returns true if the result is zero, or false for all
  * other cases.
  */
-static inline bool atomic_inc_and_test(atomic_t *v)
+static __always_inline bool atomic_inc_and_test(atomic_t *v)
 {
 	GEN_UNARY_RMWcc(LOCK_PREFIX "inc", v->counter, "%0", e);
 }
@@ -362,41 +362,41 @@ static inline bool atomic_inc_and_test(atomic_t *v)
  * if the result is negative, or false when
  * result is greater than or equal to zero.
  */
-static inline bool atomic_add_negative(long i, atomic_t *v)
+static __always_inline bool atomic_add_negative(long i, atomic_t *v)
 {
 	GEN_BINARY_RMWcc(LOCK_PREFIX "add", v->counter, "er", i, "%0", s);
 }
 
 #define nop() do { asm volatile ("nop"); } while(0)
-static inline void do_nop(size_t times)
+static __always_inline void do_nop(size_t times)
 {
 	while (times--)
 		nop();
 }
 
-static inline bool mutex_lock_bit(lock_t *v, size_t bit)
+static __always_inline bool mutex_lock_bit(lock_t *v, size_t bit)
 {
 	while (test_and_set_bit(bit, &v->counter))
 		do_nop(0x10);
 	return true;
 }
 
-static inline bool mutex_lock(lock_t *v)
+static __always_inline bool mutex_lock(lock_t *v)
 {
 	return mutex_lock_bit(v, 0);
 }
 
-static inline void mutex_unlock_bit(lock_t *v, size_t bit)
+static __always_inline void mutex_unlock_bit(lock_t *v, size_t bit)
 {
 	test_and_clear_bit(bit, &v->counter);
 }
 
-static inline void mutex_unlock(lock_t *v)
+static __always_inline void mutex_unlock(lock_t *v)
 {
 	mutex_unlock_bit(v, 0);
 }
 
-static inline bool mutex_lock_timeout(lock_t *v, size_t times)
+static __always_inline bool mutex_lock_timeout(lock_t *v, size_t times)
 {
 	bool ret = false;
 	if (!times)
@@ -414,7 +414,7 @@ static inline bool mutex_lock_timeout(lock_t *v, size_t times)
 	return ret;
 }
 
-static inline bool mutex_try_lock(lock_t *v)
+static __always_inline bool mutex_try_lock(lock_t *v)
 {
 	if (test_and_set_bit(0, &v->counter))
 		return false;
@@ -422,13 +422,13 @@ static inline bool mutex_try_lock(lock_t *v)
 }
 
 #ifndef CONFIG_USE_PTHREAD_RWLOCK
-static inline int rwlock_init(rwlock_t *lock)
+static __always_inline int rwlock_init(rwlock_t *lock)
 {
 	atomic_set(v, 0);
 	return 0;
 }
 
-static inline int read_lock(rwlock_t *v)
+static __always_inline int read_lock(rwlock_t *v)
 {
 	while (1) {
 		mutex_lock_bit(v, 1);
@@ -450,7 +450,7 @@ static inline int read_lock(rwlock_t *v)
 	}
 }
 
-static inline int read_try_lock(rwlock_t *v)
+static __always_inline int read_try_lock(rwlock_t *v)
 {
 	mutex_lock_bit(v, 1);
 	unsigned long val = (atomic_read(v) >> 2) & 0x3;
@@ -470,7 +470,7 @@ static inline int read_try_lock(rwlock_t *v)
 	}
 }
 
-static inline int write_lock(rwlock_t *v)
+static __always_inline int write_lock(rwlock_t *v)
 {
 	while (1) {
 		mutex_lock_bit(v, 1);
@@ -487,7 +487,7 @@ static inline int write_lock(rwlock_t *v)
 	}
 }
 
-static inline int write_try_lock(rwlock_t *v)
+static __always_inline int write_try_lock(rwlock_t *v)
 {
 	mutex_lock_bit(v, 1);
 	unsigned long val = (atomic_read(v) >> 2) & 0x3;
@@ -502,7 +502,7 @@ static inline int write_try_lock(rwlock_t *v)
 	}
 }
 
-static inline int read_unlock(rwlock_t *v)
+static __always_inline int read_unlock(rwlock_t *v)
 {
 	mutex_lock_bit(v, 1);
 	unsigned long val = (atomic_read(v) >> 2) & 0x3;
@@ -523,7 +523,7 @@ static inline int read_unlock(rwlock_t *v)
 	return 0;
 }
 
-static inline int write_unlock(rwlock_t *v)
+static __always_inline int write_unlock(rwlock_t *v)
 {
 	mutex_lock_bit(v, 1);
 	unsigned long val = (atomic_read(v) >> 2) & 0x3;
@@ -535,53 +535,53 @@ static inline int write_unlock(rwlock_t *v)
 	return 0;
 }
 
-static inline int rwlock_destroy(rwlock_t *v)
+static __always_inline int rwlock_destroy(rwlock_t *v)
 {
 	return 0;
 }
 #else
-static inline int rwlock_init(rwlock_t *v)
+static __always_inline int rwlock_init(rwlock_t *v)
 {
 	return pthread_rwlock_init(v, NULL);
 }
 
-static inline int read_lock(rwlock_t *v)
+static __always_inline int read_lock(rwlock_t *v)
 {
 	return pthread_rwlock_rdlock(v);
 }
 
-static inline int read_try_lock(rwlock_t *v)
+static __always_inline int read_try_lock(rwlock_t *v)
 {
 	return pthread_rwlock_tryrdlock(v);
 }
 
-static inline int write_lock(rwlock_t *v)
+static __always_inline int write_lock(rwlock_t *v)
 {
 	return pthread_rwlock_wrlock(v);
 }
 
-static inline int write_try_lock(rwlock_t *v)
+static __always_inline int write_try_lock(rwlock_t *v)
 {
 	return pthread_rwlock_trywrlock(v);
 }
 
-static inline int read_unlock(rwlock_t *v)
+static __always_inline int read_unlock(rwlock_t *v)
 {
 	return pthread_rwlock_unlock(v);
 }
 
-static inline int write_unlock(rwlock_t *v)
+static __always_inline int write_unlock(rwlock_t *v)
 {
 	return pthread_rwlock_unlock(v);
 }
 
-static inline int rwlock_destroy(rwlock_t *v)
+static __always_inline int rwlock_destroy(rwlock_t *v)
 {
 	return pthread_rwlock_destroy(v);
 }
 #endif
 
-static inline bool ref_inc_not_zero(ref_t *v)
+static __always_inline bool ref_inc_not_zero(ref_t *v)
 {
 	bool ret = true;
 	mutex_lock_bit(v, 0);
@@ -595,7 +595,7 @@ static inline bool ref_inc_not_zero(ref_t *v)
 	return ret;
 }
 
-static inline bool ref_dec_and_test(ref_t *v)
+static __always_inline bool ref_dec_and_test(ref_t *v)
 {
 	bool ret = false;
 	mutex_lock_bit(v, 0);
@@ -611,7 +611,7 @@ static inline bool ref_dec_and_test(ref_t *v)
 	return ret;
 }
 
-static inline void ref_set(ref_t *v, size_t val)
+static __always_inline void ref_set(ref_t *v, size_t val)
 {
 	mutex_lock_bit(v, 0);
 	atomic_set(v, val<<1);
