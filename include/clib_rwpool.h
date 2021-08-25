@@ -44,7 +44,7 @@ struct clib_rw_pool {
 	size_t		reader_idx;
 	size_t		writer_idx;
 	atomic_t	writer;
-	lock_t		lock;
+	mutex_t		lock;
 };
 
 struct clib_rw_pool_job {

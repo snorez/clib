@@ -18,7 +18,7 @@
 #include "../include/clib_mm.h"
 
 static LIST_HEAD(clib_mm_head);
-static lock_t mm_head_lock;
+static mutex_t mm_head_lock = MUTEX_INIT_V;
 
 static struct clib_mm *clib_mm_find(char *desc)
 {

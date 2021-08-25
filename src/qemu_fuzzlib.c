@@ -256,7 +256,7 @@ int qemu_fuzzlib_gen_default_files(char *out_sh, char *out_c)
 	return 0;
 }
 
-static mutex_t fwd_port_lock;
+static mutex_t fwd_port_lock = MUTEX_INIT_V;
 
 static struct qemu_fuzzlib_inst *inst_alloc(void)
 {
@@ -268,6 +268,8 @@ static struct qemu_fuzzlib_inst *inst_alloc(void)
 	}
 	
 	memset(inst, 0, sizeof(*inst));
+
+	mutex_init(&inst->lock);
 
 	return inst;
 }
@@ -376,8 +378,6 @@ static int inst_destroy_child_all(int pid)
 
 static void inst_destroy(struct qemu_fuzzlib_inst *inst)
 {
-	BUG_ON(atomic_read(&inst->lock));
-
 	free(inst->inst_workdir);
 	free(inst->sample_file);
 	free(inst->copied_osimage);

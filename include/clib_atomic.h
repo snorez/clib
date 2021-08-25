@@ -202,15 +202,18 @@ typedef struct {
 
 typedef atomic_t lock_t;
 typedef atomic_t ref_t;
-typedef lock_t mutex_t;
 
-#define	CONFIG_USE_PTHREAD_RWLOCK
-#ifndef CONFIG_USE_PTHREAD_RWLOCK
+#define	CONFIG_USE_PTHREAD_LOCK
+#ifndef CONFIG_USE_PTHREAD_LOCK
+typedef lock_t mutex_t;
 typedef lock_t rwlock_t;
+#define	MUTEX_INIT_V	0
 #define	RWLOCK_INIT_V	0
 #else
 #include <pthread.h>
+typedef pthread_mutex_t mutex_t;
 typedef pthread_rwlock_t rwlock_t;
+#define	MUTEX_INIT_V	PTHREAD_MUTEX_INITIALIZER
 #define	RWLOCK_INIT_V	PTHREAD_RWLOCK_INITIALIZER
 #endif
 
@@ -374,29 +377,36 @@ static __always_inline void do_nop(size_t times)
 		nop();
 }
 
-static __always_inline bool mutex_lock_bit(lock_t *v, size_t bit)
+#ifndef CONFIG_USE_PTHREAD_LOCK
+static __always_inline int mutex_init(mutex_t *v)
+{
+	atomic_set(v, MUTEX_INIT_V);
+	return 0;
+}
+
+static __always_inline bool mutex_lock_bit(mutex_t *v, size_t bit)
 {
 	while (test_and_set_bit(bit, &v->counter))
 		do_nop(0x10);
 	return true;
 }
 
-static __always_inline bool mutex_lock(lock_t *v)
+static __always_inline int mutex_lock(mutex_t *v)
 {
 	return mutex_lock_bit(v, 0);
 }
 
-static __always_inline void mutex_unlock_bit(lock_t *v, size_t bit)
+static __always_inline void mutex_unlock_bit(mutex_t *v, size_t bit)
 {
 	test_and_clear_bit(bit, &v->counter);
 }
 
-static __always_inline void mutex_unlock(lock_t *v)
+static __always_inline int mutex_unlock(mutex_t *v)
 {
 	mutex_unlock_bit(v, 0);
 }
 
-static __always_inline bool mutex_lock_timeout(lock_t *v, size_t times)
+static __always_inline bool mutex_lock_timeout(mutex_t *v, size_t times)
 {
 	bool ret = false;
 	if (!times)
@@ -414,17 +424,48 @@ static __always_inline bool mutex_lock_timeout(lock_t *v, size_t times)
 	return ret;
 }
 
-static __always_inline bool mutex_try_lock(lock_t *v)
+static __always_inline int mutex_try_lock(mutex_t *v)
 {
 	if (test_and_set_bit(0, &v->counter))
 		return false;
 	return true;
 }
 
-#ifndef CONFIG_USE_PTHREAD_RWLOCK
-static __always_inline int rwlock_init(rwlock_t *lock)
+static __always_inline int mutex_destroy(mutex_t *v)
 {
-	atomic_set(v, 0);
+	return 0;
+}
+#else
+static __always_inline int mutex_init(mutex_t *v)
+{
+	return pthread_mutex_init(v, NULL);
+}
+
+static __always_inline int mutex_lock(mutex_t *v)
+{
+	return pthread_mutex_lock(v);
+}
+
+static __always_inline int mutex_try_lock(mutex_t *v)
+{
+	return pthread_mutex_trylock(v) == 0;
+}
+
+static __always_inline int mutex_unlock(mutex_t *v)
+{
+	return pthread_mutex_unlock(v);
+}
+
+static __always_inline int mutex_destroy(mutex_t *v)
+{
+	return pthread_mutex_destroy(v);
+}
+#endif
+
+#ifndef CONFIG_USE_PTHREAD_LOCK
+static __always_inline int rwlock_init(rwlock_t *v)
+{
+	atomic_set(v, RWLOCK_INIT_V);
 	return 0;
 }
 
@@ -581,6 +622,7 @@ static __always_inline int rwlock_destroy(rwlock_t *v)
 }
 #endif
 
+#ifndef CONFIG_USE_PTHREAD_LOCK
 static __always_inline bool ref_inc_not_zero(ref_t *v)
 {
 	bool ret = true;
@@ -617,6 +659,7 @@ static __always_inline void ref_set(ref_t *v, size_t val)
 	atomic_set(v, val<<1);
 	mutex_unlock_bit(v, 0);
 }
+#endif
 
 DECL_END
 

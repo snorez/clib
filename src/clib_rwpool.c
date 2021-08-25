@@ -42,6 +42,8 @@ static struct clib_rw_pool *clib_rw_pool_new(size_t obj_cnt)
 	}
 	memset(_new, 0, sizeof(*_new));
 
+	mutex_init(&_new->lock);
+
 	_new->pool_addr = addr;
 	_new->obj_cnt = obj_cnt;
 	return _new;

@@ -19,7 +19,7 @@
 #include "../include/clib_print.h"
 
 static LIST_HEAD(print_head);
-static lock_t print_head_lock;
+static mutex_t print_head_lock = MUTEX_INIT_V;
 static int use_std = 1;
 
 void mt_print_init_ncurse(void)
