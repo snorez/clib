@@ -1138,14 +1138,24 @@ static void env_verbose(struct qemu_fuzzlib_env *env)
 			env->crash_cnt, env->last_crash_reason);
 }
 
-static struct qemu_fuzzlib_inst *env_idle_inst(struct qemu_fuzzlib_env *env)
+static struct qemu_fuzzlib_inst *env_idle_inst(struct qemu_fuzzlib_env *env,
+					       int *idx)
 {
-	for (u64 i = 0; i < env->instance_max; i++) {
+	for (u64 i = *idx; i < env->instance_max; i++) {
 		if (mutex_try_lock(&env->instances[i]->lock)) {
+			*idx = i + 1;
 			return env->instances[i];
 		}
 	}
 
+	for (u64 i = 0; i < *idx; i++) {
+		if (mutex_try_lock(&env->instances[i]->lock)) {
+			*idx = i + 1;
+			return env->instances[i];
+		}
+	}
+
+	*idx = 0;
 	return NULL;
 }
 
@@ -1437,7 +1447,7 @@ static int env_reuse_not_tested(struct qemu_fuzzlib_env *env, char *outf)
 	return ret;
 }
 
-static int env_run_one(struct qemu_fuzzlib_env *env, int *updated)
+static int env_run_one(struct qemu_fuzzlib_env *env, int *updated, int *idx)
 {
 	int err = 0;
 	struct qemu_fuzzlib_inst *inst = NULL;
@@ -1445,7 +1455,7 @@ static int env_run_one(struct qemu_fuzzlib_env *env, int *updated)
 
 	for (u32 j = 0; j < env->idle_sec; j++) {
 		for (u32 i = 0; i < times; i++) {
-			inst = env_idle_inst(env);
+			inst = env_idle_inst(env, idx);
 			if (inst)
 				break;
 		}
@@ -1505,9 +1515,10 @@ static void wait_for_all_inst(struct qemu_fuzzlib_env *env)
 
 int qemu_fuzzlib_env_run(struct qemu_fuzzlib_env *env)
 {
+	int prev_idx = 0;
 	while (1) {
 		int updated = 0;
-		int do_break = env_run_one(env, &updated);
+		int do_break = env_run_one(env, &updated, &prev_idx);
 		if (do_break) {
 			break;
 		}
