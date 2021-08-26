@@ -494,6 +494,12 @@ static int inst_launch_qemu(struct qemu_fuzzlib_env *env,
 				qemu_bootup_done = 1;
 			}
 
+			if (strstr(b, QEMU_BOOTUP_PANIC)) {
+				err_dbg(0, "guest bootup panic");
+				kill(pid, SIGTERM);
+				pid = -1;
+			}
+
 			free(b);
 		}
 
