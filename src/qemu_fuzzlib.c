@@ -440,13 +440,14 @@ static int inst_vmlog_filter(struct qemu_fuzzlib_env *env,
 
 static int inst_launch_qemu(struct qemu_fuzzlib_env *env,
 				struct qemu_fuzzlib_inst *inst,
-				char **args)
+				char **args, int *kpanic)
 {
 	int err = 0;
 	int pid;
 	int retval;
 	int qemu_is_running = 0;
 	int qemu_bootup_done = 0;
+	*kpanic = 0;
 
 	if (path_exists(inst->vmlog)) {
 		close(open(inst->vmlog, O_WRONLY | O_TRUNC));
@@ -495,9 +496,7 @@ static int inst_launch_qemu(struct qemu_fuzzlib_env *env,
 			}
 
 			if (strstr(b, QEMU_BOOTUP_PANIC)) {
-				err_dbg(0, "guest bootup panic");
-				kill(pid, SIGTERM);
-				pid = -1;
+				*kpanic = 1;
 			}
 
 			free(b);
@@ -514,6 +513,10 @@ static int inst_launch_qemu(struct qemu_fuzzlib_env *env,
 				/* err_dbg(0, "qemu launch err"); */
 				return -1;
 			}
+		}
+
+		if (*kpanic) {
+			break;
 		}
 	}
 
@@ -632,6 +635,7 @@ static int inst_run(struct qemu_fuzzlib_env *env, struct qemu_fuzzlib_inst *inst
 	int need_kill_qemu = 0;
 	int run_script_pid;
 	int fd;
+	int kpanic = 0;
 	char *launch_args[0x30] = {0};
 
 	if (inst->qemu_pid == -1) {
@@ -654,12 +658,17 @@ static int inst_run(struct qemu_fuzzlib_env *env, struct qemu_fuzzlib_inst *inst
 		}
 
 		inst->vmlog_readpos = 0;
-		inst->qemu_pid = inst_launch_qemu(env, inst, launch_args);
+		inst->qemu_pid = inst_launch_qemu(env, inst, launch_args,
+						  &kpanic);
 		mutex_unlock(&fwd_port_lock);
 		if (inst->qemu_pid < 0) {
 			/* err_dbg(0, "inst_launch_qemu err"); */
 			err = QEMU_FUZZLIB_INST_NOT_TESTED;
 			goto free_out;
+		} else if (kpanic) {
+			err = QEMU_FUZZLIB_INST_NOT_TESTED;
+			need_kill_qemu = 1;
+			goto kill_out;
 		}
 
 		err = inst_create_workdir(env, inst);
