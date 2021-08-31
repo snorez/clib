@@ -30,6 +30,7 @@ DECL_BEGIN
 #define	QEMU_GUEST_CONN_STR	"Connecting to host..."
 #define	QEMU_GUEST_ERR		"Guest error."
 #define	QEMU_BOOTUP_PANIC	"---[ end Kernel panic"
+#define	QEMU_BOOTUP_EMER	"You are in emergency mode."
 
 enum qemu_fuzzlib_inst_res {
 	QEMU_FUZZLIB_INST_INVALID = -1,

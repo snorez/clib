@@ -499,6 +499,10 @@ static int inst_launch_qemu(struct qemu_fuzzlib_env *env,
 				*kpanic = 1;
 			}
 
+			if (strstr(b, QEMU_BOOTUP_EMER)) {
+				*kpanic = 1;
+			}
+
 			free(b);
 		}
 
