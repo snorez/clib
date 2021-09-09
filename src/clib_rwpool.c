@@ -17,22 +17,17 @@
  */
 #include "../include/clib_rwpool.h"
 
-static struct clib_rw_pool *clib_rw_pool_new(size_t obj_cnt)
+static struct clib_rw_pool *clib_rw_pool_new(void (*free_pool_elem)(void *))
 {
 	void *addr = NULL;
 	struct clib_rw_pool *_new = NULL;
 
-	if (unlikely(obj_cnt > OBJPOOL_MAX)) {
-		err_dbg(0, "size check err");
-		return NULL;
-	}
-
-	addr = malloc(obj_cnt * sizeof(void *));
+	addr = malloc(OBJPOOL_CNT * sizeof(void *));
 	if (unlikely(!addr)) {
 		err_dbg(0, "malloc err");
 		return NULL;
 	}
-	memset(addr, 0, obj_cnt * sizeof(void *));
+	memset(addr, 0, OBJPOOL_CNT * sizeof(void *));
 
 	_new = (struct clib_rw_pool *)malloc(sizeof(*_new));
 	if (unlikely(!_new)) {
@@ -45,12 +40,22 @@ static struct clib_rw_pool *clib_rw_pool_new(size_t obj_cnt)
 	mutex_init(&_new->lock);
 
 	_new->pool_addr = addr;
-	_new->obj_cnt = obj_cnt;
+	_new->free_pool_elem = free_pool_elem;
+
 	return _new;
 }
 
 static void clib_rw_pool_free(struct clib_rw_pool *p)
 {
+	void **start = (void **)p->pool_addr;
+
+	if (p->free_pool_elem) {
+		for (size_t i = 0; i < OBJPOOL_CNT; i++) {
+			if (!start[i])
+				continue;
+			p->free_pool_elem(start[i]);
+		}
+	}
 	free(p->pool_addr);
 	free(p);
 }
@@ -60,7 +65,7 @@ static void **clib_rw_pool_write_find(struct clib_rw_pool *pool)
 	void **start = (void **)pool->pool_addr;
 	size_t i = 0;
 
-	for (i = pool->writer_idx; i < pool->obj_cnt; i++) {
+	for (i = pool->writer_idx; i < OBJPOOL_CNT; i++) {
 		if (!start[i]) {
 			pool->writer_idx = i + 1;
 			return &start[i];
@@ -82,7 +87,7 @@ static void **clib_rw_pool_read_find(struct clib_rw_pool *pool)
 	void **start = (void **)pool->pool_addr;
 	size_t i = 0;
 
-	for (i = pool->reader_idx; i < pool->obj_cnt; i++) {
+	for (i = pool->reader_idx; i < OBJPOOL_CNT; i++) {
 		if (start[i]) {
 			pool->reader_idx = i + 1;
 			return &start[i];
@@ -105,12 +110,19 @@ static void **clib_rw_pool_read_find(struct clib_rw_pool *pool)
 #define	USLEEP_TIME	(CONFIG_USLEEP_TIME)
 #endif
 
-void clib_rw_pool_push(struct clib_rw_pool *pool, void *obj)
+int clib_rw_pool_push(struct clib_rw_job *job, void *obj)
 {
+	int ret = 0;
 	void **addr;
+	struct clib_rw_pool *pool = job->pool;
 
 	mutex_lock(&pool->lock);
 	while (1) {
+		if (job->status != JOB_STATUS_RUNNING) {
+			ret = -1;
+			break;
+		}
+
 		addr = clib_rw_pool_write_find(pool);
 		if (addr) {
 			*addr = obj;
@@ -122,22 +134,23 @@ void clib_rw_pool_push(struct clib_rw_pool *pool, void *obj)
 		mutex_lock(&pool->lock);
 	}
 	mutex_unlock(&pool->lock);
+
+	return ret;
 }
 
-#ifndef CONFIG_LOOP_MORE_TIMES
-#define	LOOP_MORE_TIMES		0x1
-#else
-#define	LOOP_MORE_TIMES		(CONFIG_LOOP_MORE_TIMES)
-#endif
-
-void *clib_rw_pool_pop(struct clib_rw_pool *pool)
+void *clib_rw_pool_pop(struct clib_rw_job *job)
 {
 	void **addr;
 	void *ret = NULL;
-	int loop_more = 0;
+	struct clib_rw_pool *pool = job->pool;
+	int loop_one_more = 0;
 
 	mutex_lock(&pool->lock);
 	while (1) {
+		if (job->status != JOB_STATUS_RUNNING) {
+			break;
+		}
+
 		addr = clib_rw_pool_read_find(pool);
 		if (addr) {
 			ret = *addr;
@@ -145,15 +158,16 @@ void *clib_rw_pool_pop(struct clib_rw_pool *pool)
 			break;
 		}
 
+		if (clib_rw_all_writer_done(job)) {
+			if (loop_one_more) {
+				break;
+			}
+			loop_one_more = 1;
+		}
+
 		mutex_unlock(&pool->lock);
 		usleep(USLEEP_TIME);
 		mutex_lock(&pool->lock);
-		if (!atomic_read(&pool->writer)) {
-			if (loop_more >= LOOP_MORE_TIMES)
-				break;
-			loop_more++;
-			continue;
-		}
 	}
 	mutex_unlock(&pool->lock);
 
@@ -167,8 +181,14 @@ static void *writer_thread(void *arg)
 	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 #endif
 
-	struct clib_rw_pool_job *job = arg;
-	job->writer(job->write_arg, job->pool);
+	struct clib_rw_job *job = (struct clib_rw_job *)arg;
+	struct clib_rw_thread *t = rw_thread(job, 0);
+	BUG_ON(!t);
+
+	job->writer(job->write_arg, job);
+
+	t->done = 1;
+
 	return (void *)0;
 }
 
@@ -179,26 +199,41 @@ static void *reader_thread(void *arg)
 	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 #endif
 
-	struct clib_rw_pool_job *job = arg;
-	job->reader(job->read_arg, job->pool);
+	struct clib_rw_job *job = arg;
+	struct clib_rw_thread *t = rw_thread(job, 1);
+	BUG_ON(!t);
+
+	job->reader(job->read_arg, job);
+
+	t->done = 1;
+
 	return (void *)0;
 }
 
-struct clib_rw_pool_job *clib_rw_pool_job_new(size_t obj_cnt,
-					void (writer)(void *, struct clib_rw_pool *),
-					void *write_arg,
-					void (reader)(void *, struct clib_rw_pool *),
-					void *read_arg)
+struct clib_rw_job *clib_rw_job_new(void (*writer)(void *, struct clib_rw_job *),
+				    void *write_arg,
+				    int writer_cnt,
+				    void (*reader)(void *, struct clib_rw_job *),
+				    void *read_arg,
+				    int reader_cnt,
+				    void (*free_pool_elem)(void *))
 {
-	struct clib_rw_pool_job *_new;
-	_new = (struct clib_rw_pool_job *)malloc(sizeof(*_new));
+	if ((writer_cnt <= 0) || (reader_cnt <= 0)) {
+		err_dbg(0, "arg check err");
+		return NULL;
+	}
+
+	struct clib_rw_job *_new;
+	size_t malloc_len = sizeof(*_new);
+	malloc_len += sizeof(_new->threads[0]) * (writer_cnt + reader_cnt);
+	_new = (struct clib_rw_job *)malloc(malloc_len);
 	if (!_new) {
 		err_dbg(0, "malloc err");
 		return NULL;
 	}
-	memset(_new, 0, sizeof(*_new));
+	memset(_new, 0, malloc_len);
 
-	_new->pool = clib_rw_pool_new(obj_cnt);
+	_new->pool = clib_rw_pool_new(free_pool_elem);
 	if (!_new->pool) {
 		err_dbg(0, "clib_rw_pool_new err");
 		free(_new);
@@ -207,12 +242,15 @@ struct clib_rw_pool_job *clib_rw_pool_job_new(size_t obj_cnt,
 
 	_new->writer = writer;
 	_new->write_arg = write_arg;
+	_new->writer_cnt = writer_cnt;
 	_new->reader = reader;
 	_new->read_arg = read_arg;
+	_new->reader_cnt = reader_cnt;
+
 	return _new;
 }
 
-void clib_rw_pool_job_free(struct clib_rw_pool_job *job)
+void clib_rw_job_free(struct clib_rw_job *job)
 {
 	if (job) {
 		clib_rw_pool_free(job->pool);
@@ -220,32 +258,41 @@ void clib_rw_pool_job_free(struct clib_rw_pool_job *job)
 	}
 }
 
-int clib_rw_pool_job_run(struct clib_rw_pool_job *job)
+int clib_rw_job_run(struct clib_rw_job *job)
 {
 	int err = 0;
-	pthread_t tid_writer;
-	pthread_t tid_reader;
 
-	/* setup threads */
-	err = pthread_create(&tid_writer, NULL, writer_thread, (void *)job);
-	if (err) {
-		err_dbg(0, "pthread_create err");
-		return -1;
-	}
-	atomic_inc(&job->pool->writer);
-	usleep(USLEEP_TIME);
+	/* change the status first */
+	job->status = JOB_STATUS_RUNNING;
 
-	err = pthread_create(&tid_reader, NULL, reader_thread, (void *)job);
-	if (err) {
-		err_dbg(0, "pthread_create err, should kill writer thread");
-		return -1;
+	for (int i = 0; i < job->writer_cnt; i++) {
+		err = pthread_create(&job->threads[i].tid, NULL,
+				     writer_thread, (void *)job);
+		if (err) {
+			err_dbg(0, "pthread_create err");
+			return -1;
+		}
 	}
 
-	/* wait for all thread */
-	pthread_join(tid_writer, NULL);
-	atomic_dec(&job->pool->writer);
-
-	pthread_join(tid_reader, NULL);
+	for (int i = job->writer_cnt; i < (job->writer_cnt + job->reader_cnt); i++) {
+		err = pthread_create(&job->threads[i].tid, NULL,
+				     reader_thread, (void *)job);
+		if (err) {
+			err_dbg(0, "pthread_create err, should kill writer thread");
+			return -1;
+		}
+	}
 
 	return 0;
+}
+
+void clib_rw_job_term(struct clib_rw_job *job)
+{
+	job->status = JOB_STATUS_TERM;
+
+	for (int i = 0; i < (job->writer_cnt + job->reader_cnt); i++) {
+		if (!job->threads[i].tid)
+			continue;
+		pthread_join(job->threads[i].tid, NULL);
+	}
 }

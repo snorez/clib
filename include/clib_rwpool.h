@@ -26,46 +26,107 @@ DECL_BEGIN
  * each object is a pointer to a user-defined object
  * if this object is NULL, it is available
  */
-#ifndef CONFIG_OBJPOOL_MAX
-#define	OBJPOOL_MAX	0x100000
-#else
-#define	OBJPOOL_MAX	(CONFIG_OBJPOOL_MAX)
-#endif
+#define	OBJPOOL_CNT	1024
 
-#ifndef CONFIG_OBJPOOL_DEF
-#define	OBJPOOL_DEF	0x10000
-#else
-#define	OBJPOOL_DEF	(CONFIG_OBJPOOL_DEF)
-#endif
-
-struct clib_rw_pool {
-	void		*pool_addr;
-	size_t		obj_cnt;
-	size_t		reader_idx;
-	size_t		writer_idx;
-	atomic_t	writer;
-	mutex_t		lock;
+enum job_status {
+	JOB_STATUS_WAIT = 0,
+	JOB_STATUS_RUNNING = 1,
+	JOB_STATUS_TERM = 2,
 };
 
-struct clib_rw_pool_job {
+struct clib_rw_thread {
+	pthread_t		tid;
+	char			done;
+};
+
+struct clib_rw_pool {
+	void			(*free_pool_elem)(void *);
+	void			*pool_addr;
+	size_t			reader_idx;
+	size_t			writer_idx;
+	mutex_t			lock;
+	atomic_t		writer;
+};
+
+struct clib_rw_job {
 	struct clib_rw_pool	*pool;
-	void		(*writer)(void *arg, struct clib_rw_pool *pool);
-	void		*write_arg;
-	void		(*reader)(void *arg, struct clib_rw_pool *pool);
-	void		*read_arg;
+	void			(*writer)(void *arg, struct clib_rw_job *job);
+	void			*write_arg;
+	void			(*reader)(void *arg, struct clib_rw_job *job);
+	void			*read_arg;
+
+	int			writer_cnt;
+	int			reader_cnt;
+
+	int			status;
+
+	struct clib_rw_thread	threads[0];	/* minimum threads */
 };
 
 /* these two are for job_writer and job_reader */
-extern void clib_rw_pool_push(struct clib_rw_pool *pool, void *obj);
-extern void *clib_rw_pool_pop(struct clib_rw_pool *pool);
+extern int clib_rw_pool_push(struct clib_rw_job *job, void *obj);
+extern void *clib_rw_pool_pop(struct clib_rw_job *job);
 
-extern struct clib_rw_pool_job *clib_rw_pool_job_new(size_t obj_cnt,
-					void (writer)(void *, struct clib_rw_pool *),
-					void *write_arg,
-					void (reader)(void *, struct clib_rw_pool *),
-					void *read_arg);
-extern void clib_rw_pool_job_free(struct clib_rw_pool_job *job);
-extern int clib_rw_pool_job_run(struct clib_rw_pool_job *job);
+extern struct clib_rw_job *clib_rw_job_new(void (*writer)(void *, struct clib_rw_job *),
+					   void *write_arg,
+					   int writer_cnt,
+					   void (*reader)(void *, struct clib_rw_job *),
+					   void *read_arg,
+					   int reader_cnt,
+					   void (*free_pool_elem)(void *));
+extern void clib_rw_job_free(struct clib_rw_job *job);
+extern int clib_rw_job_run(struct clib_rw_job *job);
+extern void clib_rw_job_term(struct clib_rw_job *job);
+
+static inline struct clib_rw_thread *rw_thread(struct clib_rw_job *job, int reader)
+{
+	int idx_b = 0, idx_e = job->writer_cnt;
+	if (reader) {
+		idx_b = job->writer_cnt;
+		idx_e = job->writer_cnt + job->reader_cnt;
+	}
+
+	for (; idx_b < idx_e; idx_b++) {
+		if (pthread_equal(job->threads[idx_b].tid, pthread_self())) {
+			return &job->threads[idx_b];
+		}
+	}
+
+	return NULL;
+}
+
+static inline int clib_rw_all_writer_done(struct clib_rw_job *job)
+{
+	for (int i = 0; i < job->writer_cnt; i++) {
+		if (!job->threads[i].tid) {
+			continue;
+		}
+
+		if (!job->threads[i].done)
+			return 0;
+	}
+
+	return 1;
+}
+
+static inline int clib_rw_all_reader_done(struct clib_rw_job *job)
+{
+	for (int i = job->writer_cnt; i < (job->writer_cnt + job->reader_cnt); i++) {
+		if (!job->threads[i].tid) {
+			continue;
+		}
+
+		if (!job->threads[i].done)
+			return 0;
+	}
+
+	return 1;
+}
+
+static inline int clib_rw_all_thread_done(struct clib_rw_job *job)
+{
+	return clib_rw_all_writer_done(job) && clib_rw_all_reader_done(job);
+}
 
 DECL_END
 
