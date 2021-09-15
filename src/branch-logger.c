@@ -7,7 +7,7 @@ struct branch_logger *branch_logger_alloc(u32 depth)
 	u32 size = depth + 1;
 	size = clib_round_up(size, BRANCH_LOGGER_DEF_SIZE);
 
-	size_t alloc_size = sizeof(_new);
+	size_t alloc_size = sizeof(*_new);
 	alloc_size += (size - sizeof(_new->logger));
 
 	_new = (struct branch_logger *)malloc(alloc_size);
@@ -17,6 +17,7 @@ struct branch_logger *branch_logger_alloc(u32 depth)
 	}
 
 	memset(_new, 0, alloc_size);
+
 	_new->logger_size = size;
 	_new->logger_depth = depth;
 
