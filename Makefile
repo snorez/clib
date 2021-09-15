@@ -80,6 +80,7 @@ SRCS = \
        clib_sme.c \
        qemu_fuzzlib.c \
        bit-logger.c \
+       branch-logger.c \
        clib_shm.c
 
 SUBFOLDERS =

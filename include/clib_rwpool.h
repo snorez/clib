@@ -128,6 +128,12 @@ static inline int clib_rw_all_thread_done(struct clib_rw_job *job)
 	return clib_rw_all_writer_done(job) && clib_rw_all_reader_done(job);
 }
 
+static inline int clib_rw_job_done(struct clib_rw_job *job)
+{
+	return (clib_rw_all_thread_done(job) ||
+		(job->status == JOB_STATUS_TERM));
+}
+
 DECL_END
 
 #endif /* end of include guard: CLIB_OBJPOOL_H_Y1M3NESU */
