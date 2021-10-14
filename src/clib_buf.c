@@ -1121,3 +1121,32 @@ int str_split(struct list_head *head, const char *src, const char *key)
 	free(src_tmp);
 	return 0;
 }
+
+/*
+ * Get the substring which start from the beginning of the src0 and src1.
+ * the result is saved in src0.
+ */
+void str_and(char *src0, char *src1)
+{
+	char *p0 = src0, *p1 = src1;
+	while (1) {
+		if (!*p0)
+			break;
+
+		if (!*p1) {
+			memcpy(src0, src1, p1-src1);
+			break;
+		}
+
+		if (*p0 != *p1) {
+			while (*p0 != '/') {
+				*p0 = '\0';
+				p0--;
+			}
+			break;
+		}
+
+		p0++;
+		p1++;
+	}
+}

@@ -68,6 +68,7 @@ extern int buf_struct_merge(buf_struct *prev, buf_struct *next);
 extern int buf_struct_print(void *data);
 extern int get_dict_key_value(struct list_head *head, char *str, char *sep);
 extern int str_split(struct list_head *head, const char *str, const char *key);
+extern void str_and(char *src0, char *src1);
 
 DECL_END
 

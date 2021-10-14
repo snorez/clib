@@ -254,9 +254,11 @@ static inline void clib_realpath(const char *path, char *resolved_path)
 		}
 
 		if (zero_next) {
-			memset(pt, 0, strlen(pt));
-			pt += strlen(pt);
+			size_t _len = strlen(pt);
+			memset(pt, 0, _len);
+			pt += _len;
 			zero_next--;
+			continue;
 		}
 
 		count += strlen(pt) + 1; /* filename and '/' */
