@@ -93,6 +93,8 @@ extern int clib_split_file(char *path, char *bkp, unsigned long start,
 extern int clib_copy_file_bytes(char *path, char *bkp, unsigned long bytes,
 				int verbose);
 extern int clib_copy_file(char *src, char *dest, int verbose);
+extern void clib_realpath(const char *path, char *resolved_path);
+extern int is_same_path(const char *path0, const char *path1);
 
 DECL_END
 
