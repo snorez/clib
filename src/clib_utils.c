@@ -17,6 +17,8 @@
  */
 #include "../include/clib.h"
 
+int clib_inner_slow_heap;
+
 int hex2int(char *hex)
 {
 	int ret = 0;
