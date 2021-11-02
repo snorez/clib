@@ -46,6 +46,7 @@
 #include "../include/bit-logger.h"
 #include "../include/branch-logger.h"
 #include "../include/clib_shm.h"
+#include "../include/clib_malloc.h"
 
 DECL_BEGIN
 

@@ -46,7 +46,9 @@ int create_dir(char *path)
 	if (!path_exists(path)) {
 		int err = mkdir(path, S_IRWXU | S_IRWXG | S_IRWXO);
 		if (err == -1) {
-			err_dbg(1, "mkdir %s err");
+			if (errno == EEXIST)
+				return 0;
+			err_dbg(1, "mkdir %s err", path);
 			return -1;
 		}
 	}

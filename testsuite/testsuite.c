@@ -8,6 +8,7 @@ TESTCASE_DECL(test_slist);
 TESTCASE_DECL(test_int_extend);
 TESTCASE_DECL(test_compare_bits);
 TESTCASE_DECL(test_in_loop);
+TESTCASE_DECL(test_heap_audit);
 
 struct testsuite {
 	char	*name;
@@ -18,6 +19,7 @@ struct testsuite {
 	TESTCASE(test_int_extend),
 	TESTCASE(test_compare_bits),
 	TESTCASE(test_in_loop),
+	TESTCASE(test_heap_audit),
 };
 
 int main(int argc, char *argv[])
