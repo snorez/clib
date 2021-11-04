@@ -95,6 +95,8 @@ extern int clib_copy_file_bytes(char *path, char *bkp, unsigned long bytes,
 extern int clib_copy_file(char *src, char *dest, int verbose);
 extern void clib_realpath(const char *path, char *resolved_path);
 extern int is_same_path(const char *path0, const char *path1);
+extern int clib_lockfile(const char *path, int lock_type);
+extern void clib_unlockfile(int fd);
 
 DECL_END
 

@@ -817,3 +817,40 @@ int is_same_path(const char *path0, const char *path1)
 
 	return 0;
 }
+
+int clib_lockfile(const char *path, int lock_type)
+{
+	int fd = open(path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+	if (fd == -1) {
+		err_dbg(1, "open %s err", path);
+		return -1;
+	}
+
+	struct flock f_lock;
+	f_lock.l_type = lock_type;
+	f_lock.l_whence = 0;
+	f_lock.l_len = 0;
+
+	int err = fcntl(fd, F_SETLKW, &f_lock);
+	if (err == -1) {
+		err_dbg(1, "fcntl err");
+		close(fd);
+		return -1;
+	}
+
+	return fd;
+}
+
+void clib_unlockfile(int fd)
+{
+	struct flock f_lock;
+
+	f_lock.l_type = F_UNLCK;
+
+	int err = fcntl(fd, F_SETLKW, &f_lock);
+	if (err == -1) {
+		err_dbg(1, "fcntl err");
+	}
+
+	close(fd);
+}
