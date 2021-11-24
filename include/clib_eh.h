@@ -136,26 +136,45 @@ extern void mt_print_fini_ncurse(void);
 #endif
 #endif
 
-extern void _err_msg(const char *fmt, ...);
-extern void _err_sys(const char *fmt, ...);
-extern void _err_dbg(int has_errno, const char *fmt, ...);
-extern void _err_dbg1(int errval, const char *fmt, ...);
-extern void _err_dump(const char *fmt, ...);
-extern void _err_exit(int has_errno, const char *fmt, ...);
-#define	err_msg(fmt, ...) _err_msg(err_fmt(fmt), ##__VA_ARGS__)
-#define	err_sys(fmt, ...) _err_sys(err_fmt(fmt), ##__VA_ARGS__)
-#define	err_dbg(has_errno, fmt, ...) _err_dbg(has_errno, err_fmt(fmt), ##__VA_ARGS__)
-#define	err_dbg1(errval, fmt, ...) _err_dbg1(errval, err_fmt(fmt), ##__VA_ARGS__)
-#define	err_dump(fmt, ...) _err_dump(err_fmt(fmt), ##__VA_ARGS__)
-#define	err_exit(has_errno, fmt, ...) _err_exit(has_errno, err_fmt(fmt), ##__VA_ARGS__)
+extern void _err_common(FILE *s, int color, int errc, const char *fmt, va_list ap);
+extern void _err_msg(FILE *s, int color, const char *fmt, ...);
+extern void _err_sys(FILE *s, int color, const char *fmt, ...);
+extern void _err_dbg(FILE *s, int color, int has_errno, const char *fmt, ...);
+extern void _err_dbg1(FILE *s, int color, int errval, const char *fmt, ...);
+extern void _err_dump(FILE *s, int color, const char *fmt, ...);
+extern void _err_exit(FILE *s, int color, int has_errno, const char *fmt, ...);
+
+#define	err_msg_stream(s, fmt, ...) _err_msg(s, 0, err_fmt(fmt), ##__VA_ARGS__)
+#define	err_sys_stream(s, fmt, ...) _err_sys(s, 0, err_fmt(fmt), ##__VA_ARGS__)
+#define	err_dbg_stream(s, has_errno, fmt, ...) _err_dbg(s, 0, has_errno, err_fmt(fmt), ##__VA_ARGS__)
+#define	err_dbg1_stream(s, errval, fmt, ...) _err_dbg1(s, 0, errval, err_fmt(fmt), ##__VA_ARGS__)
+#define	err_dump_stream(s, fmt, ...) _err_dump(s, 0, err_fmt(fmt), ##__VA_ARGS__)
+#define	err_exit_stream(s, has_errno, fmt, ...) _err_exit(s, 0, has_errno, err_fmt(fmt), ##__VA_ARGS__)
+#define err_val_ret_stream(s, has_errno, retval, fmt, ...) \
+do {\
+	err_dbg(s, 0, has_errno, fmt, ##__VA_ARGS__);\
+	return retval;\
+} while(0);
+#define err_ptr_ret_stream(s, has_errno, retval, fmt, ...) \
+do {\
+	err_dbg(s, 0, has_errno, fmt, ##__VA_ARGS__);\
+	return ERR_PTR(retval);\
+} while(0);
+
+#define	err_msg(fmt, ...) _err_msg(stderr, 1, err_fmt(fmt), ##__VA_ARGS__)
+#define	err_sys(fmt, ...) _err_sys(stderr, 1, err_fmt(fmt), ##__VA_ARGS__)
+#define	err_dbg(has_errno, fmt, ...) _err_dbg(stderr, 1, has_errno, err_fmt(fmt), ##__VA_ARGS__)
+#define	err_dbg1(errval, fmt, ...) _err_dbg1(stderr, 1, errval, err_fmt(fmt), ##__VA_ARGS__)
+#define	err_dump(fmt, ...) _err_dump(stderr, 1, err_fmt(fmt), ##__VA_ARGS__)
+#define	err_exit(has_errno, fmt, ...) _err_exit(stderr, 1, has_errno, err_fmt(fmt), ##__VA_ARGS__)
 #define err_val_ret(has_errno, retval, fmt, ...) \
 do {\
-	err_dbg(has_errno, fmt, ##__VA_ARGS__);\
+	err_dbg(stderr, 1, has_errno, fmt, ##__VA_ARGS__);\
 	return retval;\
 } while(0);
 #define err_ptr_ret(has_errno, retval, fmt, ...) \
 do {\
-	err_dbg(has_errno, fmt, ##__VA_ARGS__);\
+	err_dbg(stderr, 1, has_errno, fmt, ##__VA_ARGS__);\
 	return ERR_PTR(retval);\
 } while(0);
 

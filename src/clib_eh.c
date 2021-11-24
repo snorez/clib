@@ -34,94 +34,102 @@ static char *last_color_e = COLOR_E;
 static char *color_prompt_b = COLOR_B;
 static char *color_prompt_e = COLOR_E;
 
-static void err_common(int has_errno, int error, const char *fmt,
-		       va_list ap)
+void _err_common(FILE *s, int color, int errc, const char *fmt, va_list ap)
 {
-	char buf[MAXLINE];
-	memset(buf, 0, MAXLINE);
-	memcpy(buf, color_prompt_b, strlen(color_prompt_b));
-	vsnprintf(buf+strlen(buf), MAXLINE-strlen(buf), fmt, ap);
-	if (has_errno)
-		snprintf(buf+strlen(buf), MAXLINE-strlen(buf), ": %s",
-			 strerror(errno));
+	char buf[MAXLINE] = {0};
+
+	char *color_b = "\0";
+	char *color_e = "\0";
+	if (likely(color)) {
+		color_b = color_prompt_b;
+		color_e = color_prompt_e;
+	}
+
+	memcpy(buf, color_b, strlen(color_b));
+	vsnprintf(buf + strlen(buf), MAXLINE - strlen(buf), fmt, ap);
+	if (errc)
+		snprintf(buf + strlen(buf), MAXLINE - strlen(buf), ": %s",
+			 strerror(errc));
 	size_t len = strlen(buf);
-	if (len >= MAXLINE-1-strlen(color_prompt_e)) {
-		buf[MAXLINE-strlen(color_prompt_e)-5] = '.';
-		buf[MAXLINE-strlen(color_prompt_e)-4] = '.';
-		buf[MAXLINE-strlen(color_prompt_e)-3] = '.';
-		memcpy(&buf[MAXLINE-strlen(color_prompt_e)-2], color_prompt_e,
-				strlen(color_prompt_e));
+	if (len >= MAXLINE-1-strlen(color_e)) {
+		buf[MAXLINE-strlen(color_e)-5] = '.';
+		buf[MAXLINE-strlen(color_e)-4] = '.';
+		buf[MAXLINE-strlen(color_e)-3] = '.';
+		memcpy(&buf[MAXLINE-strlen(color_e)-2],
+		       color_e, strlen(color_e));
 		buf[MAXLINE-2] = '\n';
 		buf[MAXLINE-1] = '\0';
 	} else {
-		memcpy(buf+len, color_prompt_e, strlen(color_prompt_e));
-		buf[len+strlen(color_prompt_e)] = '\n';
+		memcpy(buf+len, color_e, strlen(color_e));
+		buf[len+strlen(color_e)] = '\n';
 	}
-	fflush(stdout);
-	fputs(buf, stderr);
-	fflush(NULL);
+	fputs(buf, s);
+	fflush(s);
+
+	return;
 }
 
-void _err_msg(const char *fmt, ...)
+void _err_msg(FILE *s, int color, const char *fmt, ...)
 {
 	va_list ap;
 
 	va_start(ap, fmt);
-	err_common(0, 0, fmt, ap);
+	_err_common(s, color, 0, fmt, ap);
 	va_end(ap);
 }
 
-void _err_sys(const char *fmt, ...)
+void _err_sys(FILE *s, int color, const char *fmt, ...)
 {
 	va_list ap;
 
 	va_start(ap, fmt);
-	err_common(1, errno, fmt, ap);
+	_err_common(s, color, errno, fmt, ap);
 	va_end(ap);
 }
 
-void _err_dbg(int has_errno, const char *fmt, ...)
+void _err_dbg(FILE *s, int color, int has_errno, const char *fmt, ...)
 {
 	if (eh_mode & EH_M_DBG) {
 		va_list ap;
 
 		va_start(ap, fmt);
 		if (has_errno)
-			err_common(1, errno, fmt, ap);
+			_err_common(s, color, errno, fmt, ap);
 		else
-			err_common(0, 0, fmt, ap);
+			_err_common(s, color, 0, fmt, ap);
+		va_end(ap);
 	}
 }
 
-void _err_dbg1(int errval, const char *fmt, ...)
+void _err_dbg1(FILE *s, int color, int errval, const char *fmt, ...)
 {
 	if (eh_mode & EH_M_DBG) {
 		va_list ap;
 
 		va_start(ap, fmt);
-		err_common(1, (errval < 0) ? -errval : errval, fmt, ap);
+		_err_common(s, color, (errval < 0) ? -errval : errval, fmt, ap);
 		va_end(ap);
 	}
 }
 
-void _err_dump(const char *fmt, ...)
+void _err_dump(FILE *s, int color, const char *fmt, ...)
 {
 	va_list ap;
 
 	va_start(ap, fmt);
-	err_common(1, errno, fmt, ap);
+	_err_common(s, color, errno, fmt, ap);
 	va_end(ap);
 
 	abort();
 	exit(1);
 }
 
-void _err_exit(int flag_err, const char *fmt, ...)
+void _err_exit(FILE *s, int color, int flag_err, const char *fmt, ...)
 {
 	va_list ap;
 
 	va_start(ap, fmt);
-	err_common(flag_err, flag_err ? errno : 0, fmt, ap);
+	_err_common(s, color, flag_err ? errno : 0, fmt, ap);
 	va_end(ap);
 
 	exit(flag_err ? 1 : 0);
