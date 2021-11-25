@@ -82,7 +82,8 @@ SRCS = \
        bit-logger.c \
        branch-logger.c \
        clib_shm.c \
-       clib_malloc.c
+       clib_malloc.c \
+       sil.c
 
 SUBFOLDERS =
 

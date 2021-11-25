@@ -6,7 +6,7 @@ void test_in_loop(void)
 	char arr00[] = "abcdbcebcdbceb";
 	char arr01[] = "abcdbcebcdbcebc";
 	int start = 0, head = -1, tail = -1;
-	char next_v0 = 'b';
+	int next_v0 = 'b';
 
 	int err = 0;
 	err = clib_in_loop(arr0, strlen(arr0), 1, &start, &head, &tail, &next_v0);
@@ -39,7 +39,7 @@ void test_in_loop(void)
 	start = 0;
 	head = -1;
 	tail = -1;
-	long next_v1 = 0x44444444;
+	int next_v1 = 0x44444444;
 	err = clib_in_loop(arr1, sizeof(arr1) / sizeof(arr1[0]), 8, &start, &head, &tail, &next_v1);
 	ts_output(1, stdout, "arr1#0 %lx: %d %d %d %d\n", next_v1, err,
 			start, head, tail);

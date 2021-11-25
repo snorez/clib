@@ -18,7 +18,7 @@ CC_SRCS=\
 	test-int-extend.c \
 	test-compare-bits.c \
 	test-in-loop.c \
-	test-heap-audit.c
+	test-token.c
 
 CC_OBJS=$(CC_SRCS:%.c=%.o)
 

@@ -47,6 +47,7 @@
 #include "../include/branch-logger.h"
 #include "../include/clib_shm.h"
 #include "../include/clib_malloc.h"
+#include "../include/sil.h"
 
 DECL_BEGIN
 
